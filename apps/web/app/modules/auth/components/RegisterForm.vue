@@ -93,13 +93,18 @@ async function submit() {
   try {
     if (isBusiness) {
       await auth.register({ ...base, businessName: businessName.value.trim(), agreement });
+      // Keep only the address for the confirmation page; the password is dropped immediately.
+      draft.value = { submittedEmail: base.email, portal: props.portal };
+      password.value = '';
+      await navigateTo('/check-email');
     } else {
+      // Participants do not have to verify their email: sign in right away. If the address
+      // already has an account, this fails like any wrong password and reveals nothing more.
       await auth.registerParticipant({ ...base, agreement });
+      await auth.login(base.email, base.password, 'participant');
+      password.value = '';
+      await navigateTo(HOME.PARTICIPANT);
     }
-    // Keep only the address for the confirmation page; the password is dropped immediately.
-    draft.value = { submittedEmail: base.email, portal: props.portal };
-    password.value = '';
-    await navigateTo('/check-email');
   } catch (e) {
     const f = classifyAuthError(toApiError(e));
     if (f.kind === 'weak-password') {

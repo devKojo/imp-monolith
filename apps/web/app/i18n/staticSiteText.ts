@@ -73,7 +73,7 @@ export const staticSiteText = {
   'register.business.submit': 'Create business account',
   'register.business.haveAccount': 'Already have a business account?',
   'register.business.signin': 'Sign in to the business portal',
-  'register.emailHint': 'We will send a link to verify it.',
+  'register.emailHint': 'You can verify it later, after you sign in.',
   'register.password': 'Create password',
   'register.passwordHint': 'We also check passwords against known data breaches.',
   'register.passwordBreached':
@@ -208,6 +208,14 @@ export const staticSiteText = {
     'This page shows example figures. Your real entries and rewards appear here once campaigns are connected.',
   'me.logout': 'Sign out',
   'me.verified': 'Verified',
+  'me.verify.title': 'Verify your email (optional)',
+  'me.verify.body':
+    'Confirm that this address is yours. You can skip this and keep using your account.',
+  'me.verify.send': 'Send verification email',
+  'me.verify.sent': 'We sent a link to {email}. Open it to finish.',
+  'me.verify.wait': 'You can resend in {time}.',
+  'me.verify.limited': 'Too many requests. Try again in {time}.',
+  'me.verify.failed': 'We could not send that right now. Try again in a moment.',
   'me.loggingOut': 'Signing out...',
   'me.footer': 'IMP',
 

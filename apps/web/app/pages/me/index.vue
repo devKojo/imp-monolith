@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
+import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.vue';
 import { participantSample as sample } from '../../modules/participant/sample';
 
 /**
@@ -44,6 +45,7 @@ async function logout() {
     :sign-out-label="loggingOut ? t('me.loggingOut') : t('me.logout')"
     @sign-out="logout"
   >
+    <VerifyEmailPrompt class="gap-after" />
     <UiBanner tone="system" :title="t('me.sample.title')" class="gap-after">
       {{ t('me.sample.body') }}
     </UiBanner>
