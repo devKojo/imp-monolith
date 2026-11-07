@@ -18,6 +18,7 @@ const EXPECTED_INDEXES = [
   'memberships_active_user_key',
   'sessions_token_hash_key',
   'email_verifications_token_hash_key',
+  'password_resets_token_hash_key',
   'outbox_pending_idx',
   'outbox_dispatched_idx',
   'memberships_tenant_id_id_key',
@@ -44,6 +45,9 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['email_verifications', 'verification_select'],
   ['email_verifications', 'verification_insert'],
   ['email_verifications', 'verification_update'],
+  ['password_resets', 'reset_select'],
+  ['password_resets', 'reset_insert'],
+  ['password_resets', 'reset_update'],
 ];
 // [role, table, privilege, expected]
 const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
@@ -66,6 +70,7 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_runtime', 'sessions', 'DELETE', true],
   ['app_system', 'sessions', 'SELECT', false],
   ['app_system', 'email_verifications', 'SELECT', false],
+  ['app_system', 'password_resets', 'SELECT', false],
   ['app_runtime', 'users', 'DELETE', false],
 ];
 

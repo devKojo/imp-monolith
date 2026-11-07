@@ -6,6 +6,8 @@ export type SignupDraft = {
   portal: Portal;
   /** A participant just created an account: the sign-in page prefills the address and says so. */
   registered?: boolean;
+  /** A password was just reset: the sign-in page says so. */
+  passwordReset?: boolean;
 };
 
 /**

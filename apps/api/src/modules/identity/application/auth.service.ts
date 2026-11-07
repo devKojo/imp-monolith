@@ -65,6 +65,7 @@ export type IssuedSession = {
 };
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 export class AuthService {
   private readonly now: Clock;
@@ -206,6 +207,79 @@ export class AuthService {
     );
     await this.deps.mailer.sendVerificationEmail(email, token);
     return { status: 'sent' };
+  }
+
+  /**
+   * "Forgot password": always answers the same way, whether or not the address has an account (no
+   * enumeration, UI-CPY-03). Limits are keyed on the address string itself and on the client IP, so
+   * they apply identically to unknown addresses. The email is sent in the background so response
+   * time does not reveal whether anything was sent.
+   */
+  async forgotPassword(input: { email: string; ip: string }): Promise<void> {
+    const email = normalizeEmail(input.email);
+    const {
+      resendIpLimiter: ipLimit,
+      resendEmailLimiter: perEmail,
+      resendCooldown: cooldown,
+    } = this.deps;
+    const ipKey = `pw:${input.ip}`;
+    const emailKey = `pw:${email}`;
+    ipLimit.assertAllowed(ipKey);
+    cooldown.assertAllowed(emailKey);
+    perEmail.assertAllowed(emailKey);
+    ipLimit.recordFailure(ipKey);
+    cooldown.recordFailure(emailKey);
+    perEmail.recordFailure(emailKey);
+
+    const user = await this.deps.repo.findLoginUser(email);
+    if (!user) return;
+    const token = generateToken();
+    await this.deps.repo.createPasswordReset(
+      user.id,
+      hashToken(token),
+      new Date(this.now().getTime() + PASSWORD_RESET_TTL_MS),
+    );
+    void this.deps.mailer.sendPasswordResetEmail(email, token).catch(() => {
+      console.warn('[mail] password reset email failed'); // never log the address (R-PRV-06)
+    });
+  }
+
+  /**
+   * Sets a new password from an emailed token. The token is checked before the password is vetted
+   * but only consumed once the password is accepted, so a rejected (weak or breached) password does
+   * not burn the link. All sessions are revoked, so whoever had access with the old password is out.
+   */
+  async resetPassword(input: {
+    token: string;
+    password: string;
+    ip: string;
+  }): Promise<{ accountType: AccountType }> {
+    const ipKey = `reset:${input.ip}`;
+    this.deps.loginLimiter.assertAllowed(ipKey);
+    const now = this.now();
+    const tokenHash = hashToken(input.token);
+
+    const owner = await this.deps.repo.peekPasswordReset(tokenHash, now);
+    if (!owner) {
+      this.deps.loginLimiter.recordFailure(ipKey); // guessing tokens costs attempts
+      throw new InvalidTokenError();
+    }
+    const problems = passwordProblems(input.password, owner.email);
+    if (problems.length === 0 && (await this.deps.breached.isBreached(input.password))) {
+      problems.push('has appeared in a known data breach; choose a different password');
+    }
+    if (problems.length > 0) throw new WeakPasswordError(problems);
+
+    const done = await this.deps.repo.completePasswordReset({
+      tokenHash,
+      passwordHash: await this.deps.hasher.hash(input.password),
+      now,
+    });
+    if (!done) throw new InvalidTokenError(); // used or expired between the check and now
+    void this.deps.mailer.sendPasswordChangedEmail(done.email).catch(() => {
+      console.warn('[mail] password changed notice failed');
+    });
+    return { accountType: done.accountType };
   }
 
   async verifyEmail(token: string): Promise<void> {

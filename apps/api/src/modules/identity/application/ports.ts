@@ -15,6 +15,8 @@ export type MembershipSummary = {
 
 export type AccountType = 'BUSINESS' | 'PARTICIPANT';
 
+export type ResetOwner = { userId: string; email: string; accountType: AccountType };
+
 export type LoginUser = {
   id: string;
   accountType: AccountType;
@@ -101,6 +103,20 @@ export interface IdentityRepository {
     now: Date,
   ): Promise<boolean>;
   listMemberships(userId: string): Promise<MembershipSummary[]>;
+  /** Stores a password-reset token (hash only) for an existing user. */
+  createPasswordReset(userId: string, tokenHash: string, expiresAt: Date): Promise<void>;
+  /** Who a still-valid reset token belongs to, without consuming it; null if unknown, used or expired. */
+  peekPasswordReset(tokenHash: string, now: Date): Promise<ResetOwner | null>;
+  /**
+   * Single-use: consumes the token, sets the password, marks the address verified (the person
+   * proved they own it), clears any lock, revokes every session and any other outstanding
+   * reset tokens. Null for the caller that loses a race or presents a bad token.
+   */
+  completePasswordReset(input: {
+    tokenHash: string;
+    passwordHash: string;
+    now: Date;
+  }): Promise<ResetOwner | null>;
   /** Adds a fresh verification token for an existing, unverified user (resend). */
   createEmailVerification(userId: string, tokenHash: string, expiresAt: Date): Promise<void>;
   /** Single-use: true only for the one call that redeems a valid token. */
@@ -134,6 +150,9 @@ export interface GoogleIdentityProvider {
 
 export interface Mailer {
   sendVerificationEmail(to: string, token: string): Promise<void>;
+  sendPasswordResetEmail(to: string, token: string): Promise<void>;
+  /** Security notice after a password was reset (no token, no link). */
+  sendPasswordChangedEmail(to: string): Promise<void>;
 }
 
 export interface LoginRateLimiter {
