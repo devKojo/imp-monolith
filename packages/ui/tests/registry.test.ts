@@ -68,6 +68,7 @@ describe('reuse over duplication', () => {
       'UiOtpInput',
       'UiDateTimeField',
       'UiMediaUploader',
+      'UiSegmentedControl',
     ]);
     const offenders: string[] = [];
     for (const name of componentFiles) {

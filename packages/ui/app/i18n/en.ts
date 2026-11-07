@@ -19,6 +19,7 @@ export const en = {
   'common.copied': 'Copied',
   'common.loading': 'Loading',
   'common.help': 'Help',
+  'avatar.verified': 'Verified',
   'common.on': 'On',
   'common.off': 'Off',
   'common.requiredText': '(required)',

@@ -9,7 +9,11 @@ const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
  * (ADR-F005).
  */
 export default defineNuxtConfig({
-  css: [here('./app/assets/css/tokens.css'), here('./app/assets/css/base.css')],
+  css: [
+    '@fontsource-variable/inter/wght.css',
+    here('./app/assets/css/tokens.css'),
+    here('./app/assets/css/base.css'),
+  ],
   components: [{ path: here('./app/components'), pathPrefix: false }],
   hooks: {
     'pages:extend'(pages) {

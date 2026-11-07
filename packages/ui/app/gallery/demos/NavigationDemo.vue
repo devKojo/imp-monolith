@@ -18,6 +18,8 @@ import UiDivider from '../../components/UiDivider.vue';
 import UiLink from '../../components/UiLink.vue';
 import UiPasswordField from '../../components/UiPasswordField.vue';
 import UiTextInput from '../../components/UiTextInput.vue';
+import UiConsoleShell from '../../components/UiConsoleShell.vue';
+import UiPortalShell from '../../components/UiPortalShell.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const tab = ref('overview');
@@ -191,6 +193,40 @@ const authPassword = ref('');
       </UiAuthShell>
     </div>
   </GalleryBlock>
+
+  <GalleryBlock name="UiConsoleShell">
+    <div class="demo-frame demo-contained">
+      <UiConsoleShell
+        brand-name="Acme"
+        brand-tag="Console"
+        :nav="nav"
+        user-name="Alex Boateng"
+        user-role="Owner"
+      >
+        <template #actions><UiButton icon="plus">Create campaign</UiButton></template>
+        <p>Page content renders inside the single main landmark.</p>
+      </UiConsoleShell>
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiPortalShell">
+    <div class="demo-frame demo-contained">
+      <UiPortalShell
+        brand-name="Acme"
+        nav-label="Participant"
+        sign-out-label="Sign out"
+        :nav="[
+          { label: 'My rewards', to: '#', current: true },
+          { label: 'Discover', to: '#' },
+        ]"
+        user-name="Kwame Mensah"
+        user-status="Verified"
+      >
+        <p>Page content renders inside the single main landmark.</p>
+        <template #footer><span>Acme</span></template>
+      </UiPortalShell>
+    </div>
+  </GalleryBlock>
 </template>
 
 <style scoped>
@@ -201,5 +237,10 @@ const authPassword = ref('');
   overflow: hidden;
   border: 1px solid var(--ui-color-border-strong);
   border-radius: var(--ui-radius-md);
+}
+.demo-contained {
+  block-size: calc(var(--ui-space-12) * 8);
+  overflow: auto;
+  transform: translateZ(0);
 }
 </style>

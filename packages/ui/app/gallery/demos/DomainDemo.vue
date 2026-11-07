@@ -7,6 +7,10 @@ import UiReorderableList from '../../components/UiReorderableList.vue';
 import UiRewardCard from '../../components/UiRewardCard.vue';
 import UiCampaignCard from '../../components/UiCampaignCard.vue';
 import UiFeatureTile from '../../components/UiFeatureTile.vue';
+import UiClaimCard from '../../components/UiClaimCard.vue';
+import UiInstantWinCard from '../../components/UiInstantWinCard.vue';
+import UiDrawCard from '../../components/UiDrawCard.vue';
+import UiButton from '../../components/UiButton.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const questions = ref([
@@ -155,6 +159,57 @@ const proof = {
         type-icon="bar-chart"
         to="/ui/screens"
         time-left="Ends today"
+      />
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiClaimCard">
+    <UiClaimCard
+      eyebrow="Ready to claim"
+      meta="Expires in 14 days"
+      amount="GHS 500"
+      title="Weekend getaway voucher"
+      description="You won the Black Friday draw. Redeem it with the partner before it expires."
+      note="Your code is shown right after you claim."
+    >
+      <template #action><UiButton variant="secondary" icon="zap">Claim reward</UiButton></template>
+    </UiClaimCard>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiInstantWinCard">
+    <UiInstantWinCard
+      tag="Instant win"
+      reference="Entry 9912"
+      title="Festive scratch card"
+      description="1 in 4 chance to win a GHS 50 voucher. Find out now."
+      panel-title="Secret prize inside"
+      panel-text="Ready to reveal"
+    >
+      <template #action><UiButton block icon="wand">Reveal result</UiButton></template>
+    </UiInstantWinCard>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiDrawCard">
+    <div class="demo-grid">
+      <UiDrawCard
+        icon="trophy"
+        title="Grand prize draw"
+        subtitle="Savanna Travel · Black Friday"
+        when="Draws in 2 days"
+        ticket-label="Ticket"
+        ticket="8492"
+        status="Confirmed"
+      />
+      <UiDrawCard
+        icon="gift"
+        title="Weekly giveaway"
+        subtitle="Accra Coffee · Loyalty"
+        when="Draws in 5 days"
+        ticket-label="Ticket"
+        ticket="7210"
+        status="Pending check"
+        status-tone="warning"
+        status-icon="clock"
       />
     </div>
   </GalleryBlock>

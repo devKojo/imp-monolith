@@ -5,6 +5,7 @@ import UiDataTable, { type SortState } from '../../components/UiDataTable.vue';
 import UiMaskedValue from '../../components/UiMaskedValue.vue';
 import UiStatusChip from '../../components/UiStatusChip.vue';
 import { maskEmail, maskPhone } from '../../utils/phone';
+import UiStatCard from '../../components/UiStatCard.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const all = [
@@ -146,4 +147,40 @@ const funnel = [
       approx
     />
   </GalleryBlock>
+
+  <GalleryBlock name="UiStatCard">
+    <div class="demo-stats">
+      <UiStatCard
+        label="Active entries"
+        label-style="eyebrow"
+        value="4"
+        suffix="tickets live"
+        icon="ticket"
+      />
+      <UiStatCard
+        label="Active participants"
+        value="148,290"
+        badge="Up 12.4%"
+        badge-icon="arrow-up"
+        icon="users"
+        :footer="[{ label: 'Compared with last period', value: '+16,340 new' }]"
+      />
+      <UiStatCard
+        label="Draw health"
+        value="100%"
+        badge="Verified"
+        badge-tone="info"
+        icon="shield-check"
+        :footer="[{ label: 'Cryptographic integrity', value: '0 anomalies' }]"
+      />
+    </div>
+  </GalleryBlock>
 </template>
+
+<style scoped>
+.demo-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--ui-space-12) * 5), 1fr));
+  gap: var(--ui-space-4);
+}
+</style>
