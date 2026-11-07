@@ -31,8 +31,6 @@ export const staticSiteText = {
   'signin.title': 'Welcome back',
   'signin.subtitle': 'Sign in to see your entries, rewards and live draws.',
   'signin.subtitle.business': 'Sign in to manage your campaigns.',
-  'signin.badge': 'Secure access',
-  'signin.badge.business': 'Business portal',
   'signin.switch.business': 'Running campaigns? Business sign in',
   'signin.switch.participant': 'Joining campaigns? Participant sign in',
   'signin.email': 'Email address',
@@ -51,7 +49,6 @@ export const staticSiteText = {
   // registration (one form, two portals: ADR-P001)
   'register.participant.title': 'Create your account',
   'register.participant.subtitle': 'Join campaigns, track your entries and claim rewards.',
-  'register.participant.badge': 'Free for participants',
   'register.participant.name': 'Full name',
   'register.participant.email': 'Email address',
   'register.participant.agreement': 'I accept the Terms of Service and the Privacy Notice',
@@ -91,7 +88,6 @@ export const staticSiteText = {
 
   // check email
   'checkEmail.title': 'Check your email',
-  'checkEmail.badge': 'Verification link sent',
   'checkEmail.body':
     'If {email} is not registered yet, we sent it a verification link. Open the link to activate your account. If you already have an account, sign in instead.',
   'checkEmail.bodyNoEmail':

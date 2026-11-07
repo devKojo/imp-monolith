@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { t } from '../i18n';
 import { useAuth } from '../modules/auth/composables/useAuth';
-import { BRAND_NAME } from '../modules/auth/constants';
 
 /**
  * Landing page for the link in the verification email. The token is redeemed by a POST from the
@@ -28,18 +27,19 @@ onMounted(async () => {
     state.value = 'bad';
   }
 });
+const title = computed(() =>
+  state.value === 'ok'
+    ? t('verify.ok.title')
+    : state.value === 'bad'
+      ? t('verify.bad.title')
+      : t('verify.working'),
+);
 </script>
 
 <template>
   <UiAuthShell
-    :brand-name="BRAND_NAME"
-    :title="
-      state === 'ok'
-        ? t('verify.ok.title')
-        : state === 'bad'
-          ? t('verify.bad.title')
-          : t('verify.working')
-    "
+    :breadcrumbs="[{ label: t('nav.discover'), to: '/discover' }, { label: title }]"
+    :title="title"
   >
     <UiSkeleton v-if="state === 'working'" variant="text" :lines="2" />
     <template v-else-if="state === 'ok'">

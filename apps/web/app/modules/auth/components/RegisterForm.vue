@@ -5,7 +5,7 @@ import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import { AGREEMENT_VERSION, BRAND_NAME, HOME } from '../constants';
+import { AGREEMENT_VERSION, HOME } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
   businessNameProblem,
@@ -122,21 +122,19 @@ async function submit() {
     loading.value = false; // input is kept so nothing is lost on a recoverable failure
   }
 }
+const crumbs = [
+  { label: t('nav.discover'), to: '/discover' },
+  { label: isBusiness ? t('footer.business.register') : t('nav.signup') },
+];
 </script>
 
 <template>
   <UiAuthShell
     :size="isBusiness ? 'wide' : 'narrow'"
-    :brand-name="BRAND_NAME"
+    :breadcrumbs="crumbs"
     :title="k('title')"
     :subtitle="k('subtitle')"
   >
-    <template v-if="!isBusiness" #badge>
-      <UiBadge shape="pill" tone="info" icon="shield-check">{{
-        t('register.participant.badge')
-      }}</UiBadge>
-    </template>
-
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice

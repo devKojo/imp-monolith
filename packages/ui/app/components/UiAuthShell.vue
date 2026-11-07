@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import UiBreadcrumbs from './UiBreadcrumbs.vue';
 import UiSkipLink from './UiSkipLink.vue';
 
 /**
- * Frame for sign-in, sign-up and onboarding screens: brand, one centred card (title, subtitle,
+ * Frame for sign-in, sign-up and onboarding screens: breadcrumbs back to where the person came
+ * from (or a brand line when none are given), one centred card (title, subtitle,
  * body, account-routing footer strip) and optional text under it. `wide` adds a side column for
  * supporting content on large screens. It holds no per-user data, so it is safe to server-render.
  */
@@ -10,7 +12,10 @@ withDefaults(
   defineProps<{
     title: string;
     subtitle?: string;
-    brandName: string;
+    /** Shown only when there are no breadcrumbs. */
+    brandName?: string;
+    /** Trail back to the public site, e.g. Discover > Sign in. The last item is the current page. */
+    breadcrumbs?: Array<{ label: string; to?: string }>;
     size?: 'narrow' | 'wide';
   }>(),
   { size: 'narrow' },
@@ -20,8 +25,9 @@ withDefaults(
 <template>
   <div class="ui-auth">
     <UiSkipLink />
-    <header class="ui-auth__brand">
-      <slot name="brand">
+    <header v-if="breadcrumbs?.length || brandName || $slots.brand" class="ui-auth__brand">
+      <UiBreadcrumbs v-if="breadcrumbs?.length" :items="breadcrumbs" />
+      <slot v-else name="brand">
         <strong class="ui-text-h3">{{ brandName }}</strong>
       </slot>
     </header>
@@ -56,8 +62,8 @@ withDefaults(
 }
 .ui-auth__brand {
   display: flex;
-  justify-content: center;
-  padding: var(--ui-space-8) var(--ui-space-4) 0;
+  justify-content: flex-start;
+  padding: var(--ui-space-5) var(--ui-space-6) 0;
 }
 .ui-auth__main {
   display: flex;

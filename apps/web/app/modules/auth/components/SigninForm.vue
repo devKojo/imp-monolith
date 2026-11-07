@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { t } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import { BRAND_NAME, HOME } from '../constants';
+import { HOME } from '../constants';
 import type { Portal } from '../types';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
@@ -70,20 +70,18 @@ async function submit() {
     loading.value = false; // input is kept so nothing is lost on a recoverable failure
   }
 }
+const crumbs = [
+  { label: t('nav.discover'), to: '/discover' },
+  { label: isBusiness ? t('footer.business.signin') : t('nav.signin') },
+];
 </script>
 
 <template>
   <UiAuthShell
-    :brand-name="BRAND_NAME"
+    :breadcrumbs="crumbs"
     :title="t('signin.title')"
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
-    <template #badge>
-      <UiBadge shape="pill" tone="info" icon="shield-check">{{
-        isBusiness ? t('signin.badge.business') : t('signin.badge')
-      }}</UiBadge>
-    </template>
-
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice

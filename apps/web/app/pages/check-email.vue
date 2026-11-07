@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { t } from '../i18n';
 import { useSignupDraft } from '../modules/auth/composables/useSignupDraft';
-import { BRAND_NAME, SIGNIN } from '../modules/auth/constants';
+import { SIGNIN } from '../modules/auth/constants';
 
 useHead({ title: t('checkEmail.title') });
 
@@ -10,10 +10,10 @@ const isDev = import.meta.dev;
 </script>
 
 <template>
-  <UiAuthShell :brand-name="BRAND_NAME" :title="t('checkEmail.title')">
-    <template #badge>
-      <UiBadge shape="pill" tone="success" icon="mail">{{ t('checkEmail.badge') }}</UiBadge>
-    </template>
+  <UiAuthShell
+    :breadcrumbs="[{ label: t('nav.discover'), to: '/discover' }, { label: t('checkEmail.title') }]"
+    :title="t('checkEmail.title')"
+  >
     <p class="ui-text-body">
       {{
         draft.submittedEmail
