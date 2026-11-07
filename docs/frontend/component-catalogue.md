@@ -86,13 +86,13 @@
 | `UiStepper` | Builder stages (with status) and participant "Step n of N" progress. | `UiIcon`, `UiProgress` | - | UI-BLD-01, UI-PUB-05 |
 | `UiTabs` | Tabs with arrow-key navigation. | - | - | Spec 5 |
 | `UiAccordion` | Disclosure list for how-it-works and FAQ. | `UiIcon` | - | Spec 5, UI-PUB-01 |
-| `UiBreadcrumbs` | Breadcrumb trail with the current page marked. | `UiIcon`, `UiLink` | - | UI-DSH-01 |
+| `UiBreadcrumbs` | Breadcrumb trail with the current page marked. | `UiIcon`, `UiLink` | `UiAuthShell` | UI-DSH-01 |
 | `UiSidebarNav` | Primary navigation filtered by role by the caller. | `UiIcon`, `UiLink` | `UiConsoleShell`, `UiDashboardShell` | UI-DSH-01, Spec 2.2 |
 | `UiTopBar` | Business name and role, search, help, notifications and user menu. | `UiButton`, `UiIcon`, `UiLink` | `UiDashboardShell` | UI-DSH-01, UI-A11Y-13, UI-DSH-14 |
 | `UiSkipLink` | Skip-to-content link, first focusable element on every page. | - | `UiAuthShell`, `UiConsoleShell`, `UiDashboardShell`, `UiPortalShell`, `UiPublicShell` | UI-A11Y-06 |
 | `UiDashboardShell` | Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark. | `UiSidebarNav`, `UiSkipLink`, `UiTopBar` | - | UI-DSH-01, UI-FND-05 |
 | `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
-| `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column. | `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
+| `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column. | `UiBreadcrumbs`, `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
 | `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
 | `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
 

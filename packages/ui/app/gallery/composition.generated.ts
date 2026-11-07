@@ -8,6 +8,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiAuthShell": {
     "composes": [
+      "UiBreadcrumbs",
       "UiSkipLink"
     ],
     "usedBy": []
@@ -45,7 +46,9 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiIcon",
       "UiLink"
     ],
-    "usedBy": []
+    "usedBy": [
+      "UiAuthShell"
+    ]
   },
   "UiButton": {
     "composes": [
