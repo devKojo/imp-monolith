@@ -12,7 +12,7 @@ import UiLink from './UiLink.vue';
 const props = withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
-    size?: 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg';
     type?: 'button' | 'submit' | 'reset';
     /** Render as a link to this route or URL instead of a <button>. */
     to?: string;
@@ -103,11 +103,12 @@ function onClick(e: MouseEvent) {
   gap: var(--ui-space-2);
   min-block-size: var(--ui-control-target, var(--ui-target-public));
   min-inline-size: var(--ui-control-target, var(--ui-target-public));
-  padding-inline: var(--ui-space-4);
+  padding-inline: var(--ui-space-3);
   border: 1px solid transparent;
   border-radius: var(--ui-radius-md);
   font: inherit;
-  font-weight: 600;
+  font-size: var(--ui-font-body-s-size);
+  font-weight: 500;
   cursor: pointer;
   transition:
     background var(--ui-motion-fast) ease,
@@ -118,9 +119,15 @@ function onClick(e: MouseEvent) {
 .ui-button:active:not(:disabled) {
   transform: translateY(1px);
 }
+.ui-button[data-size='sm'] {
+  min-block-size: var(--ui-space-8);
+  min-inline-size: var(--ui-space-8);
+  padding-inline: var(--ui-space-3);
+  font-size: var(--ui-font-caption-size);
+}
 .ui-button[data-size='lg'] {
-  padding-inline: var(--ui-space-6);
-  font-size: var(--ui-font-body-l-size);
+  padding-inline: var(--ui-space-5);
+  font-size: var(--ui-font-body-size);
 }
 .ui-button-wrap[data-block='true'] .ui-button {
   inline-size: 100%;

@@ -52,8 +52,8 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
   padding: var(--ui-space-1);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-xl);
-  box-shadow: var(--ui-elevation-2);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-elevation-1);
   transition: border-color var(--ui-motion-fast) ease;
 }
 .ui-search:focus-within {

@@ -77,6 +77,75 @@ export function sampleCampaigns(nowMs: number): DiscoveryCampaign[] {
       timeZone: 'Africa/Accra',
       prize: { label: 'Prize', value: 'GHS 50 airtime' },
     },
+    ...[
+      [
+        'Weekend brunch vote',
+        'poll',
+        'Pick the brunch special we serve next month.',
+        'Osu Kitchen',
+        30,
+      ],
+      [
+        'Sneaker design quiz',
+        'quiz',
+        'Six questions on sneaker history. Top scorers win a store voucher.',
+        'Kicks Lab',
+        90,
+        'GHS 200 voucher',
+      ],
+      [
+        'Phone plan survey',
+        'survey',
+        'Tell us what you want from a mobile plan. Takes three minutes.',
+        'Ghana Mobile',
+        150,
+        'GHS 100 data bundle',
+      ],
+      [
+        'Mural of the year',
+        'vote',
+        'Vote for your favourite street mural in Accra.',
+        'City Arts',
+        48,
+      ],
+      [
+        'Gym membership giveaway',
+        'giveaway',
+        'Enter once to win three months at a partner gym.',
+        'FitHub',
+        200,
+        '3 months free',
+      ],
+      [
+        'Cocoa trivia',
+        'quiz',
+        'How well do you know Ghana cocoa? Eight quick questions.',
+        'Cocoa Co.',
+        72,
+        'Chocolate hamper',
+      ],
+      ['Radio jingle poll', 'poll', 'Which jingle should we air this season?', 'Joy Beats', 26],
+      [
+        'Travel habits survey',
+        'survey',
+        'Share how you travel and enter the draw.',
+        'Voyage Co.',
+        260,
+        'GHS 250 voucher',
+      ],
+    ].map(([title, type, summary, businessName, hours, prize], i) => ({
+      id: `0197a000-0000-7000-8000-0000000000${String(i + 7).padStart(2, '0')}`,
+      slug: String(title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-'),
+      title: String(title),
+      summary: String(summary),
+      businessName: String(businessName),
+      type: type as DiscoveryCampaign['type'],
+      endsAt: at(Number(hours)),
+      timeZone: 'Africa/Accra',
+      ...(prize ? { prize: { label: 'Prize', value: String(prize) } } : {}),
+    })),
   ];
 }
 

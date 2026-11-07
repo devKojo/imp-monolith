@@ -27,3 +27,15 @@ demo next to the `public_discovery` reference.
 ## Consequences
 
 Every component picks up the new radii from tokens. Per-component radius overrides stay a smell.
+
+## Addendum: compact density, footer, static text, paging
+
+- Public pages run compact: controls 36 px (was 44), buttons 14 px and weight 500, a `sm` button
+  size (32 px), and a smaller campaign card so four fit on a row. Inputs stay 16 px below 768 px so
+  iOS does not zoom.
+- `/discover` drops the sample-data banner and the "How entries stay fair" band. The brand is the
+  plain wordmark "IMP", with no logo mark.
+- `UiPublicShell` takes `footerColumns`, `footerTagline` and `copyright` for a link-column footer.
+- All site text lives in `apps/web/app/i18n/staticSiteText.ts` (renamed from `en.ts`).
+- Discover reveals 8 campaigns at a time: an intersection sentinel loads the next page on scroll
+  and a visible "Show more" button covers keyboard use and blocked scripts.

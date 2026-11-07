@@ -40,14 +40,5 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.72.1",
     "vue-eslint-parser": "^10.4.2"
-  },
-  "lint-staged": {
-    "*.{ts,js,vue}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml,css}": [
-      "prettier --write"
-    ]
   }
 }

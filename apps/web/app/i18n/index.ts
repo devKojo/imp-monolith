@@ -1,4 +1,4 @@
-import { en, type AppTextKey } from './en';
+import { staticSiteText as en, type AppTextKey } from './staticSiteText';
 
 export type TextParams = Record<string, string | number>;
 

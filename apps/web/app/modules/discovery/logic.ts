@@ -42,3 +42,10 @@ export function timeLeftText(endsAtIso: string, nowMs: number): string {
 
 export const countText = (n: number): string =>
   n === 1 ? t('discover.count.one') : t('discover.count.other', { n });
+
+/** Campaigns revealed per step: two rows of four on a wide screen. */
+export const PAGE_SIZE = 8;
+
+/** The next visible count after "show more", never beyond the total. */
+export const nextVisible = (visible: number, total: number): number =>
+  Math.min(visible + PAGE_SIZE, total);

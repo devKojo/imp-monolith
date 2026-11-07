@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { en } from './i18n/en';
+import { staticSiteText as en } from './i18n/staticSiteText';
 
 type Rule = { ssr?: boolean; headers?: Record<string, string>; redirect?: unknown };
 let config: { routeRules: Record<string, Rule>; runtimeConfig: { public: Record<string, string> } };

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import type { IconName } from '@imp/ui/app/icons';
 import { t, type AppTextKey } from '../i18n';
 import { useDiscovery } from '../modules/discovery/composables/useDiscovery';
 import { BRAND_NAME } from '../modules/auth/constants';
-import { countText, timeLeftText } from '../modules/discovery/logic';
+import { PAGE_SIZE, countText, nextVisible, timeLeftText } from '../modules/discovery/logic';
 import { isCampaignType, type CampaignType } from '../modules/discovery/types';
 
 /**
@@ -65,6 +65,67 @@ const cards = computed(() =>
   })),
 );
 
+// Paging: reveal PAGE_SIZE at a time. A sentinel below the grid loads the next page as it scrolls
+// into view; the visible button does the same for keyboard users and when scripts are blocked.
+const visible = ref(PAGE_SIZE);
+watch(
+  () => [query.value.q, query.value.type],
+  () => (visible.value = PAGE_SIZE),
+);
+const shown = computed(() => cards.value.slice(0, visible.value));
+const hasMore = computed(() => visible.value < cards.value.length);
+const showMore = () => (visible.value = nextVisible(visible.value, cards.value.length));
+const shownText = computed(() =>
+  t('discover.shown', { shown: shown.value.length, total: cards.value.length }),
+);
+
+const sentinel = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | undefined;
+onMounted(() => {
+  if (typeof IntersectionObserver === 'undefined') return;
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting) && hasMore.value) showMore();
+    },
+    { rootMargin: '240px' },
+  );
+  watch(
+    sentinel,
+    (el, old) => {
+      if (old) observer?.unobserve(old);
+      if (el) observer?.observe(el);
+    },
+    { immediate: true },
+  );
+});
+onBeforeUnmount(() => observer?.disconnect());
+
+const footerColumns = [
+  {
+    title: t('footer.participants'),
+    links: [
+      { label: t('footer.participants.discover'), to: '/discover' },
+      { label: t('footer.participants.signin'), to: '/signin' },
+      { label: t('footer.participants.signup'), to: '/signup' },
+    ],
+  },
+  {
+    title: t('footer.business'),
+    links: [
+      { label: t('footer.business.register'), to: '/business/register' },
+      { label: t('footer.business.signin'), to: '/business/signin' },
+    ],
+  },
+  {
+    title: t('footer.support'),
+    links: [
+      { label: t('footer.support.help'), to: '/help' },
+      { label: t('footer.support.report'), to: '/report-abuse' },
+    ],
+  },
+];
+const copyright = t('footer.copyright', { year: new Date().getFullYear() });
+
 const filtered = computed(() => query.value.q.trim() !== '' || query.value.type !== 'all');
 const resultCount = computed(() => (pending.value ? '' : countText(campaigns.value.length)));
 const livePill = computed(() =>
@@ -77,7 +138,13 @@ const livePill = computed(() =>
 </script>
 
 <template>
-  <UiPublicShell :brand-name="BRAND_NAME" wide>
+  <UiPublicShell
+    :brand-name="BRAND_NAME"
+    wide
+    :footer-tagline="t('footer.tagline')"
+    :footer-columns="footerColumns"
+    :copyright="copyright"
+  >
     <template #nav>
       <UiLink to="/discover" aria-current="page">{{ t('nav.discover') }}</UiLink>
       <UiLink to="/business/register">{{ t('nav.forBusinesses') }}</UiLink>
@@ -93,8 +160,8 @@ const livePill = computed(() =>
         <p v-if="livePill" class="pill ui-text-label-sm">
           <span class="pill__dot" aria-hidden="true" />{{ livePill }}
         </p>
-        <h1 id="discover-title" class="hero__title ui-text-display">{{ t('discover.title') }}</h1>
-        <p class="hero__lead ui-text-body-l">{{ t('discover.subtitle') }}</p>
+        <h1 id="discover-title" class="hero__title ui-text-h1">{{ t('discover.title') }}</h1>
+        <p class="hero__lead ui-text-body-s">{{ t('discover.subtitle') }}</p>
         <div class="hero__search">
           <UiSearchField
             v-model="text"
@@ -112,10 +179,6 @@ const livePill = computed(() =>
     </section>
 
     <div class="wrap">
-      <UiBanner v-if="discovery.isSample" tone="system" :title="t('discover.sample.title')">
-        {{ t('discover.sample.body') }}
-      </UiBanner>
-
       <section class="results" aria-labelledby="results-title">
         <div class="results__head">
           <h2 id="results-title" class="ui-text-h2">
@@ -135,7 +198,7 @@ const livePill = computed(() =>
         </ul>
 
         <ul v-else-if="cards.length > 0" class="grid">
-          <li v-for="c in cards" :key="c.id">
+          <li v-for="c in shown" :key="c.id">
             <UiCampaignCard
               :title="c.title"
               :summary="c.summary"
@@ -172,31 +235,18 @@ const livePill = computed(() =>
           :description="t('discover.none.body')"
           :heading-level="3"
         />
+
+        <div v-if="!error && cards.length > 0" class="more">
+          <p class="more__count ui-text-caption ui-text-hint">{{ shownText }}</p>
+          <template v-if="hasMore">
+            <div ref="sentinel" class="more__sentinel" aria-hidden="true" />
+            <UiButton variant="secondary" size="sm" @click="showMore">
+              {{ t('discover.more') }}
+            </UiButton>
+          </template>
+        </div>
       </section>
     </div>
-
-    <section class="how" aria-labelledby="how-title">
-      <div class="wrap">
-        <h2 id="how-title" class="how__title ui-text-label-sm">{{ t('discover.how.title') }}</h2>
-        <div class="tiles">
-          <UiFeatureTile
-            icon="shield-check"
-            :title="t('discover.how.verified.title')"
-            :description="t('discover.how.verified.body')"
-          />
-          <UiFeatureTile
-            icon="trophy"
-            :title="t('discover.how.draws.title')"
-            :description="t('discover.how.draws.body')"
-          />
-          <UiFeatureTile
-            icon="lock"
-            :title="t('discover.how.privacy.title')"
-            :description="t('discover.how.privacy.body')"
-          />
-        </div>
-      </div>
-    </section>
   </UiPublicShell>
 </template>
 
@@ -241,8 +291,8 @@ const livePill = computed(() =>
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--ui-space-4);
-  padding: var(--ui-space-10) var(--ui-space-4) var(--ui-space-8);
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-8) var(--ui-space-4) var(--ui-space-6);
   text-align: center;
 }
 .pill {
@@ -277,6 +327,7 @@ const livePill = computed(() =>
 .hero__title {
   max-inline-size: calc(var(--ui-space-12) * 15);
   margin: 0;
+  font-weight: 600;
 }
 .hero__lead {
   max-inline-size: calc(var(--ui-space-12) * 11);
@@ -285,17 +336,19 @@ const livePill = computed(() =>
 }
 .hero__search {
   inline-size: 100%;
-  max-inline-size: calc(var(--ui-space-12) * 14);
-  margin-block-start: var(--ui-space-3);
+  max-inline-size: calc(var(--ui-space-12) * 12);
+  margin-block-start: var(--ui-space-2);
   text-align: start;
 }
 .hero__chips {
   justify-content: center;
   max-inline-size: calc(var(--ui-space-12) * 16);
+  /* Smaller chips than the page default. */
+  --ui-control-target: var(--ui-space-8);
 }
 
 .results {
-  padding-block: var(--ui-space-8);
+  padding-block: var(--ui-space-6) var(--ui-space-10);
 }
 .results__head {
   display: flex;
@@ -322,9 +375,9 @@ const livePill = computed(() =>
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(calc(var(--ui-space-12) * 6), 1fr));
-  gap: var(--ui-space-6);
-  margin: var(--ui-space-6) 0 0;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--ui-space-12) * 5), 1fr));
+  gap: var(--ui-space-4);
+  margin: var(--ui-space-5) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -332,20 +385,18 @@ const livePill = computed(() =>
   min-inline-size: 0;
 }
 
-.how {
-  padding-block: var(--ui-space-10);
-  background: var(--ui-color-surface-subtle);
-  border-block-start: 1px solid var(--ui-color-border);
+.more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ui-space-3);
+  margin-block-start: var(--ui-space-6);
 }
-.how__title {
-  margin: 0 0 var(--ui-space-4);
-  color: var(--ui-color-text-secondary);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.more__count {
+  margin: 0;
 }
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(calc(var(--ui-space-12) * 5), 1fr));
-  gap: var(--ui-space-6);
+.more__sentinel {
+  block-size: 1px;
+  inline-size: 100%;
 }
 </style>
