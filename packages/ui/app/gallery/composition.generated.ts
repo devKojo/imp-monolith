@@ -6,6 +6,31 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiAuthShell": {
+    "composes": [
+      "UiSkipLink"
+    ],
+    "usedBy": []
+  },
+  "UiAvatar": {
+    "composes": [],
+    "usedBy": [
+      "UiConsoleShell",
+      "UiPortalShell"
+    ]
+  },
+  "UiBadge": {
+    "composes": [
+      "UiIcon"
+    ],
+    "usedBy": [
+      "UiCampaignCard",
+      "UiDrawCard",
+      "UiInstantWinCard",
+      "UiStatCard",
+      "UiStatusChip"
+    ]
+  },
   "UiBanner": {
     "composes": [
       "UiButton",
@@ -24,14 +49,17 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiButton": {
     "composes": [
-      "UiIcon"
+      "UiIcon",
+      "UiLink"
     ],
     "usedBy": [
       "UiBanner",
+      "UiCampaignCard",
       "UiCaptchaWrapper",
       "UiChart",
       "UiConfirmDialog",
       "UiConflictDialog",
+      "UiConsoleShell",
       "UiCopyButton",
       "UiCountdown",
       "UiDataTable",
@@ -39,12 +67,24 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiMaskedValue",
       "UiMediaUploader",
       "UiOtpInput",
+      "UiPasswordField",
+      "UiPortalShell",
       "UiReorderableList",
+      "UiSearchField",
       "UiStepUpDialog",
       "UiSystemState",
       "UiToaster",
       "UiTopBar"
     ]
+  },
+  "UiCampaignCard": {
+    "composes": [
+      "UiBadge",
+      "UiButton",
+      "UiCard",
+      "UiIcon"
+    ],
+    "usedBy": []
   },
   "UiCaptchaWrapper": {
     "composes": [
@@ -57,8 +97,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   "UiCard": {
     "composes": [],
     "usedBy": [
+      "UiCampaignCard",
       "UiCaptchaWrapper",
       "UiDrawProofPanel",
+      "UiFeatureTile",
       "UiRewardCard"
     ]
   },
@@ -82,6 +124,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiClaimCard": {
+    "composes": [],
+    "usedBy": []
+  },
   "UiConfirmDialog": {
     "composes": [
       "UiButton",
@@ -101,6 +147,15 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [
       "UiCheckbox",
       "UiLink"
+    ],
+    "usedBy": []
+  },
+  "UiConsoleShell": {
+    "composes": [
+      "UiAvatar",
+      "UiButton",
+      "UiSidebarNav",
+      "UiSkipLink"
     ],
     "usedBy": []
   },
@@ -153,6 +208,17 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiStepUpDialog"
     ]
   },
+  "UiDivider": {
+    "composes": [],
+    "usedBy": []
+  },
+  "UiDrawCard": {
+    "composes": [
+      "UiBadge",
+      "UiIconTile"
+    ],
+    "usedBy": []
+  },
   "UiDrawProofPanel": {
     "composes": [
       "UiButton",
@@ -176,6 +242,19 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiFeatureTile": {
+    "composes": [
+      "UiCard",
+      "UiIcon"
+    ],
+    "usedBy": []
+  },
+  "UiFilterChips": {
+    "composes": [
+      "UiIcon"
+    ],
+    "usedBy": []
+  },
   "UiFormField": {
     "composes": [
       "UiIcon"
@@ -191,9 +270,11 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [],
     "usedBy": [
       "UiAccordion",
+      "UiBadge",
       "UiBanner",
       "UiBreadcrumbs",
       "UiButton",
+      "UiCampaignCard",
       "UiCaptchaWrapper",
       "UiCheckbox",
       "UiChoiceGroup",
@@ -201,17 +282,38 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiDateTimeField",
       "UiEmptyState",
       "UiErrorSummary",
+      "UiFeatureTile",
+      "UiFilterChips",
       "UiFormField",
+      "UiIconTile",
+      "UiInstantWinCard",
       "UiLink",
       "UiMediaUploader",
       "UiMeter",
+      "UiPasswordField",
       "UiPermissionGate",
       "UiSidebarNav",
-      "UiStatusChip",
       "UiStepper",
+      "UiTextInput",
       "UiToaster",
       "UiTopBar"
     ]
+  },
+  "UiIconTile": {
+    "composes": [
+      "UiIcon"
+    ],
+    "usedBy": [
+      "UiDrawCard",
+      "UiStatCard"
+    ]
+  },
+  "UiInstantWinCard": {
+    "composes": [
+      "UiBadge",
+      "UiIcon"
+    ],
+    "usedBy": []
   },
   "UiLink": {
     "composes": [
@@ -219,7 +321,9 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": [
       "UiBreadcrumbs",
+      "UiButton",
       "UiConsentGroup",
+      "UiPortalShell",
       "UiPublicShell",
       "UiRewardCard",
       "UiSidebarNav",
@@ -233,7 +337,8 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiCountdown",
       "UiMaskedValue",
       "UiMediaUploader",
-      "UiOtpInput"
+      "UiOtpInput",
+      "UiPasswordField"
     ]
   },
   "UiMaskedValue": {
@@ -267,6 +372,16 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiPasswordField": {
+    "composes": [
+      "UiButton",
+      "UiIcon",
+      "UiLiveRegion",
+      "UiProgress",
+      "UiTextInput"
+    ],
+    "usedBy": []
+  },
   "UiPermissionGate": {
     "composes": [
       "UiCopyButton",
@@ -280,12 +395,22 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiPortalShell": {
+    "composes": [
+      "UiAvatar",
+      "UiButton",
+      "UiLink",
+      "UiSkipLink"
+    ],
+    "usedBy": []
+  },
   "UiProgress": {
     "composes": [],
     "usedBy": [
       "UiCountdown",
       "UiMediaUploader",
       "UiMeter",
+      "UiPasswordField",
       "UiStepper"
     ]
   },
@@ -310,6 +435,17 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiSearchField": {
+    "composes": [
+      "UiButton",
+      "UiTextInput"
+    ],
+    "usedBy": []
+  },
+  "UiSegmentedControl": {
+    "composes": [],
+    "usedBy": []
+  },
   "UiSelect": {
     "composes": [
       "UiFormField"
@@ -324,6 +460,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiLink"
     ],
     "usedBy": [
+      "UiConsoleShell",
       "UiDashboardShell"
     ]
   },
@@ -336,13 +473,23 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   "UiSkipLink": {
     "composes": [],
     "usedBy": [
+      "UiAuthShell",
+      "UiConsoleShell",
       "UiDashboardShell",
+      "UiPortalShell",
       "UiPublicShell"
     ]
   },
+  "UiStatCard": {
+    "composes": [
+      "UiBadge",
+      "UiIconTile"
+    ],
+    "usedBy": []
+  },
   "UiStatusChip": {
     "composes": [
-      "UiIcon"
+      "UiBadge"
     ],
     "usedBy": []
   },
@@ -379,10 +526,13 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiTextInput": {
     "composes": [
-      "UiFormField"
+      "UiFormField",
+      "UiIcon"
     ],
     "usedBy": [
       "UiConfirmDialog",
+      "UiPasswordField",
+      "UiSearchField",
       "UiStepUpDialog"
     ]
   },

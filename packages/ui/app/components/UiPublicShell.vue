@@ -5,10 +5,11 @@ import UiSelect from './UiSelect.vue';
 import UiSkipLink from './UiSkipLink.vue';
 
 /**
- * Public participant page frame (UI-PUB-01, UI-PUB-23): brand and language switcher on top, a
- * single reading column, and a footer that always has Privacy, Terms, Help and Report abuse (the
- * help link is in the same place on every public page). The language switcher appears only when the
- * campaign has more than one locale. Rendered by SSR and edge-cached: it holds no per-user data.
+ * Public page frame (UI-PUB-01, UI-PUB-23): brand on top, optional primary navigation and header
+ * actions (for example Sign in), a language switcher when there is more than one locale, and a
+ * footer that always has Privacy, Terms, Help and Report abuse. The help link is in the same place
+ * on every public page. `wide` replaces the 720 px reading column with the full content width for
+ * listings. Rendered by SSR and edge-cached: it holds no per-user data.
  */
 const props = withDefaults(
   defineProps<{
@@ -16,6 +17,8 @@ const props = withDefaults(
     locale?: string;
     locales?: Array<{ value: string; label: string }>;
     links?: { privacy: string; terms: string; help: string; reportAbuse: string };
+    /** Full content width instead of the reading column. */
+    wide?: boolean;
   }>(),
   {
     links: () => ({
@@ -36,15 +39,28 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
       <div class="ui-public__brand">
         <slot name="logo">{{ brandName }}</slot>
       </div>
-      <UiSelect
-        v-if="locales && locales.length > 1"
-        :model-value="props.locale ?? ''"
-        :label="uiText('public.language')"
-        :options="locales"
-        @update:model-value="emit('update:locale', $event)"
-      />
+      <nav v-if="$slots.nav" class="ui-public__nav" :aria-label="uiText('nav.primary')">
+        <slot name="nav" />
+      </nav>
+      <div class="ui-public__actions">
+        <slot name="actions" />
+        <UiSelect
+          v-if="locales && locales.length > 1"
+          :model-value="props.locale ?? ''"
+          :label="uiText('public.language')"
+          :options="locales"
+          @update:model-value="emit('update:locale', $event)"
+        />
+      </div>
     </header>
-    <main id="main" tabindex="-1" class="ui-public__main ui-reading"><slot /></main>
+    <main
+      id="main"
+      tabindex="-1"
+      class="ui-public__main"
+      :class="wide ? 'ui-public__main--wide' : 'ui-reading'"
+    >
+      <slot />
+    </main>
     <footer class="ui-public__footer">
       <nav :aria-label="uiText('nav.footer')">
         <ul>
@@ -74,9 +90,9 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
 }
 .ui-public__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--ui-space-3);
+  gap: var(--ui-space-3) var(--ui-space-5);
   padding: var(--ui-space-3) var(--ui-space-4);
   border-block-end: 1px solid var(--ui-color-border);
 }
@@ -84,10 +100,45 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
   font-weight: 700;
   max-inline-size: 240px;
 }
+.ui-public__nav {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--ui-space-1) var(--ui-space-2);
+}
+/* Navigation links read as nav items, not inline text links; the current page is marked. */
+.ui-public__nav :deep(a) {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--ui-target-public);
+  padding-inline: var(--ui-space-3);
+  color: var(--ui-color-text-secondary);
+  border-radius: var(--ui-radius-md);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ui-public__nav :deep(a:hover) {
+  background: var(--ui-color-surface-hover);
+  color: var(--ui-color-text-primary);
+}
+.ui-public__nav :deep(a[aria-current='page']) {
+  background: var(--ui-color-selected-bg);
+  color: var(--ui-color-selected-text);
+}
+.ui-public__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-inline-start: auto;
+}
 .ui-public__main {
   flex: 1;
   inline-size: 100%;
   padding: var(--ui-space-4);
+}
+.ui-public__main--wide {
+  max-inline-size: var(--ui-layout-content-max);
+  margin-inline: auto;
 }
 .ui-public__main:focus {
   outline: none;

@@ -8,6 +8,8 @@ const props = defineProps<{
   to: string;
   /** Opens in a new tab and shows an external marker with a text cue. */
   external?: boolean;
+  /** No link styling: for links that are styled as something else (a button, a card). */
+  bare?: boolean;
 }>();
 
 // Client-side navigation through NuxtLink when the app provides it; a plain anchor otherwise.
@@ -23,7 +25,7 @@ const attrs = computed(() =>
 </script>
 
 <template>
-  <component :is="tag" v-bind="attrs" class="ui-link">
+  <component :is="tag" v-bind="attrs" class="ui-link" :data-bare="bare">
     <slot />
     <template v-if="external">
       <UiIcon name="external" :size="14" />
@@ -41,5 +43,9 @@ const attrs = computed(() =>
 }
 .ui-link:hover {
   text-decoration-thickness: var(--ui-focus-width);
+}
+.ui-link[data-bare='true'] {
+  color: inherit;
+  text-decoration: none;
 }
 </style>

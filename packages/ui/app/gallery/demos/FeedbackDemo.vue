@@ -9,6 +9,7 @@ import UiSkeleton from '../../components/UiSkeleton.vue';
 import UiStatusChip from '../../components/UiStatusChip.vue';
 import UiSystemState from '../../components/UiSystemState.vue';
 import { statusVocabularies, type StatusVocabulary } from '../../status-vocabulary';
+import UiBadge from '../../components/UiBadge.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const vocabularies = Object.keys(statusVocabularies) as StatusVocabulary[];
@@ -98,6 +99,21 @@ const dismissed = ref(false);
     <UiMeter label="Monthly participants" :used="42000" :limit="100000" />
     <UiMeter label="SMS spend today" :used="82" :limit="100" unit="GHS" />
     <UiMeter label="Storage" :used="5" :limit="5" unit="GB" />
+  </GalleryBlock>
+
+  <GalleryBlock name="UiBadge">
+    <div class="demo-row">
+      <UiBadge>Neutral</UiBadge>
+      <UiBadge tone="info" icon="info">Info</UiBadge>
+      <UiBadge tone="success" icon="check-circle">Success</UiBadge>
+      <UiBadge tone="warning" icon="alert-triangle">Warning</UiBadge>
+      <UiBadge tone="danger" icon="x-circle">Danger</UiBadge>
+    </div>
+    <div class="demo-row">
+      <UiBadge shape="pill" icon="shield-check" tone="info">Business sign in</UiBadge>
+      <UiBadge shape="pill" icon="clock" tone="info">2 days left</UiBadge>
+      <UiBadge variant="outline" icon="gift">Giveaway</UiBadge>
+    </div>
   </GalleryBlock>
 </template>
 

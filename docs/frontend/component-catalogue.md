@@ -4,23 +4,26 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-48 components.
+65 components.
 
 ## Foundation
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFormField`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPermissionGate`, `UiSidebarNav`, `UiStatusChip`, `UiStepper`, `UiToaster`, `UiTopBar` | UI-FND-06 |
-| `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs. | `UiIcon` | `UiBreadcrumbs`, `UiConsentGroup`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
-| `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput` | UI-A11Y-05 |
-| `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiStepper` | Spec 5 |
-| `UiCard` | Bordered surface with optional heading; the base for panels and prize cards. | - | `UiCaptchaWrapper`, `UiDrawProofPanel`, `UiRewardCard` | Spec 3.4 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
+| `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
+| `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
+| `UiCard` | Bordered surface with optional heading; the base for panels, prize cards and media cards. | - | `UiCampaignCard`, `UiCaptchaWrapper`, `UiDrawProofPanel`, `UiFeatureTile`, `UiRewardCard` | Spec 3.4 |
+| `UiDivider` | Separator with an optional centred word such as "or". | - | - | Spec 3.4 |
+| `UiAvatar` | Initials in a filled circle with an optional verified dot. | - | `UiConsoleShell`, `UiPortalShell` | UI-DSH-01, UI-FND-06 |
+| `UiIconTile` | A decorative icon in a tinted rounded square; the leading mark of stat and list rows. | `UiIcon` | `UiDrawCard`, `UiStatCard` | UI-FND-06, UI-DSH-04 |
 
 ## Actions
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiButton` | Primary, secondary, tertiary and danger actions with loading and disabled-with-reason states. | `UiIcon` | `UiBanner`, `UiCaptchaWrapper`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiReorderableList`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
+| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
 | `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
 | `UiPermissionGate` | Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule. | `UiCopyButton`, `UiIcon` | - | UI-DSH-03, Spec 7.3 |
 
@@ -28,8 +31,8 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiFormField` | Label, required text, hint and error wiring shared by every labelled control. | `UiIcon` | `UiOtpInput`, `UiPhoneInput`, `UiSelect`, `UiTextInput` | UI-A11Y-04 |
-| `UiTextInput` | Text input and textarea with autocomplete, inputmode and a near-limit counter. | `UiFormField` | `UiConfirmDialog`, `UiStepUpDialog` | Spec 5, UI-A11Y-04 |
+| `UiFormField` | Label, required text, hint and error wiring shared by every labelled control; optional label-row link and visually hidden label. | `UiIcon` | `UiOtpInput`, `UiPhoneInput`, `UiSelect`, `UiTextInput` | UI-A11Y-04 |
+| `UiTextInput` | Text input and textarea with autocomplete, inputmode, a near-limit counter, an optional leading icon and a trailing control slot. | `UiFormField`, `UiIcon` | `UiConfirmDialog`, `UiPasswordField`, `UiSearchField`, `UiStepUpDialog` | Spec 5, UI-A11Y-04 |
 | `UiPhoneInput` | Country selector and number field accepting local and international formats. | `UiFormField` | - | UI-PUB-04, UI-I18N-05 |
 | `UiOtpInput` | One-field 6-digit code entry with resend countdown and every OTP state. | `UiButton`, `UiFormField`, `UiLiveRegion` | - | UI-PUB-12, Spec 6.3, UI-A11Y-09 |
 | `UiSelect` | Native select inside the shared field wrapper. | `UiFormField` | `UiPublicShell` | Spec 5 |
@@ -40,18 +43,23 @@
 | `UiErrorSummary` | Error list at the top of a form; focus moves here and items link to fields. | `UiIcon` | - | UI-A11Y-04, Spec 11 |
 | `UiConsentGroup` | Required terms separate from unticked optional purposes, each with versioned text. | `UiCheckbox`, `UiLink` | - | UI-PUB-10, R-PRV-03 |
 | `UiCaptchaWrapper` | Frame for the CAPTCHA provider with an accessible alternative. | `UiButton`, `UiCard`, `UiIcon` | - | UI-PUB-11, UI-A11Y-09 |
+| `UiPasswordField` | Password input with show/hide toggle and an optional live requirements checklist. | `UiButton`, `UiIcon`, `UiLiveRegion`, `UiProgress`, `UiTextInput` | - | UI-A11Y-04, R-IAM-04 |
+| `UiFilterChips` | Single-select filter chips (campaign type, status) as toggle buttons. | `UiIcon` | - | UI-DSH-04, Spec 5 |
+| `UiSearchField` | Search form with icon, clear button and a visible Search button. | `UiButton`, `UiTextInput` | - | UI-A11Y-04, UI-DSH-04 |
+| `UiSegmentedControl` | Compact single-choice switch for views of the same data (All / Live / Scheduled). | - | - | UI-DSH-04, UI-A11Y-01 |
 
 ## Feedback
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiStatusChip` | Status chip driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk). | `UiIcon` | - | UI-DSH-05, Spec 7.2 |
+| `UiStatusChip` | A UiBadge driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk). | `UiBadge` | - | UI-DSH-05, Spec 7.2 |
 | `UiBanner` | Persistent info, warning, error, system and elevation messages. | `UiButton`, `UiIcon` | `UiSystemState` | Spec 5, UI-DSH-13, UI-ADM-01 |
 | `UiToaster` | Success and info toasts (via useToast) that auto-dismiss and pause on hover and focus. | `UiButton`, `UiIcon` | - | Spec 5, UI-DSH-13 |
 | `UiEmptyState` | Heading, explanation and next action for empty and terminal screens. | `UiIcon` | `UiDataTable`, `UiSystemState` | Spec 5, Spec 11 |
 | `UiSkeleton` | Layout-matching placeholders for text, card, table, chart and form. | - | `UiDataTable` | UI-PRF-02, Spec 11 |
 | `UiSystemState` | Renders any state from the section 11 matrix (401, 403, 404, 409, 429, 503, offline, ...). | `UiBanner`, `UiButton`, `UiEmptyState` | - | Spec 11, UXA-006 |
 | `UiMeter` | Usage and spend-cap meter with 80% and 100% treatments. | `UiIcon`, `UiProgress` | - | UI-DSH-12, UI-DSH-10 |
+| `UiBadge` | The one small label, tag or pill. Status chips, type tags and time-left markers are badges. | `UiIcon` | `UiCampaignCard`, `UiDrawCard`, `UiInstantWinCard`, `UiStatCard`, `UiStatusChip` | UI-DSH-05, Spec 3.4 |
 
 ## Overlays
 
@@ -69,6 +77,7 @@
 | `UiDataTable` | Sticky-header, sortable table with load-more, priority collapse and card layout on mobile. | `UiButton`, `UiEmptyState`, `UiIcon`, `UiSkeleton` | - | UI-DSH-04, UI-DSH-06, UI-A11Y-11 |
 | `UiMaskedValue` | Masked PII with permission-gated reveal that re-masks after 30 s. | `UiButton`, `UiLiveRegion` | - | UI-DSH-07, UXA-012, Spec 7.4 |
 | `UiChart` | Line, bar and funnel SVG charts with markers, patterns, data table and summary. | `UiButton` | - | UI-A11Y-10, UI-DSH-08 |
+| `UiStatCard` | One KPI: label, headline value, optional suffix, trend badge, icon and label/value rows. | `UiBadge`, `UiIconTile` | - | UI-DSH-04, UI-DSH-05 |
 
 ## Navigation
 
@@ -78,11 +87,14 @@
 | `UiTabs` | Tabs with arrow-key navigation. | - | - | Spec 5 |
 | `UiAccordion` | Disclosure list for how-it-works and FAQ. | `UiIcon` | - | Spec 5, UI-PUB-01 |
 | `UiBreadcrumbs` | Breadcrumb trail with the current page marked. | `UiIcon`, `UiLink` | - | UI-DSH-01 |
-| `UiSidebarNav` | Primary navigation filtered by role by the caller. | `UiIcon`, `UiLink` | `UiDashboardShell` | UI-DSH-01, Spec 2.2 |
+| `UiSidebarNav` | Primary navigation filtered by role by the caller. | `UiIcon`, `UiLink` | `UiConsoleShell`, `UiDashboardShell` | UI-DSH-01, Spec 2.2 |
 | `UiTopBar` | Business name and role, search, help, notifications and user menu. | `UiButton`, `UiIcon`, `UiLink` | `UiDashboardShell` | UI-DSH-01, UI-A11Y-13, UI-DSH-14 |
-| `UiSkipLink` | Skip-to-content link, first focusable element on every page. | - | `UiDashboardShell`, `UiPublicShell` | UI-A11Y-06 |
+| `UiSkipLink` | Skip-to-content link, first focusable element on every page. | - | `UiAuthShell`, `UiConsoleShell`, `UiDashboardShell`, `UiPortalShell`, `UiPublicShell` | UI-A11Y-06 |
 | `UiDashboardShell` | Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark. | `UiSidebarNav`, `UiSkipLink`, `UiTopBar` | - | UI-DSH-01, UI-FND-05 |
-| `UiPublicShell` | Public page frame: brand, language switcher, reading column, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
+| `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
+| `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column. | `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
+| `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
+| `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
 
 ## Domain
 
@@ -93,14 +105,19 @@
 | `UiCountdown` | Campaign countdown and quiz timer with milestone announcements and extension. | `UiButton`, `UiLiveRegion`, `UiProgress` | - | UI-A11Y-07, UI-PUB-13 |
 | `UiRewardCard` | Prize image, name, value, quantity and rules link. | `UiCard`, `UiLink` | - | Spec 5, UI-FND-08 |
 | `UiDrawProofPanel` | Algorithm, snapshot hash, seed commitment, revealed seed and verify steps. | `UiButton`, `UiCard`, `UiCopyButton` | - | UI-RWD-03, R-RWD-04 |
+| `UiFeatureTile` | Icon, short title and description for how-it-works and trust points. | `UiCard`, `UiIcon` | - | UI-PUB-01 |
+| `UiCampaignCard` | Campaign in a discovery list: media, type, time left, business, summary, prize and one call to action. | `UiBadge`, `UiButton`, `UiCard`, `UiIcon` | - | UI-PUB-01, UI-CPY-04, R-WEB-05 |
+| `UiClaimCard` | Feature card for the next action a participant should take (claim a reward). | - | - | UI-PRT-01, UI-FND-01 |
+| `UiInstantWinCard` | Instant-win entry with odds in words and one reveal action; the result is decided server-side. | `UiBadge`, `UiIcon` | - | UI-PRT-01, R-CAM-03 |
+| `UiDrawCard` | A draw the participant entered: what, when, ticket reference and confirmation state. | `UiBadge`, `UiIconTile` | - | UI-PRT-01, UI-DSH-05 |
 
 ## Most reused
 
-- `UiIcon`: used by 21 components
-- `UiButton`: used by 17 components
-- `UiLink`: used by 6 components
-- `UiLiveRegion`: used by 5 components
-- `UiProgress`: used by 4 components
-- `UiFormField`: used by 4 components
-- `UiCard`: used by 3 components
-- `UiDialog`: used by 3 components
+- `UiIcon`: used by 28 components
+- `UiButton`: used by 22 components
+- `UiLink`: used by 8 components
+- `UiLiveRegion`: used by 6 components
+- `UiProgress`: used by 5 components
+- `UiCard`: used by 5 components
+- `UiSkipLink`: used by 5 components
+- `UiBadge`: used by 5 components

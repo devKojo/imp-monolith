@@ -5,9 +5,9 @@ export const tokens = {
     "text-secondary": "#344054",
     "text-hint": "#475467",
     "surface": "#FFFFFF",
-    "surface-subtle": "#F9FAFB",
-    "border": "#D0D5DD",
-    "border-strong": "#667085",
+    "surface-subtle": "#F1F3FF",
+    "border": "#DBE2F9",
+    "border-strong": "#868CA0",
     "action-primary": "#1D4ED8",
     "action-primary-text": "#FFFFFF",
     "focus-ring": "#1D4ED8",
@@ -22,7 +22,15 @@ export const tokens = {
     "warning-text": "#93370D",
     "danger-bg": "#FEF3F2",
     "danger-text": "#B42318",
-    "overlay": "#101828"
+    "overlay": "#101828",
+    "action-primary-hover": "#1E40AF",
+    "action-primary-active": "#172554",
+    "danger-action": "#B42318",
+    "danger-action-hover": "#912018",
+    "danger-action-active": "#7A1B14",
+    "surface-hover": "#F1F3FF",
+    "surface-pressed": "#F2F4F7",
+    "surface-page": "#F9F9FF"
   },
   "chartSeries": [
     {
@@ -73,36 +81,42 @@ export const tokens = {
     "12": 48
   },
   "radius": {
-    "sm": 4,
-    "md": 8,
-    "lg": 16,
+    "sm": 2,
+    "md": 4,
+    "lg": 8,
+    "xl": 12,
     "pill": 999
   },
   "font": {
     "display": {
       "size": 30,
       "line": 38,
-      "weight": 700
+      "weight": 700,
+      "letterSpacing": "-0.02em"
     },
     "display-mobile": {
       "size": 28,
       "line": 36,
-      "weight": 700
+      "weight": 700,
+      "letterSpacing": "-0.02em"
     },
     "h1": {
       "size": 24,
       "line": 32,
-      "weight": 700
+      "weight": 700,
+      "letterSpacing": "-0.015em"
     },
     "h2": {
       "size": 20,
       "line": 28,
-      "weight": 600
+      "weight": 600,
+      "letterSpacing": "-0.01em"
     },
     "h3": {
       "size": 18,
       "line": 26,
-      "weight": 600
+      "weight": 600,
+      "letterSpacing": "-0.005em"
     },
     "body-l": {
       "size": 18,
@@ -123,6 +137,23 @@ export const tokens = {
       "size": 12,
       "line": 16,
       "weight": 500
+    },
+    "label": {
+      "size": 14,
+      "line": 20,
+      "weight": 500
+    },
+    "label-sm": {
+      "size": 12,
+      "line": 16,
+      "weight": 600,
+      "letterSpacing": "0.02em"
+    },
+    "hero": {
+      "size": 56,
+      "line": 56,
+      "weight": 800,
+      "letterSpacing": "-0.03em"
     }
   },
   "breakpoint": {
@@ -146,10 +177,10 @@ export const tokens = {
   }
 } as const;
 
-export type SemanticColorToken = 'text-primary' | 'text-secondary' | 'text-hint' | 'surface' | 'surface-subtle' | 'border' | 'border-strong' | 'action-primary' | 'action-primary-text' | 'focus-ring' | 'link' | 'selected-bg' | 'selected-text' | 'info-bg' | 'info-text' | 'success-bg' | 'success-text' | 'warning-bg' | 'warning-text' | 'danger-bg' | 'danger-text' | 'overlay';
+export type SemanticColorToken = 'text-primary' | 'text-secondary' | 'text-hint' | 'surface' | 'surface-subtle' | 'border' | 'border-strong' | 'action-primary' | 'action-primary-text' | 'focus-ring' | 'link' | 'selected-bg' | 'selected-text' | 'info-bg' | 'info-text' | 'success-bg' | 'success-text' | 'warning-bg' | 'warning-text' | 'danger-bg' | 'danger-text' | 'overlay' | 'action-primary-hover' | 'action-primary-active' | 'danger-action' | 'danger-action-hover' | 'danger-action-active' | 'surface-hover' | 'surface-pressed' | 'surface-page';
 export type SpaceToken = '1' | '2' | '3' | '4' | '5' | '6' | '8' | '10' | '12';
-export type RadiusToken = 'sm' | 'md' | 'lg' | 'pill';
-export type FontStyleToken = 'display' | 'display-mobile' | 'h1' | 'h2' | 'h3' | 'body-l' | 'body' | 'body-s' | 'caption';
+export type RadiusToken = 'sm' | 'md' | 'lg' | 'xl' | 'pill';
+export type FontStyleToken = 'display' | 'display-mobile' | 'h1' | 'h2' | 'h3' | 'body-l' | 'body' | 'body-s' | 'caption' | 'label' | 'label-sm' | 'hero';
 
 /** CSS custom property reference for a semantic colour, e.g. cssColor('text-primary'). */
 export const cssColor = (name: SemanticColorToken): string => `var(--ui-color-${name})`;

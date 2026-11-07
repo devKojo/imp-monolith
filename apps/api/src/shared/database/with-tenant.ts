@@ -18,16 +18,14 @@ export type WithTenantOptions = {
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
- * The only way to touch tenant tables (R-TEN-03). Opens an interactive transaction on the
- * app_runtime client, sets the transaction-local `app.tenant_id` so RLS applies, and hands the
- * transaction client to `fn`. With no tenant set the policies return zero rows (fail closed).
- *
- * No network I/O (HTTP, S3, SMTP, SMS) may happen inside `fn` (R-DAT-07). Because `fn` can be
- * re-run on P2034, it must be safe to repeat: do side effects through the outbox.
+ * Shared implementation: opens an interactive transaction, sets transaction-local scope settings
+ * (`app.tenant_id`, `app.user_id`, ...) that the RLS policies read, then runs `fn`. Retries
+ * P2034 (bounded, jittered) and maps Prisma errors to domain errors. Because `fn` can be re-run,
+ * it must be safe to repeat; no network I/O inside it (R-DAT-07).
  */
-export async function withTenant<T>(
+export async function runScoped<T>(
   db: PrismaClient,
-  ctx: TenantContext,
+  settings: ReadonlyArray<readonly [name: string, value: string]>,
   fn: (tx: TenantTx) => Promise<T>,
   opts: WithTenantOptions = {},
 ): Promise<T> {
@@ -38,7 +36,9 @@ export async function withTenant<T>(
     try {
       return await db.$transaction(
         async (tx) => {
-          await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId}, true)`;
+          for (const [name, value] of settings) {
+            await tx.$executeRaw`SELECT set_config(${name}, ${value}, true)`;
+          }
           return fn(tx);
         },
         { maxWait: MAX_WAIT_MS, timeout },
@@ -52,4 +52,17 @@ export async function withTenant<T>(
       throw mapPrismaError(err);
     }
   }
+}
+
+/**
+ * The only way to touch tenant tables (R-TEN-03). Sets the transaction-local `app.tenant_id` so
+ * RLS applies. With no tenant set the policies return zero rows (fail closed).
+ */
+export function withTenant<T>(
+  db: PrismaClient,
+  ctx: TenantContext,
+  fn: (tx: TenantTx) => Promise<T>,
+  opts: WithTenantOptions = {},
+): Promise<T> {
+  return runScoped(db, [['app.tenant_id', ctx.tenantId]], fn, opts);
 }

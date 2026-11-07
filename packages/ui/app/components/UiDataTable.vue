@@ -32,6 +32,8 @@ const props = withDefaults(
     hasMore?: boolean;
     total?: number;
     density?: 'comfortable' | 'compact';
+    /** No outer border or radius, for a table that sits inside a card. */
+    flush?: boolean;
   }>(),
   { sort: null, density: 'comfortable' },
 );
@@ -57,7 +59,7 @@ const showing = computed(() =>
 </script>
 
 <template>
-  <div class="ui-table-wrap" :data-density="density">
+  <div class="ui-table-wrap" :data-density="density" :data-flush="flush">
     <UiSkeleton v-if="loading && rows.length === 0" variant="table" />
     <slot v-else-if="rows.length === 0" name="empty"
       ><UiEmptyState :title="uiText('state.empty.title')" :description="uiText('state.empty.body')"
@@ -214,5 +216,27 @@ tbody tr:nth-child(even) {
   [data-priority='low'] {
     display: flex;
   }
+}
+[data-flush='true'] .ui-table-scroll {
+  border: 0;
+  border-radius: 0;
+}
+[data-flush='true'] th {
+  background: transparent;
+  font-size: var(--ui-font-caption-size);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+[data-flush='true'] tbody tr:nth-child(even) {
+  background: transparent;
+}
+[data-flush='true'] tbody tr:last-child td {
+  border-block-end: 0;
+}
+[data-flush='true'] .ui-table__foot {
+  margin: 0;
+  padding: var(--ui-space-4) var(--ui-space-6);
+  border-block-start: 1px solid var(--ui-color-border);
 }
 </style>

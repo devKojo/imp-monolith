@@ -12,6 +12,11 @@ import UiPhoneInput from '../../components/UiPhoneInput.vue';
 import UiSelect from '../../components/UiSelect.vue';
 import UiSwitch from '../../components/UiSwitch.vue';
 import UiTextInput from '../../components/UiTextInput.vue';
+import UiFilterChips from '../../components/UiFilterChips.vue';
+import UiLink from '../../components/UiLink.vue';
+import UiPasswordField from '../../components/UiPasswordField.vue';
+import UiSearchField from '../../components/UiSearchField.vue';
+import UiSegmentedControl from '../../components/UiSegmentedControl.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const name = ref('');
@@ -48,6 +53,27 @@ const showErrors = () =>
   ]);
 const nameError = computed(() => (errors.value.length ? 'Enter your full name.' : undefined));
 const captchaState = ref<'challenge' | 'failed'>('challenge');
+
+const password = ref('');
+const pwRules = computed(() => [
+  { id: 'len', label: 'At least 12 characters', met: password.value.length >= 12 },
+  {
+    id: 'name',
+    label: 'Does not contain your email name',
+    met: password.value.length > 0 && !password.value.toLowerCase().includes('ada'),
+  },
+  {
+    id: 'rep',
+    label: 'Not one repeated character',
+    met: password.value.length > 1 && !/^(.)\1+$/.test(password.value),
+  },
+]);
+const signinPassword = ref('');
+const chip = ref('all');
+const query = ref('');
+const searched = ref('');
+
+const segmented = ref('all');
 </script>
 
 <template>
@@ -223,6 +249,52 @@ const captchaState = ref<'challenge' | 'failed'>('challenge');
         [ provider widget ] fail this check
       </button>
     </UiCaptchaWrapper>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiPasswordField">
+    <UiPasswordField
+      v-model="password"
+      label="Create password"
+      autocomplete="new-password"
+      :rules="pwRules"
+      required
+      hint="Use a phrase you can remember. We also check it against known breaches."
+    />
+    <UiPasswordField v-model="signinPassword" label="Password" error="Invalid email or password.">
+      <template #labelAside><UiLink to="/ui/states">Forgot password?</UiLink></template>
+    </UiPasswordField>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiFilterChips">
+    <UiFilterChips
+      v-model="chip"
+      label="Campaign type"
+      :options="[
+        { value: 'all', label: 'All campaigns' },
+        { value: 'quiz', label: 'Quizzes', icon: 'clipboard-list' },
+        { value: 'poll', label: 'Polls', icon: 'bar-chart' },
+        { value: 'giveaway', label: 'Giveaways', icon: 'gift' },
+      ]"
+    />
+    <p class="ui-text-body-s">Selected: {{ chip }}</p>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiSearchField">
+    <UiSearchField v-model="query" label="Search campaigns" @search="searched = $event" />
+    <p class="ui-text-body-s" role="status">Last search: {{ searched || 'none' }}</p>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiSegmentedControl">
+    <UiSegmentedControl
+      v-model="segmented"
+      label="Campaign status"
+      :options="[
+        { value: 'all', label: 'All' },
+        { value: 'live', label: 'Live' },
+        { value: 'scheduled', label: 'Scheduled' },
+        { value: 'paused', label: 'Paused' },
+      ]"
+    />
   </GalleryBlock>
 </template>
 

@@ -24,19 +24,21 @@ docs/frontend/               this file, ADRs, generated component-catalogue.md
 
 ## Active decisions
 
-| ID                                                  | Decision                                                               | Enforced by                                 |
-| --------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
-| [ADR-F001](adr/ADR-F001-ui-layer.md)                | Reusable UI lives in the `@imp/ui` Nuxt layer, not in the web app      | Layout, code review                         |
-| [ADR-F002](adr/ADR-F002-reuse-first.md)             | Reuse first: compose, then extend, then (rarely) add a component       | `registry.test.ts`, catalogue check, review |
-| [ADR-F003](adr/ADR-F003-css-tooling.md)             | Scoped CSS + token custom properties + logical properties              | `lint-ui`                                   |
-| [ADR-F004](adr/ADR-F004-design-tokens.md)           | Tokens defined once in JSON, generated, contrast-gated                 | `tokens:check`, `foundations.test.ts`       |
-| [ADR-F005](adr/ADR-F005-workbench-gallery.md)       | The workbench is the in-repo `/ui` gallery (dev only)                  | Gallery blocks required per component       |
-| [ADR-F006](adr/ADR-F006-icons.md)                   | One in-repo inline SVG icon registry                                   | Typed `IconName`                            |
-| [ADR-F007](adr/ADR-F007-strings-and-i18n.md)        | Strings live in a keyed catalogue (i18n-ready)                         | `foundations.test.ts`                       |
-| [ADR-F008](adr/ADR-F008-charts.md)                  | Charts are an in-house accessible SVG component                        | Component tests                             |
-| [ADR-F009](adr/ADR-F009-state-and-ssr.md)           | SSR-safe state; public pages SSR, authenticated pages SPA              | Review, R-WEB-04 test (later)               |
-| [ADR-F010](adr/ADR-F010-accessibility-and-tests.md) | Accessibility is a definition-of-done item with automated axe coverage | `a11y.test.ts`, CI                          |
-| [ADR-F011](adr/ADR-F011-dependencies.md)            | Frontend dependencies are pinned and at least 14 days old              | Review (R-STK-09)                           |
+| ID                                                  | Decision                                                                     | Enforced by                                 |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
+| [ADR-F001](adr/ADR-F001-ui-layer.md)                | Reusable UI lives in the `@imp/ui` Nuxt layer, not in the web app            | Layout, code review                         |
+| [ADR-F002](adr/ADR-F002-reuse-first.md)             | Reuse first: compose, then extend, then (rarely) add a component             | `registry.test.ts`, catalogue check, review |
+| [ADR-F003](adr/ADR-F003-css-tooling.md)             | Scoped CSS + token custom properties + logical properties                    | `lint-ui`                                   |
+| [ADR-F004](adr/ADR-F004-design-tokens.md)           | Tokens defined once in JSON, generated, contrast-gated                       | `tokens:check`, `foundations.test.ts`       |
+| [ADR-F005](adr/ADR-F005-workbench-gallery.md)       | The workbench is the in-repo `/ui` gallery (dev only)                        | Gallery blocks required per component       |
+| [ADR-F006](adr/ADR-F006-icons.md)                   | One in-repo inline SVG icon registry                                         | Typed `IconName`                            |
+| [ADR-F007](adr/ADR-F007-strings-and-i18n.md)        | Strings live in a keyed catalogue (i18n-ready)                               | `foundations.test.ts`                       |
+| [ADR-F008](adr/ADR-F008-charts.md)                  | Charts are an in-house accessible SVG component                              | Component tests                             |
+| [ADR-F009](adr/ADR-F009-state-and-ssr.md)           | SSR-safe state; public pages SSR, authenticated pages SPA                    | Review, R-WEB-04 test (later)               |
+| [ADR-F010](adr/ADR-F010-accessibility-and-tests.md) | Accessibility is a definition-of-done item with automated axe coverage       | `a11y.test.ts`, CI                          |
+| [ADR-F011](adr/ADR-F011-dependencies.md)            | Frontend dependencies are pinned and at least 14 days old                    | Review (R-STK-09)                           |
+| [ADR-F012](adr/ADR-F012-design-references.md)       | External designs are reconciled with the specs, then folded into the library | PR checklist, registry `origin`             |
+| [ADR-F013](adr/ADR-F013-design-language-v2.md)      | Design language v2: Inter, tighter radii, portal shells                      | `foundations.test.ts`, `tokens:check`       |
 
 ## Rules while developing
 
@@ -92,6 +94,16 @@ npm test -w @imp/ui                # tokens, lint, registry, behaviour and axe t
 - [ ] `npm run catalogue:build -w @imp/ui` and `npm run check -w @imp/ui` pass; commit generated files.
 
 ## Known gaps (tracked, not hidden)
+
+- **Discovery has no backend yet.** `/discover` runs on labelled sample data; the API it needs is in
+  [discovery-contract.md](discovery-contract.md) and needs a spec amendment (no listing endpoint and
+  no discovery route in the information architecture).
+- **Participant and business dashboards show labelled sample data**; their actions are disabled
+  until the participation, campaign and draw APIs exist (ADR-F013, ADR-P001).
+- **Not built from the auth designs** (see ADR-F012): SSO, phone/OTP sign-in, forgot password,
+  resend verification, MFA enrolment, an idle-session warning (UI-A11Y-07).
+- The API client in `apps/web/app/modules/auth/api.ts` and its validation mirror are hand-written
+  until `packages/contracts` exists (R-STK-04).
 
 - Visual regression snapshots at 360/768/1280 px and Playwright axe on real journeys (UI-FND-02,
   UXA-001, UXA-004/005) are not wired yet; the jsdom axe sweep covers structure only, and colour

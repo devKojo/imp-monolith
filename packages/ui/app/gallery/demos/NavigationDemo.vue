@@ -12,6 +12,14 @@ import UiStepper, { type Step } from '../../components/UiStepper.vue';
 import UiTabs from '../../components/UiTabs.vue';
 import UiTopBar from '../../components/UiTopBar.vue';
 import type { NavItem } from '../../components/UiSidebarNav.vue';
+import UiAuthShell from '../../components/UiAuthShell.vue';
+import UiBadge from '../../components/UiBadge.vue';
+import UiDivider from '../../components/UiDivider.vue';
+import UiLink from '../../components/UiLink.vue';
+import UiPasswordField from '../../components/UiPasswordField.vue';
+import UiTextInput from '../../components/UiTextInput.vue';
+import UiConsoleShell from '../../components/UiConsoleShell.vue';
+import UiPortalShell from '../../components/UiPortalShell.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const tab = ref('overview');
@@ -38,6 +46,9 @@ const nav: NavItem[] = [
   { label: 'Reports', to: '/ui/screens#reports', icon: 'download', badge: '2' },
 ];
 const locale = ref('en');
+
+const authEmail = ref('');
+const authPassword = ref('');
 </script>
 
 <template>
@@ -152,6 +163,70 @@ const locale = ref('en');
       </UiPublicShell>
     </div>
   </GalleryBlock>
+
+  <GalleryBlock name="UiAuthShell">
+    <div class="demo-frame">
+      <UiAuthShell
+        brand-name="Acme Ltd"
+        title="Welcome back"
+        subtitle="Sign in to manage your campaigns."
+      >
+        <template #badge
+          ><UiBadge shape="pill" tone="info" icon="shield-check"
+            >Business sign in</UiBadge
+          ></template
+        >
+        <UiTextInput
+          v-model="authEmail"
+          label="Email address"
+          type="email"
+          icon="mail"
+          autocomplete="email"
+        />
+        <UiPasswordField v-model="authPassword" label="Password" autocomplete="current-password" />
+        <UiDivider label="or" />
+        <UiButton block icon-trailing="arrow-right">Sign in</UiButton>
+        <template #footer
+          >Don't have an account? <UiLink to="/ui/screens">Create an account</UiLink></template
+        >
+        <template #below>Your session ends after 30 minutes of inactivity.</template>
+      </UiAuthShell>
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiConsoleShell">
+    <div class="demo-frame demo-contained">
+      <UiConsoleShell
+        brand-name="Acme"
+        brand-tag="Console"
+        :nav="nav"
+        user-name="Alex Boateng"
+        user-role="Owner"
+      >
+        <template #actions><UiButton icon="plus">Create campaign</UiButton></template>
+        <p>Page content renders inside the single main landmark.</p>
+      </UiConsoleShell>
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiPortalShell">
+    <div class="demo-frame demo-contained">
+      <UiPortalShell
+        brand-name="Acme"
+        nav-label="Participant"
+        sign-out-label="Sign out"
+        :nav="[
+          { label: 'My rewards', to: '#', current: true },
+          { label: 'Discover', to: '#' },
+        ]"
+        user-name="Kwame Mensah"
+        user-status="Verified"
+      >
+        <p>Page content renders inside the single main landmark.</p>
+        <template #footer><span>Acme</span></template>
+      </UiPortalShell>
+    </div>
+  </GalleryBlock>
 </template>
 
 <style scoped>
@@ -162,5 +237,10 @@ const locale = ref('en');
   overflow: hidden;
   border: 1px solid var(--ui-color-border-strong);
   border-radius: var(--ui-radius-md);
+}
+.demo-contained {
+  block-size: calc(var(--ui-space-12) * 8);
+  overflow: auto;
+  transform: translateZ(0);
 }
 </style>

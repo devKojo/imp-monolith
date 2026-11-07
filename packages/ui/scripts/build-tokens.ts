@@ -20,7 +20,7 @@ type Tokens = {
   elevation: Record<string, string>;
   font: {
     family: string;
-    styles: Record<string, { size: number; line: number; weight: number }>;
+    styles: Record<string, { size: number; line: number; weight: number; letterSpacing?: string }>;
   };
   breakpoint: Record<string, number>;
   layout: Record<string, number>;
@@ -71,6 +71,7 @@ for (const [k, v] of Object.entries(tokens.font.styles)) {
   out(`  --ui-font-${k}-size: ${px(v.size)};`);
   out(`  --ui-font-${k}-line: ${px(v.line)};`);
   out(`  --ui-font-${k}-weight: ${v.weight};`);
+  if (v.letterSpacing) out(`  --ui-font-${k}-tracking: ${v.letterSpacing};`);
 }
 for (const [k, v] of Object.entries(tokens.layout)) out(`  --ui-layout-${k}: ${px(v)};`);
 for (const [k, v] of Object.entries(tokens.target)) out(`  --ui-target-${k}: ${px(v)};`);

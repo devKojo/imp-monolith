@@ -1,3 +1,6 @@
 <template>
-  <NuxtPage />
+  <UiToaster>
+    <NuxtRouteAnnouncer />
+    <NuxtPage />
+  </UiToaster>
 </template>

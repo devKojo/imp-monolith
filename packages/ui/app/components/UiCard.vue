@@ -8,13 +8,15 @@ withDefaults(
     tone?: 'default' | 'subtle';
     /** Raised cards always keep their border so edges stay visible (spec 3.4). */
     raised?: boolean;
+    /** No padding and clipped content, so media can run to the card edges. */
+    flush?: boolean;
   }>(),
   { as: 'div', headingLevel: 3, tone: 'default' },
 );
 </script>
 
 <template>
-  <component :is="as" class="ui-card" :data-tone="tone" :data-raised="raised">
+  <component :is="as" class="ui-card" :data-tone="tone" :data-raised="raised" :data-flush="flush">
     <component :is="`h${headingLevel}`" v-if="title" class="ui-card__title ui-text-h3">{{
       title
     }}</component>
@@ -36,6 +38,10 @@ withDefaults(
 }
 .ui-card[data-raised='true'] {
   box-shadow: var(--ui-elevation-2);
+}
+.ui-card[data-flush='true'] {
+  padding: 0;
+  overflow: hidden;
 }
 .ui-card__title {
   margin: 0 0 var(--ui-space-3);

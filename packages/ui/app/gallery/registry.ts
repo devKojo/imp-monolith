@@ -24,6 +24,8 @@ export type ComponentEntry = {
   specRefs: string[];
   states: string[];
   a11y: string;
+  /** Where the need was first seen, when it came from a design reference screen. */
+  origin?: string;
 };
 
 export const registry: ComponentEntry[] = [
@@ -39,9 +41,10 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiLink',
     category: 'Foundation',
-    summary: 'Internal (NuxtLink) or external link with a text cue for new tabs.',
+    summary:
+      'Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards.',
     specRefs: ['UI-A11Y-06'],
-    states: ['internal', 'external'],
+    states: ['internal', 'external', 'bare'],
     a11y: 'External links announce "(opens in a new tab)".',
   },
   {
@@ -63,9 +66,10 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiCard',
     category: 'Foundation',
-    summary: 'Bordered surface with optional heading; the base for panels and prize cards.',
+    summary:
+      'Bordered surface with optional heading; the base for panels, prize cards and media cards.',
     specRefs: ['Spec 3.4'],
-    states: ['default', 'subtle', 'raised'],
+    states: ['default', 'subtle', 'raised', 'flush (media to the edge)'],
     a11y: 'Heading level is configurable to keep the outline correct.',
   },
   // ---- Actions
@@ -73,9 +77,9 @@ export const registry: ComponentEntry[] = [
     name: 'UiButton',
     category: 'Actions',
     summary:
-      'Primary, secondary, tertiary and danger actions with loading and disabled-with-reason states.',
+      'Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states.',
     specRefs: ['Spec 5', 'UI-FND-05', 'UI-CPY-02'],
-    states: ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading'],
+    states: ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading', 'link'],
     a11y: 'Loading keeps width and sets aria-busy; the disabled reason is visible text, not a tooltip.',
   },
   {
@@ -98,15 +102,17 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiFormField',
     category: 'Forms',
-    summary: 'Label, required text, hint and error wiring shared by every labelled control.',
+    summary:
+      'Label, required text, hint and error wiring shared by every labelled control; optional label-row link and visually hidden label.',
     specRefs: ['UI-A11Y-04'],
-    states: ['default', 'hint', 'error'],
+    states: ['default', 'hint', 'error', 'label aside', 'hidden label'],
     a11y: 'Persistent label, aria-describedby to hint or error, error = icon + text.',
   },
   {
     name: 'UiTextInput',
     category: 'Forms',
-    summary: 'Text input and textarea with autocomplete, inputmode and a near-limit counter.',
+    summary:
+      'Text input and textarea with autocomplete, inputmode, a near-limit counter, an optional leading icon and a trailing control slot.',
     specRefs: ['Spec 5', 'UI-A11Y-04'],
     states: ['default', 'error', 'disabled', 'near limit'],
     a11y: '16 px text prevents mobile zoom; autocomplete and inputmode set per field.',
@@ -196,7 +202,7 @@ export const registry: ComponentEntry[] = [
     name: 'UiStatusChip',
     category: 'Feedback',
     summary:
-      'Status chip driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk).',
+      'A UiBadge driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk).',
     specRefs: ['UI-DSH-05', 'Spec 7.2'],
     states: ['every status in every vocabulary'],
     a11y: 'Icon + text + colour, never colour alone.',
@@ -378,9 +384,10 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiPublicShell',
     category: 'Navigation',
-    summary: 'Public page frame: brand, language switcher, reading column, required footer links.',
+    summary:
+      'Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links.',
     specRefs: ['UI-PUB-01', 'UI-PUB-23', 'UI-A11Y-13'],
-    states: ['single locale', 'multi locale'],
+    states: ['single locale', 'multi locale', 'wide', 'with navigation'],
     a11y: 'Footer always has Privacy, Terms, Help, Report abuse; no per-user data (edge-cached).',
   },
   // ---- Domain
@@ -424,5 +431,167 @@ export const registry: ComponentEntry[] = [
     specRefs: ['UI-RWD-03', 'R-RWD-04'],
     states: ['default'],
     a11y: 'Copy buttons name what they copy; steps are an ordered list.',
+  },
+
+  // ---- Added from the auth, onboarding and discovery design reference
+  {
+    name: 'UiBadge',
+    category: 'Feedback',
+    summary:
+      'The one small label, tag or pill. Status chips, type tags and time-left markers are badges.',
+    specRefs: ['UI-DSH-05', 'Spec 3.4'],
+    states: ['neutral', 'info', 'success', 'warning', 'danger', 'rounded', 'pill', 'outline'],
+    a11y: 'Pair the tone with an icon or explicit text; never colour alone.',
+    origin: 'signin (security pill), signup (portal tag), discovery (type and time-left tags)',
+  },
+  {
+    name: 'UiDivider',
+    category: 'Foundation',
+    summary: 'Separator with an optional centred word such as "or".',
+    specRefs: ['Spec 3.4'],
+    states: ['plain', 'labelled'],
+    a11y: 'role=separator; the word is real text.',
+    origin: 'signin and signup ("or sign in with email")',
+  },
+  {
+    name: 'UiPasswordField',
+    category: 'Forms',
+    summary: 'Password input with show/hide toggle and an optional live requirements checklist.',
+    specRefs: ['UI-A11Y-04', 'R-IAM-04'],
+    states: ['hidden', 'shown', 'error', 'rules unmet', 'rules met'],
+    a11y: 'Toggle is a labelled aria-pressed button; each rule has icon, text and met/not-met cue; progress announced only when the count changes.',
+    origin: 'signin, signup and business-registration (visibility toggle, password rules)',
+  },
+  {
+    name: 'UiFilterChips',
+    category: 'Forms',
+    summary: 'Single-select filter chips (campaign type, status) as toggle buttons.',
+    specRefs: ['UI-DSH-04', 'Spec 5'],
+    states: ['unselected', 'selected'],
+    a11y: 'aria-pressed buttons in a named group; selected adds a check and heavier border, not colour alone.',
+    origin: 'discovery (category pills)',
+  },
+  {
+    name: 'UiSearchField',
+    category: 'Forms',
+    summary: 'Search form with icon, clear button and a visible Search button.',
+    specRefs: ['UI-A11Y-04', 'UI-DSH-04'],
+    states: ['empty', 'with text', 'with hint'],
+    a11y: 'role=search; label kept for assistive tech (hidden visually because the button names the purpose).',
+    origin: 'discovery (search bar)',
+  },
+  {
+    name: 'UiAuthShell',
+    category: 'Navigation',
+    summary:
+      'Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column.',
+    specRefs: ['UI-PUB-01', 'UI-A11Y-06'],
+    states: ['narrow', 'wide with aside', 'with footer strip'],
+    a11y: 'Skip link, one main landmark, h1 is the card title; no per-user data so it can be server-rendered.',
+    origin: 'signin, signup and business-registration (centred card layouts)',
+  },
+  {
+    name: 'UiFeatureTile',
+    category: 'Domain',
+    summary: 'Icon, short title and description for how-it-works and trust points.',
+    specRefs: ['UI-PUB-01'],
+    states: ['default'],
+    a11y: 'Heading level is configurable; the icon is decorative.',
+    origin: 'discovery (three value cards), signup (benefit points)',
+  },
+  {
+    name: 'UiCampaignCard',
+    category: 'Domain',
+    summary:
+      'Campaign in a discovery list: media, type, time left, business, summary, prize and one call to action.',
+    specRefs: ['UI-PUB-01', 'UI-CPY-04', 'R-WEB-05'],
+    states: ['with image', 'placeholder media', 'with prize', 'without prize'],
+    a11y: 'One link per card (the button); relative time left has the absolute end time on <time>; image decorative unless alt is given.',
+    origin: 'discovery (campaign grid)',
+  },
+  {
+    name: 'UiAvatar',
+    category: 'Foundation',
+    summary: 'Initials in a filled circle with an optional verified dot.',
+    specRefs: ['UI-DSH-01', 'UI-FND-06'],
+    states: ['default', 'small', 'verified', 'soft'],
+    a11y: 'The name is the accessible text; initials are decorative. The verified dot has a text label.',
+    origin: 'participant and business dashboards (account chip)',
+  },
+  {
+    name: 'UiIconTile',
+    category: 'Foundation',
+    summary:
+      'A decorative icon in a tinted rounded square; the leading mark of stat and list rows.',
+    specRefs: ['UI-FND-06', 'UI-DSH-04'],
+    states: ['brand', 'success', 'warning', 'neutral', 'small', 'large'],
+    a11y: 'Always aria-hidden: the row text carries the meaning.',
+    origin: 'participant and business dashboards (KPI and list icons)',
+  },
+  {
+    name: 'UiStatCard',
+    category: 'Data',
+    summary:
+      'One KPI: label, headline value, optional suffix, trend badge, icon and label/value rows.',
+    specRefs: ['UI-DSH-04', 'UI-DSH-05'],
+    states: ['plain', 'eyebrow label', 'with badge', 'with footer rows'],
+    a11y: 'Real text, not an image; a change is stated by the badge words, never by colour alone; footer is a description list.',
+    origin: 'business dashboard (KPI row) and participant dashboard (summary row)',
+  },
+  {
+    name: 'UiSegmentedControl',
+    category: 'Forms',
+    summary: 'Compact single-choice switch for views of the same data (All / Live / Scheduled).',
+    specRefs: ['UI-DSH-04', 'UI-A11Y-01'],
+    states: ['unselected', 'selected', 'focus'],
+    a11y: 'Native radio group with a name; arrow keys move the choice; selected is a raised fill plus bold text.',
+    origin: 'business dashboard (campaign table filter)',
+  },
+  {
+    name: 'UiClaimCard',
+    category: 'Domain',
+    summary: 'Feature card for the next action a participant should take (claim a reward).',
+    specRefs: ['UI-PRT-01', 'UI-FND-01'],
+    states: ['default', 'with note'],
+    a11y: 'A labelled section; white text on the brand gradient keeps 4.5:1; the action is a real button.',
+    origin: 'participant dashboard (ready to claim)',
+  },
+  {
+    name: 'UiInstantWinCard',
+    category: 'Domain',
+    summary:
+      'Instant-win entry with odds in words and one reveal action; the result is decided server-side.',
+    specRefs: ['UI-PRT-01', 'R-CAM-03'],
+    states: ['default'],
+    a11y: 'A labelled section; the reveal is a button supplied by the page; the tag is text plus an icon.',
+    origin: 'participant dashboard (instant win)',
+  },
+  {
+    name: 'UiDrawCard',
+    category: 'Domain',
+    summary: 'A draw the participant entered: what, when, ticket reference and confirmation state.',
+    specRefs: ['UI-PRT-01', 'UI-DSH-05'],
+    states: ['confirmed', 'pending'],
+    a11y: 'An article with a heading; the ticket is a code element; state is text plus an icon.',
+    origin: 'participant dashboard (active upcoming draws)',
+  },
+  {
+    name: 'UiConsoleShell',
+    category: 'Navigation',
+    summary:
+      'Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions.',
+    specRefs: ['UI-DSH-01', 'UI-A11Y-05'],
+    states: ['desktop sidebar', 'mobile drawer'],
+    a11y: 'Skip link, one main landmark, drawer button with expanded state, Escape closes the drawer, 32 px targets.',
+    origin: 'business dashboard (ADR-F013)',
+  },
+  {
+    name: 'UiPortalShell',
+    category: 'Navigation',
+    summary: 'Participant frame: brand, tabs, signed-in person, one main landmark and a footer.',
+    specRefs: ['UI-PRT-01', 'UI-A11Y-05'],
+    states: ['default'],
+    a11y: 'Skip link, named navigation with aria-current, 44 px targets, one main landmark.',
+    origin: 'participant dashboard (ADR-F013)',
   },
 ];
