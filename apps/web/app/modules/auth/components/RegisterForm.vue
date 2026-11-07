@@ -6,7 +6,7 @@ import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
 import GoogleSigninButton from './GoogleSigninButton.vue';
-import { AGREEMENT_VERSION, HOME } from '../constants';
+import { AGREEMENT_VERSION, HOME, SIGNIN } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
   businessNameProblem,
@@ -98,12 +98,13 @@ async function submit() {
       password.value = '';
       await navigateTo('/check-email');
     } else {
-      // Participants do not have to verify their email: sign in right away. If the address
-      // already has an account, this fails like any wrong password and reveals nothing more.
+      // No email verification for participants, and no automatic sign-in: send them to the
+      // sign-in page with the address filled in and let them type the password themselves. The
+      // address travels in memory only (never the URL); the password is dropped immediately.
       await auth.registerParticipant({ ...base, agreement });
-      await auth.login(base.email, base.password, 'participant');
+      draft.value = { submittedEmail: base.email, portal: 'participant', registered: true };
       password.value = '';
-      await navigateTo(HOME.PARTICIPANT);
+      await navigateTo(SIGNIN.participant);
     }
   } catch (e) {
     const f = classifyAuthError(toApiError(e));

@@ -4,6 +4,8 @@ export type SignupDraft = {
   /** Set after a successful registration, for the "check your email" page. */
   submittedEmail: string;
   portal: Portal;
+  /** A participant just created an account: the sign-in page prefills the address and says so. */
+  registered?: boolean;
 };
 
 /**
