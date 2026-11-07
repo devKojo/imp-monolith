@@ -44,13 +44,33 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
 </template>
 
 <style scoped>
+/* One raised bar: the field and the Search button share a single rounded surface. */
 .ui-search {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--ui-space-2);
+  padding: var(--ui-space-1);
+  background: var(--ui-color-surface);
+  border: 1px solid var(--ui-color-border-strong);
+  border-radius: var(--ui-radius-xl);
+  box-shadow: var(--ui-elevation-2);
+  transition: border-color var(--ui-motion-fast) ease;
+}
+.ui-search:focus-within {
+  border-color: var(--ui-color-action-primary);
+  outline: var(--ui-focus-width) solid var(--ui-color-focus-ring);
+  outline-offset: var(--ui-focus-offset);
 }
 .ui-search__field {
   flex: 1;
   min-inline-size: 0;
+}
+/* The bar carries the visible edge (it keeps its own 1 px border); the inner field is flat. */
+.ui-search__field :deep(.ui-control) {
+  background: transparent;
+  border-color: transparent;
+}
+.ui-search__field :deep(.ui-control:focus-visible) {
+  outline: none;
 }
 </style>

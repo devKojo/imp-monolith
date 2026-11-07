@@ -111,7 +111,12 @@ function onClick(e: MouseEvent) {
   cursor: pointer;
   transition:
     background var(--ui-motion-fast) ease,
-    border-color var(--ui-motion-fast) ease;
+    border-color var(--ui-motion-fast) ease,
+    box-shadow var(--ui-motion-fast) ease,
+    transform var(--ui-motion-fast) ease;
+}
+.ui-button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .ui-button[data-size='lg'] {
   padding-inline: var(--ui-space-6);
@@ -125,9 +130,11 @@ function onClick(e: MouseEvent) {
 .ui-button[data-variant='primary'] {
   background: var(--ui-color-action-primary);
   color: var(--ui-color-action-primary-text);
+  box-shadow: var(--ui-elevation-1);
 }
 .ui-button[data-variant='primary']:hover:not(:disabled) {
   background: var(--ui-color-action-primary-hover);
+  box-shadow: var(--ui-elevation-2);
 }
 .ui-button[data-variant='primary']:active:not(:disabled) {
   background: var(--ui-color-action-primary-active);

@@ -126,7 +126,7 @@ const showing = computed(() =>
   max-block-size: 70vh;
   overflow: auto;
   border: 1px solid var(--ui-color-border);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-lg);
 }
 .ui-table {
   inline-size: 100%;

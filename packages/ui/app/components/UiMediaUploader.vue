@@ -110,7 +110,7 @@ function onChange(e: Event) {
   gap: var(--ui-space-2);
   padding: var(--ui-space-4);
   border: 1px dashed var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-lg);
 }
 .ui-uploader p {
   margin: 0;

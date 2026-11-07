@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { uiText } from '../composables/useUiText';
+import UiIcon from './UiIcon.vue';
 import UiLink from './UiLink.vue';
 import UiSelect from './UiSelect.vue';
 import UiSkipLink from './UiSkipLink.vue';
@@ -37,7 +38,10 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
     <UiSkipLink />
     <header class="ui-public__header">
       <div class="ui-public__brand">
-        <slot name="logo">{{ brandName }}</slot>
+        <slot name="logo">
+          <span class="ui-public__mark" aria-hidden="true"><UiIcon name="zap" :size="18" /></span>
+          <span class="ui-public__name">{{ brandName }}</span>
+        </slot>
       </div>
       <nav v-if="$slots.nav" class="ui-public__nav" :aria-label="uiText('nav.primary')">
         <slot name="nav" />
@@ -62,6 +66,12 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
       <slot />
     </main>
     <footer class="ui-public__footer">
+      <p class="ui-public__footer-brand">
+        <span class="ui-public__mark ui-public__mark--sm" aria-hidden="true">
+          <UiIcon name="zap" :size="14" />
+        </span>
+        {{ brandName }}
+      </p>
       <nav :aria-label="uiText('nav.footer')">
         <ul>
           <li>
@@ -88,42 +98,83 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
   flex-direction: column;
   min-block-size: 100vh;
 }
+/* Sticky frosted header: content scrolls underneath it. */
 .ui-public__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--ui-space-3) var(--ui-space-5);
-  padding: var(--ui-space-3) var(--ui-space-4);
+  gap: var(--ui-space-2) var(--ui-space-5);
+  padding: var(--ui-space-2)
+    max(var(--ui-space-4), calc((100% - var(--ui-layout-content-max)) / 2 + var(--ui-space-8)));
+  background: color-mix(in srgb, var(--ui-color-surface-page) 82%, transparent);
   border-block-end: 1px solid var(--ui-color-border);
+  box-shadow: var(--ui-elevation-1);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
 }
 .ui-public__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  max-inline-size: 280px;
   font-weight: 700;
-  max-inline-size: 240px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.ui-public__name {
+  font-size: var(--ui-font-body-s-size);
+}
+.ui-public__mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ui-space-8);
+  block-size: var(--ui-space-8);
+  background: linear-gradient(
+    145deg,
+    var(--ui-color-action-primary),
+    var(--ui-color-action-primary-hover)
+  );
+  color: var(--ui-color-action-primary-text);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: var(--ui-elevation-1);
+}
+.ui-public__mark--sm {
+  inline-size: var(--ui-space-6);
+  block-size: var(--ui-space-6);
+  border-radius: var(--ui-radius-md);
 }
 .ui-public__nav {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: var(--ui-space-1) var(--ui-space-2);
+  gap: var(--ui-space-1);
 }
 /* Navigation links read as nav items, not inline text links; the current page is marked. */
 .ui-public__nav :deep(a) {
   display: inline-flex;
   align-items: center;
   min-block-size: var(--ui-target-public);
-  padding-inline: var(--ui-space-3);
+  padding-inline: var(--ui-space-4);
   color: var(--ui-color-text-secondary);
-  border-radius: var(--ui-radius-md);
-  font-weight: 600;
+  border-radius: var(--ui-radius-pill);
+  font-size: var(--ui-font-body-s-size);
+  font-weight: 500;
   text-decoration: none;
+  transition: background var(--ui-motion-fast) ease;
 }
 .ui-public__nav :deep(a:hover) {
-  background: var(--ui-color-surface-hover);
+  background: var(--ui-color-selected-bg);
   color: var(--ui-color-text-primary);
 }
 .ui-public__nav :deep(a[aria-current='page']) {
   background: var(--ui-color-selected-bg);
   color: var(--ui-color-selected-text);
+  font-weight: 600;
 }
 .ui-public__actions {
   display: flex;
@@ -137,21 +188,35 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
   padding: var(--ui-space-4);
 }
 .ui-public__main--wide {
-  max-inline-size: var(--ui-layout-content-max);
-  margin-inline: auto;
+  max-inline-size: none;
+  padding: 0;
 }
 .ui-public__main:focus {
   outline: none;
 }
 .ui-public__footer {
-  padding: var(--ui-space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-3) var(--ui-space-6);
+  padding: var(--ui-space-6)
+    max(var(--ui-space-4), calc((100% - var(--ui-layout-content-max)) / 2 + var(--ui-space-8)));
   background: var(--ui-color-surface-subtle);
   border-block-start: 1px solid var(--ui-color-border);
+}
+.ui-public__footer-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin: 0;
+  font-size: var(--ui-font-body-s-size);
+  font-weight: 600;
 }
 ul {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--ui-space-2) var(--ui-space-5);
+  gap: var(--ui-space-1) var(--ui-space-5);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -160,5 +225,11 @@ li a {
   display: inline-flex;
   align-items: center;
   min-block-size: var(--ui-target-public);
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-body-s-size);
+  text-decoration: none;
+}
+li a:hover {
+  color: var(--ui-color-text-primary);
 }
 </style>

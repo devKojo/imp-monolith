@@ -39,7 +39,7 @@ withDefaults(
   align-items: center;
   gap: var(--ui-space-1);
   padding: var(--ui-space-1) var(--ui-space-2);
-  border: 1px solid currentcolor;
+  border: 1px solid color-mix(in srgb, currentcolor 24%, transparent);
   border-radius: var(--ui-radius-sm);
   white-space: nowrap;
 }

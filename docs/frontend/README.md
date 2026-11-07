@@ -39,6 +39,7 @@ docs/frontend/               this file, ADRs, generated component-catalogue.md
 | [ADR-F011](adr/ADR-F011-dependencies.md)            | Frontend dependencies are pinned and at least 14 days old                    | Review (R-STK-09)                           |
 | [ADR-F012](adr/ADR-F012-design-references.md)       | External designs are reconciled with the specs, then folded into the library | PR checklist, registry `origin`             |
 | [ADR-F013](adr/ADR-F013-design-language-v2.md)      | Design language v2: Inter, tighter radii, portal shells                      | `foundations.test.ts`, `tokens:check`       |
+| [ADR-F014](adr/ADR-F014-soft-radii-discover.md)     | Softer radii, public shell and discovery layout                              | `foundations.test.ts`, `tokens:check`       |
 
 ## Rules while developing
 

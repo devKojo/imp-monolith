@@ -117,9 +117,12 @@ svg {
   background: var(--ui-color-surface);
   color: var(--ui-color-text-primary);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-sm);
+  border-radius: var(--ui-radius-md);
   font: inherit;
   font-size: var(--ui-font-body-size);
+  transition:
+    border-color var(--ui-motion-fast) ease,
+    box-shadow var(--ui-motion-fast) ease;
 }
 .ui-control[aria-invalid='true'] {
   border-color: var(--ui-color-danger-text);

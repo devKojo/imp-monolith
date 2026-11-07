@@ -29,7 +29,7 @@ withDefaults(
   padding: var(--ui-space-5);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-lg);
   box-shadow: var(--ui-elevation-1);
 }
 .ui-card[data-tone='subtle'] {
