@@ -94,6 +94,43 @@ export const icons = {
   'log-out': stroke('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9'),
   circle: stroke('M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z'),
   loader: stroke('M21 12a9 9 0 1 1-6.22-8.56'),
+  ticket: stroke(
+    'M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z',
+    'M13 5v2M13 11v2M13 17v2',
+  ),
+  cash: stroke(
+    'M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z',
+    'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+    'M6 12h.01M18 12h.01',
+  ),
+  timer: stroke('M10 2h4M12 14l3-3', 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z'),
+  rocket: stroke(
+    'M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09Z',
+    'm12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z',
+    'M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5',
+  ),
+  users: stroke(
+    'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+    'M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  ),
+  'trending-up': stroke('M22 7 13.5 15.5 8.5 10.5 2 17', 'M16 7h6v6'),
+  sliders: stroke('M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'),
+  grid: stroke('M3 3h7v7H3ZM14 3h7v7h-7ZM14 14h7v7h-7ZM3 14h7v7H3Z'),
+  calendar: stroke(
+    'M8 2v4M16 2v4M3 10h18',
+    'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  ),
+  sparkles: stroke('m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z', 'M19 3v4M21 5h-4'),
+  wand: stroke(
+    'M3 21 15 9M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M12.2 6.2 11 5',
+  ),
+  cpu: stroke(
+    'M6 6h12v12H6ZM9 9h6v6H9Z',
+    'M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2',
+  ),
+  'more-vertical': stroke('M12 6h.01M12 12h.01M12 18h.01'),
+  star: stroke('m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.2l-5-4.9 6.9-1Z'),
+  cloud: stroke('M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 12.5 3.5 3.5 0 0 0 6 19Z'),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof icons;

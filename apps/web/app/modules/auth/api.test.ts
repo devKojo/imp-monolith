@@ -33,7 +33,7 @@ describe('createAuthApi', () => {
   it('calls the documented endpoints with the right methods and bodies', async () => {
     const { fetcher, calls } = fakeFetcher({});
     const api = createAuthApi(fetcher);
-    await api.login('a@b.co', 'pw');
+    await api.login('a@b.co', 'pw', 'business');
     await api.verifyEmail('tok');
     await api.session();
     await api.register({
@@ -43,13 +43,22 @@ describe('createAuthApi', () => {
       businessName: 'Acme',
       agreement: { accepted: true, version: '1.0' },
     });
+    await api.registerParticipant({
+      name: 'Kofi',
+      email: 'k@b.co',
+      password: 'pw',
+      agreement: { accepted: true, version: '1.0' },
+    });
     expect(calls.map((c) => `${c.opts.method} ${c.url}`)).toEqual([
       'POST /api/v1/auth/login',
       'POST /api/v1/auth/verify-email',
       'GET /api/v1/auth/session',
       'POST /api/v1/auth/register',
+      'POST /api/v1/auth/register-participant',
     ]);
-    expect(calls[0]!.opts.body).toEqual({ email: 'a@b.co', password: 'pw' });
+    expect(calls[0]!.opts.body).toEqual({ email: 'a@b.co', password: 'pw', portal: 'business' });
+    // A participant registration carries no business name: the two flows are separate.
+    expect(calls[4]!.opts.body).not.toHaveProperty('businessName');
     expect(calls[3]!.opts.body).toMatchObject({ agreement: { accepted: true, version: '1.0' } });
   });
 
@@ -58,7 +67,7 @@ describe('createAuthApi', () => {
     const api = createAuthApi(fetcher);
     await api.logout('csrf-1');
     await api.switchTenant('m-1', 'csrf-2');
-    await api.login('a@b.co', 'pw');
+    await api.login('a@b.co', 'pw', 'participant');
     expect(calls[0]!.opts.headers).toEqual({ 'X-CSRF-Token': 'csrf-1' });
     expect(calls[1]!.opts.headers).toEqual({ 'X-CSRF-Token': 'csrf-2' });
     expect(calls[1]!.opts.body).toEqual({ membershipId: 'm-1' });
@@ -74,7 +83,7 @@ describe('createAuthApi', () => {
       ),
     );
     const err = await createAuthApi(fetcher)
-      .login('a@b.co', 'x')
+      .login('a@b.co', 'x', 'business')
       .catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 429, code: 'TOO_MANY_REQUESTS', retryAfter: 45 });
@@ -97,6 +106,7 @@ describe('classifyAuthError', () => {
     expect(classifyAuthError(err(401, 'INVALID_CREDENTIALS'))).toEqual({
       kind: 'invalid-credentials',
     });
+    expect(classifyAuthError(err(409, 'WRONG_PORTAL'))).toEqual({ kind: 'wrong-portal' });
     expect(classifyAuthError(err(403, 'EMAIL_NOT_VERIFIED'))).toEqual({
       kind: 'email-not-verified',
     });

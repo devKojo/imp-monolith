@@ -17,8 +17,12 @@ export type MembershipSummary = {
   role: Role;
 };
 
+/** Which sign-in page was used. A participant account never opens the business portal. */
+export type Portal = 'participant' | 'business';
+export type AccountType = 'BUSINESS' | 'PARTICIPANT';
+
 export type SessionInfo = {
-  user: { name: string; email: string; emailVerified: boolean };
+  user: { name: string; email: string; emailVerified: boolean; accountType: AccountType };
   active: { membershipId: string; tenantId: string; role: Role } | null;
   memberships: MembershipSummary[];
   /** Session-bound CSRF token; sent as X-CSRF-Token on authenticated state-changing requests. */
@@ -27,8 +31,16 @@ export type SessionInfo = {
 
 export type LoginResult = {
   csrfToken: string;
+  accountType: AccountType;
   memberships: MembershipSummary[];
   activeMembershipId: string | null;
+};
+
+export type RegisterParticipantInput = {
+  name: string;
+  email: string;
+  password: string;
+  agreement: { accepted: true; version: string };
 };
 
 export type RegisterInput = {

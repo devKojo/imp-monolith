@@ -45,6 +45,9 @@ onMounted(async () => {
     <template v-else-if="state === 'ok'">
       <p class="ui-text-body" role="status">{{ t('verify.ok.body') }}</p>
       <UiButton to="/signin" block icon-trailing="arrow-right">{{ t('verify.signin') }}</UiButton>
+      <UiButton to="/business/signin" block variant="secondary">{{
+        t('verify.business')
+      }}</UiButton>
     </template>
     <template v-else>
       <p class="ui-text-body" role="alert">{{ t('verify.bad.body') }}</p>

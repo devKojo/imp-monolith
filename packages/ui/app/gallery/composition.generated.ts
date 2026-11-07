@@ -12,12 +12,22 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiAvatar": {
+    "composes": [],
+    "usedBy": [
+      "UiConsoleShell",
+      "UiPortalShell"
+    ]
+  },
   "UiBadge": {
     "composes": [
       "UiIcon"
     ],
     "usedBy": [
       "UiCampaignCard",
+      "UiDrawCard",
+      "UiInstantWinCard",
+      "UiStatCard",
       "UiStatusChip"
     ]
   },
@@ -49,6 +59,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiChart",
       "UiConfirmDialog",
       "UiConflictDialog",
+      "UiConsoleShell",
       "UiCopyButton",
       "UiCountdown",
       "UiDataTable",
@@ -57,6 +68,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiMediaUploader",
       "UiOtpInput",
       "UiPasswordField",
+      "UiPortalShell",
       "UiReorderableList",
       "UiSearchField",
       "UiStepUpDialog",
@@ -112,6 +124,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiClaimCard": {
+    "composes": [],
+    "usedBy": []
+  },
   "UiConfirmDialog": {
     "composes": [
       "UiButton",
@@ -131,6 +147,15 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [
       "UiCheckbox",
       "UiLink"
+    ],
+    "usedBy": []
+  },
+  "UiConsoleShell": {
+    "composes": [
+      "UiAvatar",
+      "UiButton",
+      "UiSidebarNav",
+      "UiSkipLink"
     ],
     "usedBy": []
   },
@@ -185,6 +210,13 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiDivider": {
     "composes": [],
+    "usedBy": []
+  },
+  "UiDrawCard": {
+    "composes": [
+      "UiBadge",
+      "UiIconTile"
+    ],
     "usedBy": []
   },
   "UiDrawProofPanel": {
@@ -253,6 +285,8 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiFeatureTile",
       "UiFilterChips",
       "UiFormField",
+      "UiIconTile",
+      "UiInstantWinCard",
       "UiLink",
       "UiMediaUploader",
       "UiMeter",
@@ -265,6 +299,22 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiTopBar"
     ]
   },
+  "UiIconTile": {
+    "composes": [
+      "UiIcon"
+    ],
+    "usedBy": [
+      "UiDrawCard",
+      "UiStatCard"
+    ]
+  },
+  "UiInstantWinCard": {
+    "composes": [
+      "UiBadge",
+      "UiIcon"
+    ],
+    "usedBy": []
+  },
   "UiLink": {
     "composes": [
       "UiIcon"
@@ -273,6 +323,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiBreadcrumbs",
       "UiButton",
       "UiConsentGroup",
+      "UiPortalShell",
       "UiPublicShell",
       "UiRewardCard",
       "UiSidebarNav",
@@ -344,6 +395,15 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiPortalShell": {
+    "composes": [
+      "UiAvatar",
+      "UiButton",
+      "UiLink",
+      "UiSkipLink"
+    ],
+    "usedBy": []
+  },
   "UiProgress": {
     "composes": [],
     "usedBy": [
@@ -382,6 +442,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiSegmentedControl": {
+    "composes": [],
+    "usedBy": []
+  },
   "UiSelect": {
     "composes": [
       "UiFormField"
@@ -396,6 +460,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiLink"
     ],
     "usedBy": [
+      "UiConsoleShell",
       "UiDashboardShell"
     ]
   },
@@ -409,9 +474,18 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [],
     "usedBy": [
       "UiAuthShell",
+      "UiConsoleShell",
       "UiDashboardShell",
+      "UiPortalShell",
       "UiPublicShell"
     ]
+  },
+  "UiStatCard": {
+    "composes": [
+      "UiBadge",
+      "UiIconTile"
+    ],
+    "usedBy": []
   },
   "UiStatusChip": {
     "composes": [

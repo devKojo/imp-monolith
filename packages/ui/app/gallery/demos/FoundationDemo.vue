@@ -8,6 +8,8 @@ import UiLiveRegion from '../../components/UiLiveRegion.vue';
 import UiProgress from '../../components/UiProgress.vue';
 import { icons, type IconName } from '../../icons';
 import UiDivider from '../../components/UiDivider.vue';
+import UiAvatar from '../../components/UiAvatar.vue';
+import UiIconTile from '../../components/UiIconTile.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const names = Object.keys(icons) as IconName[];
@@ -63,6 +65,26 @@ const message = ref('');
     <UiDivider label="or" />
     <UiDivider label="or sign in with email" />
   </GalleryBlock>
+
+  <GalleryBlock name="UiAvatar">
+    <div class="demo-row">
+      <UiAvatar name="Kwame Mensah" />
+      <UiAvatar name="Kwame Mensah" verified />
+      <UiAvatar name="Ama" size="sm" />
+      <UiAvatar name="Alex Boateng" tone="soft" />
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiIconTile">
+    <div class="demo-row">
+      <UiIconTile icon="ticket" />
+      <UiIconTile icon="cash" tone="success" />
+      <UiIconTile icon="alert-triangle" tone="warning" />
+      <UiIconTile icon="calendar" tone="neutral" />
+      <UiIconTile icon="rocket" size="sm" />
+      <UiIconTile icon="cpu" size="lg" />
+    </div>
+  </GalleryBlock>
 </template>
 
 <style scoped>
@@ -78,5 +100,11 @@ const message = ref('');
   display: flex;
   align-items: center;
   gap: var(--ui-space-2);
+}
+.demo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-3);
 }
 </style>

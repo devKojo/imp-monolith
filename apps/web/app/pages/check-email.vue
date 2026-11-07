@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { t } from '../../i18n';
-import { useSignupDraft } from '../../modules/auth/composables/useSignupDraft';
-import { BRAND_NAME } from '../../modules/auth/constants';
+import { t } from '../i18n';
+import { useSignupDraft } from '../modules/auth/composables/useSignupDraft';
+import { BRAND_NAME, SIGNIN } from '../modules/auth/constants';
 
 useHead({ title: t('checkEmail.title') });
 
@@ -22,7 +22,7 @@ const isDev = import.meta.dev;
       }}
     </p>
     <UiBanner v-if="isDev" tone="system">{{ t('checkEmail.dev') }}</UiBanner>
-    <UiButton to="/signin" block icon-trailing="arrow-right" variant="secondary">
+    <UiButton :to="SIGNIN[draft.portal]" block icon-trailing="arrow-right" variant="secondary">
       {{ t('checkEmail.signin') }}
     </UiButton>
   </UiAuthShell>

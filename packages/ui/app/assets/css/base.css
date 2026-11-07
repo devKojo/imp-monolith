@@ -16,8 +16,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--ui-color-surface);
+  background: var(--ui-color-surface-page);
   color: var(--ui-color-text-primary);
+  -webkit-font-smoothing: antialiased;
   font-family: var(--ui-font-family);
   font-size: var(--ui-font-body-size);
   line-height: var(--ui-font-body-line);

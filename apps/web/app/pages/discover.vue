@@ -73,7 +73,7 @@ const resultCount = computed(() => (pending.value ? '' : countText(campaigns.val
   <UiPublicShell :brand-name="BRAND_NAME" wide>
     <template #nav>
       <UiLink to="/discover" aria-current="page">{{ t('nav.discover') }}</UiLink>
-      <UiLink to="/signup">{{ t('nav.forBusinesses') }}</UiLink>
+      <UiLink to="/business/register">{{ t('nav.forBusinesses') }}</UiLink>
     </template>
     <template #actions>
       <UiButton to="/signin" variant="secondary">{{ t('nav.signin') }}</UiButton>

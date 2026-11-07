@@ -16,6 +16,7 @@ import UiFilterChips from '../../components/UiFilterChips.vue';
 import UiLink from '../../components/UiLink.vue';
 import UiPasswordField from '../../components/UiPasswordField.vue';
 import UiSearchField from '../../components/UiSearchField.vue';
+import UiSegmentedControl from '../../components/UiSegmentedControl.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const name = ref('');
@@ -71,6 +72,8 @@ const signinPassword = ref('');
 const chip = ref('all');
 const query = ref('');
 const searched = ref('');
+
+const segmented = ref('all');
 </script>
 
 <template>
@@ -279,6 +282,19 @@ const searched = ref('');
   <GalleryBlock name="UiSearchField">
     <UiSearchField v-model="query" label="Search campaigns" @search="searched = $event" />
     <p class="ui-text-body-s" role="status">Last search: {{ searched || 'none' }}</p>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiSegmentedControl">
+    <UiSegmentedControl
+      v-model="segmented"
+      label="Campaign status"
+      :options="[
+        { value: 'all', label: 'All' },
+        { value: 'live', label: 'Live' },
+        { value: 'scheduled', label: 'Scheduled' },
+        { value: 'paused', label: 'Paused' },
+      ]"
+    />
   </GalleryBlock>
 </template>
 
