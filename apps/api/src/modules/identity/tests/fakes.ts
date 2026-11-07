@@ -8,6 +8,7 @@ import type {
   NewSession,
   PasswordHasher,
   RegisterOwnerInput,
+  RegisterParticipantInput,
   SessionRecord,
 } from '../application/ports';
 
@@ -15,11 +16,12 @@ type UserRow = {
   id: string;
   email: string;
   name: string;
-  passwordHash: string;
+  passwordHash: string | null;
   emailVerifiedAt: Date | null;
   failed: number;
   lockedUntil: Date | null;
-  membership: MembershipSummary;
+  membership: MembershipSummary | null;
+  accountType: 'BUSINESS' | 'PARTICIPANT';
 };
 type SessionRow = SessionRecord;
 
@@ -29,6 +31,27 @@ export class FakeIdentityRepository implements IdentityRepository {
   sessions = new Map<string, SessionRow>(); // by tokenHash
   verifications = new Map<string, { userId: string; expiresAt: Date; used: boolean }>();
   touched: string[] = [];
+
+  async registerParticipant(i: RegisterParticipantInput) {
+    if (this.users.has(i.email)) return 'exists' as const;
+    this.users.set(i.email, {
+      id: i.userId,
+      email: i.email,
+      name: i.name,
+      passwordHash: i.passwordHash,
+      emailVerifiedAt: null,
+      failed: 0,
+      lockedUntil: null,
+      membership: null,
+      accountType: 'PARTICIPANT',
+    });
+    this.verifications.set(i.verificationTokenHash, {
+      userId: i.userId,
+      expiresAt: i.verificationExpiresAt,
+      used: false,
+    });
+    return 'created' as const;
+  }
 
   async registerOwner(i: RegisterOwnerInput) {
     if (this.users.has(i.email)) return 'exists' as const;
@@ -46,6 +69,7 @@ export class FakeIdentityRepository implements IdentityRepository {
         businessName: i.businessName,
         role: 'BUSINESS_OWNER',
       },
+      accountType: 'BUSINESS',
     });
     this.verifications.set(i.verificationTokenHash, {
       userId: i.userId,
@@ -55,11 +79,34 @@ export class FakeIdentityRepository implements IdentityRepository {
     return 'created' as const;
   }
 
+  async registerGoogleParticipant(i: { userId: string; email: string; name: string }) {
+    if (this.users.has(i.email)) return 'exists' as const;
+    this.users.set(i.email, {
+      id: i.userId,
+      email: i.email,
+      name: i.name,
+      passwordHash: null,
+      emailVerifiedAt: new Date(),
+      failed: 0,
+      lockedUntil: null,
+      membership: null,
+      accountType: 'PARTICIPANT',
+    });
+    return 'created' as const;
+  }
+
+  async adoptVerifiedEmail(userId: string, now: Date) {
+    const u = [...this.users.values()].find((x) => x.id === userId)!;
+    u.emailVerifiedAt = now;
+    u.passwordHash = null;
+  }
+
   async findLoginUser(email: string): Promise<LoginUser | null> {
     const u = this.users.get(email);
     return u
       ? {
           id: u.id,
+          accountType: u.accountType,
           passwordHash: u.passwordHash,
           emailVerifiedAt: u.emailVerifiedAt,
           lockedUntil: u.lockedUntil,
@@ -79,10 +126,10 @@ export class FakeIdentityRepository implements IdentityRepository {
     u.failed = 0;
     u.lockedUntil = null;
     this.sessions.set(s.tokenHash, this.record(u, s, now, u.membership));
-    return [u.membership];
+    return u.membership ? [u.membership] : [];
   }
 
-  private record(u: UserRow, s: NewSession, now: Date, m: MembershipSummary): SessionRow {
+  private record(u: UserRow, s: NewSession, now: Date, m: MembershipSummary | null): SessionRow {
     return {
       sessionId: s.sessionId,
       userId: u.id,
@@ -90,8 +137,13 @@ export class FakeIdentityRepository implements IdentityRepository {
       lastSeenAt: now,
       expiresAt: s.expiresAt,
       revokedAt: null,
-      user: { email: u.email, name: u.name, emailVerified: u.emailVerifiedAt !== null },
-      active: { membershipId: m.membershipId, tenantId: m.tenantId, role: m.role },
+      user: {
+        email: u.email,
+        name: u.name,
+        emailVerified: u.emailVerifiedAt !== null,
+        accountType: u.accountType,
+      },
+      active: m ? { membershipId: m.membershipId, tenantId: m.tenantId, role: m.role } : null,
     };
   }
 
@@ -113,13 +165,15 @@ export class FakeIdentityRepository implements IdentityRepository {
     now: Date,
   ) {
     const u = [...this.users.values()].find((x) => x.id === userId)!;
-    if (u.membership.membershipId !== membershipId) return false;
+    if (u.membership?.membershipId !== membershipId) return false;
     this.sessions.get(from.tokenHash)!.revokedAt = now;
     this.sessions.set(next.tokenHash, this.record(u, next, now, u.membership));
     return true;
   }
   async listMemberships(userId: string) {
-    return [...this.users.values()].filter((u) => u.id === userId).map((u) => u.membership);
+    return [...this.users.values()]
+      .filter((u) => u.id === userId && u.membership)
+      .map((u) => u.membership!);
   }
   async consumeEmailVerification(tokenHash: string, now: Date) {
     const v = this.verifications.get(tokenHash);

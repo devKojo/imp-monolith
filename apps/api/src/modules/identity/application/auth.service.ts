@@ -1,20 +1,25 @@
 import {
   EmailNotVerifiedError,
+  WrongPortalError,
   ForbiddenError,
   InvalidCredentialsError,
   InvalidTokenError,
+  OAuthFailedError,
   UnauthenticatedError,
   WeakPasswordError,
 } from '../domain/errors';
 import { normalizeEmail } from '../domain/email';
+import { newOAuthAttempt, openAttempt, sealAttempt } from '../domain/oauth';
 import { isLocked } from '../domain/login-throttle';
 import { passwordProblems } from '../domain/password-policy';
 import { absoluteExpiry, isSessionActive, shouldTouch } from '../domain/session-policy';
 import { csrfTokenFor, generateToken, hashToken } from '../domain/tokens';
 import { uuidv7 } from '@/shared/uuid';
 import type {
+  AccountType,
   BreachedPasswordChecker,
   Clock,
+  GoogleIdentityProvider,
   IdentityRepository,
   LoginRateLimiter,
   Mailer,
@@ -28,6 +33,8 @@ export type AuthDeps = {
   hasher: PasswordHasher;
   breached: BreachedPasswordChecker;
   mailer: Mailer;
+  /** Present only when Google sign-in is configured. */
+  google?: GoogleIdentityProvider | undefined;
   loginLimiter: LoginRateLimiter;
   registerLimiter: LoginRateLimiter;
   csrfSecret: string;
@@ -37,6 +44,7 @@ export type AuthDeps = {
 export type AuthContext = {
   sessionId: string;
   userId: string;
+  accountType: AccountType;
   email: string;
   name: string;
   emailVerified: boolean;
@@ -65,13 +73,8 @@ export class AuthService {
    * Responds identically whether or not the email is already registered (no account
    * enumeration). The password is hashed first so both paths cost the same.
    */
-  async register(input: {
-    name: string;
-    email: string;
-    password: string;
-    businessName: string;
-    ip: string;
-  }): Promise<void> {
+  /** Shared by both registration flows: throttle, normalise, and vet + hash the password. */
+  private async prepareRegistration(input: { email: string; password: string; ip: string }) {
     this.deps.registerLimiter.assertAllowed(input.ip);
     this.deps.registerLimiter.recordFailure(input.ip); // counts every attempt
 
@@ -82,7 +85,42 @@ export class AuthService {
     }
     if (problems.length > 0) throw new WeakPasswordError(problems);
 
-    const passwordHash = await this.deps.hasher.hash(input.password);
+    return { email, passwordHash: await this.deps.hasher.hash(input.password) };
+  }
+
+  /** Participant account: an identity only. No business, no membership (ADR-P001). */
+  async registerParticipant(input: {
+    name: string;
+    email: string;
+    password: string;
+    agreementVersion: string;
+    ip: string;
+  }): Promise<void> {
+    const { email, passwordHash } = await this.prepareRegistration(input);
+    const now = this.now();
+    const verificationToken = generateToken();
+    const result = await this.deps.repo.registerParticipant({
+      userId: uuidv7(now.getTime()),
+      email,
+      name: input.name.trim(),
+      passwordHash,
+      agreementVersion: input.agreementVersion,
+      verificationTokenHash: hashToken(verificationToken),
+      verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
+    });
+    if (result === 'created')
+      await this.deps.mailer.sendVerificationEmail(email, verificationToken);
+  }
+
+  async register(input: {
+    name: string;
+    email: string;
+    password: string;
+    businessName: string;
+    agreementVersion: string;
+    ip: string;
+  }): Promise<void> {
+    const { email, passwordHash } = await this.prepareRegistration(input);
     const now = this.now();
     const verificationToken = generateToken();
     const result = await this.deps.repo.registerOwner({
@@ -93,6 +131,7 @@ export class AuthService {
       name: input.name.trim(),
       passwordHash,
       businessName: input.businessName.trim(),
+      agreementVersion: input.agreementVersion,
       verificationTokenHash: hashToken(verificationToken),
       verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
     });
@@ -105,9 +144,15 @@ export class AuthService {
     if (!ok) throw new InvalidTokenError();
   }
 
-  async login(input: { email: string; password: string; ip: string }): Promise<{
+  async login(input: {
+    email: string;
+    password: string;
+    portal?: 'participant' | 'business';
+    ip: string;
+  }): Promise<{
     session: IssuedSession;
     memberships: MembershipSummary[];
+    accountType: AccountType;
   }> {
     this.deps.loginLimiter.assertAllowed(input.ip);
     const email = normalizeEmail(input.email);
@@ -125,11 +170,93 @@ export class AuthService {
       throw new InvalidCredentialsError();
     }
     if (!user.emailVerifiedAt) throw new EmailNotVerifiedError();
+    // Only after the password is proven, so this never reveals whether an address has an account.
+    if (
+      user.accountType !==
+      ((input.portal ?? 'business') === 'participant' ? 'PARTICIPANT' : 'BUSINESS')
+    ) {
+      throw new WrongPortalError(user.accountType);
+    }
 
     this.deps.loginLimiter.reset(input.ip);
     const session = this.newSession(now);
     const memberships = await this.deps.repo.startSession(user.id, session.record, now);
-    return { session: session.issued, memberships };
+    return { session: session.issued, memberships, accountType: user.accountType };
+  }
+
+  get googleEnabled(): boolean {
+    return !!this.deps.google;
+  }
+
+  /** Starts Sign in with Google: the Google URL to send the browser to, and the sealed attempt cookie. */
+  beginGoogle(): { redirectUrl: string; attemptCookie: string } {
+    const google = this.deps.google;
+    if (!google) throw new OAuthFailedError();
+    const attempt = newOAuthAttempt(this.now());
+    return {
+      redirectUrl: google.authorizeUrl({
+        state: attempt.state,
+        nonce: attempt.nonce,
+        codeChallenge: attempt.challenge,
+      }),
+      attemptCookie: sealAttempt(this.deps.csrfSecret, attempt),
+    };
+  }
+
+  /**
+   * Completes Sign in with Google for participants. Validates the sealed attempt (state, nonce,
+   * PKCE verifier), then signs in the participant with that verified email, creating the account on
+   * first use. Business accounts are refused: they sign in with email and password.
+   */
+  async finishGoogle(input: {
+    code: string;
+    state: string;
+    attemptCookie: string | undefined;
+    ip: string;
+  }): Promise<{ session: IssuedSession; accountType: AccountType }> {
+    const google = this.deps.google;
+    this.deps.loginLimiter.assertAllowed(input.ip);
+    const now = this.now();
+    const attempt = openAttempt(this.deps.csrfSecret, input.attemptCookie, now);
+    if (!google || !attempt || attempt.state !== input.state) {
+      this.deps.loginLimiter.recordFailure(input.ip);
+      throw new OAuthFailedError();
+    }
+    let claims;
+    try {
+      claims = await google.exchange({
+        code: input.code,
+        codeVerifier: attempt.verifier,
+        nonce: attempt.nonce,
+      });
+    } catch {
+      this.deps.loginLimiter.recordFailure(input.ip);
+      throw new OAuthFailedError();
+    }
+    // Google must vouch for the address, otherwise it proves nothing about who is signing in.
+    if (!claims.emailVerified) throw new OAuthFailedError();
+
+    const email = normalizeEmail(claims.email);
+    let user = await this.deps.repo.findLoginUser(email);
+    if (!user) {
+      const created = await this.deps.repo.registerGoogleParticipant({
+        userId: uuidv7(now.getTime()),
+        email,
+        name: claims.name,
+      });
+      user = await this.deps.repo.findLoginUser(email);
+      if (!user || (created === 'exists' && user.accountType !== 'PARTICIPANT')) {
+        throw new OAuthFailedError();
+      }
+    } else if (!user.emailVerifiedAt) {
+      await this.deps.repo.adoptVerifiedEmail(user.id, now);
+    }
+    if (user.accountType !== 'PARTICIPANT') throw new WrongPortalError(user.accountType);
+
+    this.deps.loginLimiter.reset(input.ip);
+    const session = this.newSession(now);
+    await this.deps.repo.startSession(user.id, session.record, now);
+    return { session: session.issued, accountType: user.accountType };
   }
 
   /** Resolves a cookie token to an authenticated context, or null. Refreshes last-seen. */
@@ -144,6 +271,7 @@ export class AuthService {
     return {
       sessionId: record.sessionId,
       userId: record.userId,
+      accountType: record.user.accountType,
       email: record.user.email,
       name: record.user.name,
       emailVerified: record.user.emailVerified,

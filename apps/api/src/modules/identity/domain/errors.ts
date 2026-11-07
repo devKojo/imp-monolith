@@ -15,6 +15,12 @@ export class EmailNotVerifiedError extends AppError {
     super('Email address is not verified', 403, 'EMAIL_NOT_VERIFIED');
   }
 }
+/** Correct credentials, but the account belongs to the other portal (participant vs business). */
+export class WrongPortalError extends AppError {
+  constructor(public readonly accountType: 'BUSINESS' | 'PARTICIPANT') {
+    super('This account belongs to a different portal', 409, 'WRONG_PORTAL');
+  }
+}
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(message, 403, 'FORBIDDEN');
@@ -44,5 +50,12 @@ export class TooManyRequestsError extends AppError {
 export class ServiceBusyError extends AppError {
   constructor(public readonly retryAfterSeconds = 1) {
     super('Service is busy, retry shortly', 503, 'SERVICE_BUSY');
+  }
+}
+
+/** Google sign-in failed (bad state, bad code, unverified email...). Never says which. */
+export class OAuthFailedError extends AppError {
+  constructor() {
+    super('Google sign-in failed', 401, 'OAUTH_FAILED');
   }
 }

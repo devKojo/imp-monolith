@@ -75,8 +75,49 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-explicit-any': 'error' },
   },
   {
-    files: ['apps/web/**/*.{ts,vue}'],
+    // The shared UI layer runs in the browser (and SSR); its scripts and config run in Node.
+    files: ['packages/ui/app/**/*.{ts,vue}', 'packages/ui/tests/**/*.ts'],
     languageOptions: { globals: { ...globals.browser } },
+    rules: {
+      // TypeScript optional props with withDefaults are the idiom here.
+      'vue/require-default-prop': 'off',
+    },
+  },
+  {
+    files: ['packages/ui/scripts/**/*.ts', 'packages/ui/*.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    // Gallery pages are Nuxt route files (single-word names) that use Nuxt auto-imports.
+    files: ['packages/ui/app/gallery/pages/**/*.vue'],
+    languageOptions: { globals: { useHead: 'readonly' } },
+    rules: { 'vue/multi-word-component-names': 'off' },
+  },
+  {
+    files: ['packages/ui/tests/**/*.ts'],
+    rules: { 'vue/one-component-per-file': 'off' },
+  },
+  {
+    files: ['apps/web/**/*.{ts,vue}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        // Nuxt auto-imports used in the web app.
+        $fetch: 'readonly',
+        useHead: 'readonly',
+        useRoute: 'readonly',
+        useRouter: 'readonly',
+        useState: 'readonly',
+        useAsyncData: 'readonly',
+        useRuntimeConfig: 'readonly',
+        navigateTo: 'readonly',
+        definePageMeta: 'readonly',
+        defineNuxtPlugin: 'readonly',
+        defineNuxtRouteMiddleware: 'readonly',
+        useCountdown: 'readonly',
+        useClearOnInput: 'readonly',
+      },
+    },
     rules: { 'vue/multi-word-component-names': 'off' },
   },
   {
