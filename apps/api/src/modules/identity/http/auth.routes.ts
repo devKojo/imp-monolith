@@ -3,6 +3,7 @@ import { parse } from '@/shared/http';
 import type { AuthService } from '../application/auth.service';
 import {
   loginSchema,
+  registerParticipantSchema,
   registerSchema,
   switchTenantSchema,
   verifyEmailSchema,
@@ -26,6 +27,7 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
 
   // Declared access per route (R-IAM-06): public = no session required.
   //   POST /register      public       POST /login           public
+  //   POST /register-participant  public
   //   POST /verify-email  public       POST /logout          session + csrf
   //   GET  /session       session      POST /switch-tenant   session + csrf
   r.post('/register', async (req, res) => {
@@ -42,6 +44,18 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
     res.status(202).json({ status: 'verification_sent' });
   });
 
+  r.post('/register-participant', async (req, res) => {
+    const body = parse(registerParticipantSchema, req.body);
+    await auth.registerParticipant({
+      name: body.name,
+      email: body.email,
+      password: body.password,
+      agreementVersion: body.agreement.version,
+      ip: req.ip ?? 'unknown',
+    });
+    res.status(202).json({ status: 'verification_sent' });
+  });
+
   r.post('/verify-email', async (req, res) => {
     await auth.verifyEmail(parse(verifyEmailSchema, req.body).token);
     res.status(204).end();
@@ -49,10 +63,14 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
 
   r.post('/login', async (req, res) => {
     const body = parse(loginSchema, req.body);
-    const { session, memberships } = await auth.login({ ...body, ip: req.ip ?? 'unknown' });
+    const { session, memberships, accountType } = await auth.login({
+      ...body,
+      ip: req.ip ?? 'unknown',
+    });
     res.append('Set-Cookie', sessionCookie(session.token, session.expiresAt));
     res.json({
       csrfToken: session.csrfToken,
+      accountType,
       memberships,
       activeMembershipId: memberships[0]?.membershipId ?? null,
     });
@@ -68,7 +86,12 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
     const ctx = req.auth!;
     const { memberships } = await auth.profile(ctx);
     res.json({
-      user: { name: ctx.name, email: ctx.email, emailVerified: ctx.emailVerified },
+      user: {
+        name: ctx.name,
+        email: ctx.email,
+        emailVerified: ctx.emailVerified,
+        accountType: ctx.accountType,
+      },
       active: ctx.active,
       memberships,
       csrfToken: ctx.csrfToken,

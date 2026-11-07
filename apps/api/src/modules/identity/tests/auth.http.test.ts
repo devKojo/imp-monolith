@@ -179,6 +179,82 @@ describe('identity HTTP', () => {
     });
   });
 
+  describe('participant accounts (ADR-P001)', () => {
+    const pBody = { name: 'Kofi', email: 'Kofi@Example.com', password: PASSWORD, agreement };
+    const pLogin = (portal?: string) =>
+      post('/login', {
+        email: 'kofi@example.com',
+        password: PASSWORD,
+        ...(portal ? { portal } : {}),
+      });
+    async function registerParticipantAndVerify() {
+      await post('/register-participant', pBody).expect(202);
+      await post('/verify-email', { token: s.mailer.sent[0]!.token }).expect(204);
+    }
+
+    it('registers without a business and signs in through the participant portal', async () => {
+      await registerParticipantAndVerify();
+      const res = await pLogin('participant').expect(200);
+      expect(res.body.accountType).toBe('PARTICIPANT');
+      expect(res.body.memberships).toEqual([]);
+      expect(res.body.activeMembershipId).toBeNull();
+      const session = await request(s.app)
+        .get('/api/v1/auth/session')
+        .set('Cookie', cookieOf(res))
+        .expect(200);
+      expect(session.body.user.accountType).toBe('PARTICIPANT');
+      expect(session.body.active).toBeNull();
+    });
+
+    it('requires the agreement and rejects a business name (strict schema)', async () => {
+      await post('/register-participant', { ...pBody, agreement: undefined }).expect(400);
+      await post('/register-participant', { ...pBody, businessName: 'Acme' }).expect(400);
+    });
+
+    it('responds identically for an existing email and sends nothing more', async () => {
+      await post('/register-participant', pBody).expect(202);
+      const again = await post('/register-participant', pBody).expect(202);
+      expect(again.body).toEqual({ status: 'verification_sent' });
+      expect(s.mailer.sent).toHaveLength(1);
+    });
+
+    it('rejects weak passwords with 422', async () => {
+      const res = await post('/register-participant', { ...pBody, password: 'short' });
+      expect(res.status).toBe(422);
+    });
+
+    it('refuses a participant on the business portal, and a business owner on the participant portal', async () => {
+      await registerParticipantAndVerify();
+      const wrong = await pLogin('business');
+      expect(wrong.status).toBe(409);
+      expect(wrong.body.error.code).toBe('WRONG_PORTAL');
+      expect(wrong.headers['set-cookie']).toBeUndefined();
+      // Omitting the portal means the business portal.
+      expect((await pLogin()).body.error.code).toBe('WRONG_PORTAL');
+
+      s = setup();
+      await registerAndVerify();
+      const res = await post('/login', {
+        email: 'ada@example.com',
+        password: PASSWORD,
+        portal: 'participant',
+      });
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('WRONG_PORTAL');
+    });
+
+    it('does not reveal accounts: a wrong password is a generic 401 on either portal', async () => {
+      await registerParticipantAndVerify();
+      const res = await post('/login', {
+        email: 'kofi@example.com',
+        password: 'wrong-wrong-wrong',
+        portal: 'business',
+      });
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('INVALID_CREDENTIALS');
+    });
+  });
+
   describe('sessions', () => {
     it('GET /session needs a valid cookie', async () => {
       await request(s.app).get('/api/v1/auth/session').expect(401);
@@ -195,7 +271,12 @@ describe('identity HTTP', () => {
         .get('/api/v1/auth/session')
         .set('Cookie', cookie)
         .expect(200);
-      expect(res.body.user).toEqual({ name: 'Ada', email: 'ada@example.com', emailVerified: true });
+      expect(res.body.user).toEqual({
+        name: 'Ada',
+        email: 'ada@example.com',
+        emailVerified: true,
+        accountType: 'BUSINESS',
+      });
       expect(res.body.active.role).toBe('BUSINESS_OWNER');
       expect(res.body.csrfToken).toBe(csrf);
     });

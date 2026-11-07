@@ -13,8 +13,11 @@ export type MembershipSummary = {
   role: Role;
 };
 
+export type AccountType = 'BUSINESS' | 'PARTICIPANT';
+
 export type LoginUser = {
   id: string;
+  accountType: AccountType;
   passwordHash: string | null;
   emailVerifiedAt: Date | null;
   lockedUntil: Date | null;
@@ -27,7 +30,7 @@ export type SessionRecord = {
   lastSeenAt: Date;
   expiresAt: Date;
   revokedAt: Date | null;
-  user: { email: string; name: string; emailVerified: boolean };
+  user: { email: string; name: string; emailVerified: boolean; accountType: AccountType };
   /** Derived from the session's active membership only (R-TEN-12). */
   active: { membershipId: string; tenantId: string; role: Role } | null;
 };
@@ -52,7 +55,20 @@ export type RegisterOwnerInput = {
   verificationExpiresAt: Date;
 };
 
+export type RegisterParticipantInput = {
+  userId: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+  /** Version of the terms the participant accepted (R-PRV-01). */
+  agreementVersion: string;
+  verificationTokenHash: string;
+  verificationExpiresAt: Date;
+};
+
 export interface IdentityRepository {
+  /** Creates a participant user + verification token. No business, no membership. */
+  registerParticipant(input: RegisterParticipantInput): Promise<'created' | 'exists'>;
   /** Creates business + user + owner membership + verification token in one transaction. */
   registerOwner(input: RegisterOwnerInput): Promise<'created' | 'exists'>;
   findLoginUser(email: string): Promise<LoginUser | null>;

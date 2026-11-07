@@ -1,5 +1,6 @@
 import {
   EmailNotVerifiedError,
+  WrongPortalError,
   ForbiddenError,
   InvalidCredentialsError,
   InvalidTokenError,
@@ -13,6 +14,7 @@ import { absoluteExpiry, isSessionActive, shouldTouch } from '../domain/session-
 import { csrfTokenFor, generateToken, hashToken } from '../domain/tokens';
 import { uuidv7 } from '@/shared/uuid';
 import type {
+  AccountType,
   BreachedPasswordChecker,
   Clock,
   IdentityRepository,
@@ -37,6 +39,7 @@ export type AuthDeps = {
 export type AuthContext = {
   sessionId: string;
   userId: string;
+  accountType: AccountType;
   email: string;
   name: string;
   emailVerified: boolean;
@@ -65,14 +68,8 @@ export class AuthService {
    * Responds identically whether or not the email is already registered (no account
    * enumeration). The password is hashed first so both paths cost the same.
    */
-  async register(input: {
-    name: string;
-    email: string;
-    password: string;
-    businessName: string;
-    agreementVersion: string;
-    ip: string;
-  }): Promise<void> {
+  /** Shared by both registration flows: throttle, normalise, and vet + hash the password. */
+  private async prepareRegistration(input: { email: string; password: string; ip: string }) {
     this.deps.registerLimiter.assertAllowed(input.ip);
     this.deps.registerLimiter.recordFailure(input.ip); // counts every attempt
 
@@ -83,7 +80,42 @@ export class AuthService {
     }
     if (problems.length > 0) throw new WeakPasswordError(problems);
 
-    const passwordHash = await this.deps.hasher.hash(input.password);
+    return { email, passwordHash: await this.deps.hasher.hash(input.password) };
+  }
+
+  /** Participant account: an identity only. No business, no membership (ADR-P001). */
+  async registerParticipant(input: {
+    name: string;
+    email: string;
+    password: string;
+    agreementVersion: string;
+    ip: string;
+  }): Promise<void> {
+    const { email, passwordHash } = await this.prepareRegistration(input);
+    const now = this.now();
+    const verificationToken = generateToken();
+    const result = await this.deps.repo.registerParticipant({
+      userId: uuidv7(now.getTime()),
+      email,
+      name: input.name.trim(),
+      passwordHash,
+      agreementVersion: input.agreementVersion,
+      verificationTokenHash: hashToken(verificationToken),
+      verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
+    });
+    if (result === 'created')
+      await this.deps.mailer.sendVerificationEmail(email, verificationToken);
+  }
+
+  async register(input: {
+    name: string;
+    email: string;
+    password: string;
+    businessName: string;
+    agreementVersion: string;
+    ip: string;
+  }): Promise<void> {
+    const { email, passwordHash } = await this.prepareRegistration(input);
     const now = this.now();
     const verificationToken = generateToken();
     const result = await this.deps.repo.registerOwner({
@@ -107,9 +139,15 @@ export class AuthService {
     if (!ok) throw new InvalidTokenError();
   }
 
-  async login(input: { email: string; password: string; ip: string }): Promise<{
+  async login(input: {
+    email: string;
+    password: string;
+    portal?: 'participant' | 'business';
+    ip: string;
+  }): Promise<{
     session: IssuedSession;
     memberships: MembershipSummary[];
+    accountType: AccountType;
   }> {
     this.deps.loginLimiter.assertAllowed(input.ip);
     const email = normalizeEmail(input.email);
@@ -127,11 +165,18 @@ export class AuthService {
       throw new InvalidCredentialsError();
     }
     if (!user.emailVerifiedAt) throw new EmailNotVerifiedError();
+    // Only after the password is proven, so this never reveals whether an address has an account.
+    if (
+      user.accountType !==
+      ((input.portal ?? 'business') === 'participant' ? 'PARTICIPANT' : 'BUSINESS')
+    ) {
+      throw new WrongPortalError(user.accountType);
+    }
 
     this.deps.loginLimiter.reset(input.ip);
     const session = this.newSession(now);
     const memberships = await this.deps.repo.startSession(user.id, session.record, now);
-    return { session: session.issued, memberships };
+    return { session: session.issued, memberships, accountType: user.accountType };
   }
 
   /** Resolves a cookie token to an authenticated context, or null. Refreshes last-seen. */
@@ -146,6 +191,7 @@ export class AuthService {
     return {
       sessionId: record.sessionId,
       userId: record.userId,
+      accountType: record.user.accountType,
       email: record.user.email,
       name: record.user.name,
       emailVerified: record.user.emailVerified,

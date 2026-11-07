@@ -15,6 +15,12 @@ export class EmailNotVerifiedError extends AppError {
     super('Email address is not verified', 403, 'EMAIL_NOT_VERIFIED');
   }
 }
+/** Correct credentials, but the account belongs to the other portal (participant vs business). */
+export class WrongPortalError extends AppError {
+  constructor(public readonly accountType: 'BUSINESS' | 'PARTICIPANT') {
+    super('This account belongs to a different portal', 409, 'WRONG_PORTAL');
+  }
+}
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(message, 403, 'FORBIDDEN');

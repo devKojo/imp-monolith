@@ -93,6 +93,51 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     expect(registered?.metadata).toEqual({ agreementVersion: '1.0' });
   });
 
+  it('registers a participant with no business or membership, and signs in on its own portal', async () => {
+    const e = email('part');
+    const before = mailer.sent.length;
+    await auth.registerParticipant({
+      name: 'Part',
+      email: e,
+      password: PASSWORD,
+      agreementVersion: '1.0',
+      ip: '1.1.1.1',
+    });
+    await auth.verifyEmail(mailer.sent[before]!.token);
+
+    const user = await platform.user.findUniqueOrThrow({ where: { email: e } });
+    expect(user.accountType).toBe('PARTICIPANT');
+    expect(await platform.membership.count({ where: { userId: user.id } })).toBe(0);
+    const [audit] = await platform.$queryRaw<
+      { tenant_id: string | null; metadata: { agreementVersion: string } }[]
+    >`SELECT tenant_id, metadata FROM audit_log
+      WHERE actor_id = ${user.id}::uuid AND action = 'auth.participant_registered'`;
+    expect(audit?.tenant_id).toBeNull();
+    expect(audit?.metadata).toEqual({ agreementVersion: '1.0' });
+
+    await expect(
+      auth.login({ email: e, password: PASSWORD, portal: 'business', ip: '1.1.1.1' }),
+    ).rejects.toMatchObject({ code: 'WRONG_PORTAL' });
+    const ok = await auth.login({
+      email: e,
+      password: PASSWORD,
+      portal: 'participant',
+      ip: '1.1.1.1',
+    });
+    expect(ok.accountType).toBe('PARTICIPANT');
+    expect(ok.memberships).toEqual([]);
+
+    const ctx = await auth.authenticate(ok.session.token);
+    expect(ctx).toMatchObject({ accountType: 'PARTICIPANT', active: null });
+  });
+
+  it('a business owner cannot use the participant portal', async () => {
+    const e = await registerVerified('wrongportal');
+    await expect(
+      auth.login({ email: e, password: PASSWORD, portal: 'participant', ip: '1.1.1.1' }),
+    ).rejects.toMatchObject({ code: 'WRONG_PORTAL' });
+  });
+
   it('a duplicate email rolls everything back and reports exists', async () => {
     const e = await registerVerified('dup');
     const result = await repo.registerOwner({

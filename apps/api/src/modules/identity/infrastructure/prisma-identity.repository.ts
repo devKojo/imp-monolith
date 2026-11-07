@@ -8,6 +8,7 @@ import type {
   MembershipSummary,
   NewSession,
   RegisterOwnerInput,
+  RegisterParticipantInput,
   SessionRecord,
 } from '../application/ports';
 import { UnauthenticatedError } from '../domain/errors';
@@ -53,6 +54,41 @@ async function membershipsOf(tx: TenantTx, userId: string): Promise<MembershipSu
 /** All access goes through withIdentity so RLS scopes every statement (identity or tenant). */
 export class PrismaIdentityRepository implements IdentityRepository {
   constructor(private readonly db: PrismaClient) {}
+
+  async registerParticipant(input: RegisterParticipantInput): Promise<'created' | 'exists'> {
+    try {
+      await withIdentity(this.db, { userId: input.userId }, async (tx) => {
+        await tx.user.create({
+          data: {
+            id: input.userId,
+            email: input.email,
+            name: input.name,
+            accountType: 'PARTICIPANT',
+            passwordHash: input.passwordHash,
+          },
+        });
+        await tx.emailVerification.create({
+          data: {
+            userId: input.userId,
+            tokenHash: input.verificationTokenHash,
+            expiresAt: input.verificationExpiresAt,
+          },
+        });
+        await audit(tx, {
+          tenantId: null,
+          actorId: input.userId,
+          action: 'auth.participant_registered',
+          targetType: 'user',
+          targetId: input.userId,
+          metadata: { agreementVersion: input.agreementVersion },
+        });
+      });
+      return 'created';
+    } catch (err) {
+      if (err instanceof ConflictError) return 'exists';
+      throw err;
+    }
+  }
 
   async registerOwner(input: RegisterOwnerInput): Promise<'created' | 'exists'> {
     try {
@@ -108,6 +144,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
       return u
         ? {
             id: u.id,
+            accountType: u.accountType,
             passwordHash: u.passwordHash,
             emailVerifiedAt: u.emailVerifiedAt,
             lockedUntil: u.lockedUntil,
@@ -197,7 +234,12 @@ export class PrismaIdentityRepository implements IdentityRepository {
         lastSeenAt: s.lastSeenAt,
         expiresAt: s.expiresAt,
         revokedAt: s.revokedAt,
-        user: { email: user.email, name: user.name, emailVerified: user.emailVerifiedAt !== null },
+        user: {
+          email: user.email,
+          name: user.name,
+          emailVerified: user.emailVerifiedAt !== null,
+          accountType: user.accountType,
+        },
         active: m ? { membershipId: m.id, tenantId: m.tenantId, role: m.role } : null,
       };
     });
