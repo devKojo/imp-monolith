@@ -1,4 +1,6 @@
 export default defineNuxtConfig({
+  // Design tokens, components and the dev-only /ui gallery come from the shared layer.
+  extends: ['../../packages/ui'],
   compatibilityDate: '2025-07-15',
   ssr: true,
   typescript: { strict: true },

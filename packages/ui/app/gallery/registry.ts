@@ -1,0 +1,428 @@
+/**
+ * Component registry: the single index of the library (UI-GOV-02). Every component file in
+ * app/components MUST have an entry here and a demo in the gallery before a feature may use it; a
+ * test enforces both. Composition ("composes" / "used by") is derived from source by
+ * scripts/build-catalogue.ts, so only describe what code cannot say.
+ */
+export const categories = [
+  'Foundation',
+  'Actions',
+  'Forms',
+  'Feedback',
+  'Overlays',
+  'Data',
+  'Navigation',
+  'Domain',
+] as const;
+export type Category = (typeof categories)[number];
+
+export type ComponentEntry = {
+  name: string;
+  category: Category;
+  summary: string;
+  /** UI spec requirement ids (UI-*) and sections this component implements. */
+  specRefs: string[];
+  states: string[];
+  a11y: string;
+};
+
+export const registry: ComponentEntry[] = [
+  // ---- Foundation
+  {
+    name: 'UiIcon',
+    category: 'Foundation',
+    summary: 'The one inline SVG icon set. Decorative unless given a label.',
+    specRefs: ['UI-FND-06'],
+    states: ['decorative', 'labelled'],
+    a11y: 'aria-hidden by default; role=img with aria-label when meaningful.',
+  },
+  {
+    name: 'UiLink',
+    category: 'Foundation',
+    summary: 'Internal (NuxtLink) or external link with a text cue for new tabs.',
+    specRefs: ['UI-A11Y-06'],
+    states: ['internal', 'external'],
+    a11y: 'External links announce "(opens in a new tab)".',
+  },
+  {
+    name: 'UiLiveRegion',
+    category: 'Foundation',
+    summary: 'aria-live status or alert region for save, submit and error announcements.',
+    specRefs: ['UI-A11Y-05'],
+    states: ['polite', 'assertive'],
+    a11y: 'Keep mounted; change the message. Assertive only for blocking errors.',
+  },
+  {
+    name: 'UiProgress',
+    category: 'Foundation',
+    summary: 'Progress bar used by stepper, uploader, countdown and meters.',
+    specRefs: ['Spec 5'],
+    states: ['determinate', 'indeterminate', 'tones'],
+    a11y: 'role=progressbar with a name; show the value as text next to it.',
+  },
+  {
+    name: 'UiCard',
+    category: 'Foundation',
+    summary: 'Bordered surface with optional heading; the base for panels and prize cards.',
+    specRefs: ['Spec 3.4'],
+    states: ['default', 'subtle', 'raised'],
+    a11y: 'Heading level is configurable to keep the outline correct.',
+  },
+  // ---- Actions
+  {
+    name: 'UiButton',
+    category: 'Actions',
+    summary:
+      'Primary, secondary, tertiary and danger actions with loading and disabled-with-reason states.',
+    specRefs: ['Spec 5', 'UI-FND-05', 'UI-CPY-02'],
+    states: ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading'],
+    a11y: 'Loading keeps width and sets aria-busy; the disabled reason is visible text, not a tooltip.',
+  },
+  {
+    name: 'UiCopyButton',
+    category: 'Actions',
+    summary: 'Copy a value to the clipboard and announce it.',
+    specRefs: ['UI-RWD-03', 'UI-DSH-12'],
+    states: ['idle', 'copied'],
+    a11y: 'Name includes what is copied; "Copied" is announced politely.',
+  },
+  {
+    name: 'UiPermissionGate',
+    category: 'Actions',
+    summary: 'Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule.',
+    specRefs: ['UI-DSH-03', 'Spec 7.3'],
+    states: ['allowed', 'never', 'state', 'role', 'elevation'],
+    a11y: 'Reasons are text beside the control; hiding is a usability aid, never security.',
+  },
+  // ---- Forms
+  {
+    name: 'UiFormField',
+    category: 'Forms',
+    summary: 'Label, required text, hint and error wiring shared by every labelled control.',
+    specRefs: ['UI-A11Y-04'],
+    states: ['default', 'hint', 'error'],
+    a11y: 'Persistent label, aria-describedby to hint or error, error = icon + text.',
+  },
+  {
+    name: 'UiTextInput',
+    category: 'Forms',
+    summary: 'Text input and textarea with autocomplete, inputmode and a near-limit counter.',
+    specRefs: ['Spec 5', 'UI-A11Y-04'],
+    states: ['default', 'error', 'disabled', 'near limit'],
+    a11y: '16 px text prevents mobile zoom; autocomplete and inputmode set per field.',
+  },
+  {
+    name: 'UiPhoneInput',
+    category: 'Forms',
+    summary: 'Country selector and number field accepting local and international formats.',
+    specRefs: ['UI-PUB-04', 'UI-I18N-05'],
+    states: ['default', 'error'],
+    a11y: 'Formats on blur; never blocks valid characters; autocomplete=tel.',
+  },
+  {
+    name: 'UiOtpInput',
+    category: 'Forms',
+    summary: 'One-field 6-digit code entry with resend countdown and every OTP state.',
+    specRefs: ['UI-PUB-12', 'Spec 6.3', 'UI-A11Y-09'],
+    states: ['idle', 'verifying', 'wrong', 'expired', 'limit', 'cannotSend', 'verified'],
+    a11y: 'one-time-code autofill, paste supported, countdown announced every 10 s only.',
+  },
+  {
+    name: 'UiSelect',
+    category: 'Forms',
+    summary: 'Native select inside the shared field wrapper.',
+    specRefs: ['Spec 5'],
+    states: ['default', 'error', 'disabled'],
+    a11y: 'Native semantics.',
+  },
+  {
+    name: 'UiCheckbox',
+    category: 'Forms',
+    summary: 'Checkbox for form values with description and error.',
+    specRefs: ['Spec 5', 'UI-PUB-10'],
+    states: ['unchecked', 'checked', 'error', 'disabled'],
+    a11y: 'Whole label is clickable; 44 px minimum height.',
+  },
+  {
+    name: 'UiSwitch',
+    category: 'Forms',
+    summary: 'Switch for settings that apply immediately.',
+    specRefs: ['Spec 5'],
+    states: ['off', 'on', 'disabled'],
+    a11y: 'role=switch; state shown as text as well as position.',
+  },
+  {
+    name: 'UiChoiceGroup',
+    category: 'Forms',
+    summary: 'Radio group with radio-card variant for poll, vote and quiz options.',
+    specRefs: ['UI-PUB-13', 'UI-PUB-14'],
+    states: ['unselected', 'selected', 'error'],
+    a11y: 'Native radios in a fieldset; the whole card is the target.',
+  },
+  {
+    name: 'UiDateTimeField',
+    category: 'Forms',
+    summary: 'Date, time and time zone fields with a participant-facing preview.',
+    specRefs: ['UI-BLD-04', 'UI-I18N-03'],
+    states: ['default', 'error'],
+    a11y: 'Keyboard-typable native inputs; the preview is announced politely.',
+  },
+  {
+    name: 'UiErrorSummary',
+    category: 'Forms',
+    summary: 'Error list at the top of a form; focus moves here and items link to fields.',
+    specRefs: ['UI-A11Y-04', 'Spec 11'],
+    states: ['hidden', 'visible'],
+    a11y: 'role=alert, receives focus when errors appear; input is preserved.',
+  },
+  {
+    name: 'UiConsentGroup',
+    category: 'Forms',
+    summary: 'Required terms separate from unticked optional purposes, each with versioned text.',
+    specRefs: ['UI-PUB-10', 'R-PRV-03'],
+    states: ['default', 'error'],
+    a11y: 'Fieldset with legend; optional boxes start unticked.',
+  },
+  {
+    name: 'UiCaptchaWrapper',
+    category: 'Forms',
+    summary: 'Frame for the CAPTCHA provider with an accessible alternative.',
+    specRefs: ['UI-PUB-11', 'UI-A11Y-09'],
+    states: ['challenge', 'failed'],
+    a11y: 'Alternative reachable by keyboard; entered data is kept on failure.',
+  },
+  // ---- Feedback
+  {
+    name: 'UiStatusChip',
+    category: 'Feedback',
+    summary:
+      'Status chip driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk).',
+    specRefs: ['UI-DSH-05', 'Spec 7.2'],
+    states: ['every status in every vocabulary'],
+    a11y: 'Icon + text + colour, never colour alone.',
+  },
+  {
+    name: 'UiBanner',
+    category: 'Feedback',
+    summary: 'Persistent info, warning, error, system and elevation messages.',
+    specRefs: ['Spec 5', 'UI-DSH-13', 'UI-ADM-01'],
+    states: ['info', 'warning', 'error', 'system', 'elevation', 'dismissible'],
+    a11y: 'Errors use role=alert; others role=status. Pushes content down.',
+  },
+  {
+    name: 'UiToaster',
+    category: 'Feedback',
+    summary:
+      'Success and info toasts (via useToast) that auto-dismiss and pause on hover and focus.',
+    specRefs: ['Spec 5', 'UI-DSH-13'],
+    states: ['success', 'info'],
+    a11y: 'aria-live polite, never takes focus, 6 s with pause.',
+  },
+  {
+    name: 'UiEmptyState',
+    category: 'Feedback',
+    summary: 'Heading, explanation and next action for empty and terminal screens.',
+    specRefs: ['Spec 5', 'Spec 11'],
+    states: ['empty', 'filtered'],
+    a11y: 'Always says why it is empty and what to do next.',
+  },
+  {
+    name: 'UiSkeleton',
+    category: 'Feedback',
+    summary: 'Layout-matching placeholders for text, card, table, chart and form.',
+    specRefs: ['UI-PRF-02', 'Spec 11'],
+    states: ['text', 'card', 'table', 'chart', 'form'],
+    a11y: 'Hidden from AT with a single "Loading" status; no motion under reduced-motion.',
+  },
+  {
+    name: 'UiSystemState',
+    category: 'Feedback',
+    summary:
+      'Renders any state from the section 11 matrix (401, 403, 404, 409, 429, 503, offline, ...).',
+    specRefs: ['Spec 11', 'UXA-006'],
+    states: ['all 19 system states'],
+    a11y: 'Banner, inline or page treatment per state, always with a next step.',
+  },
+  {
+    name: 'UiMeter',
+    category: 'Feedback',
+    summary: 'Usage and spend-cap meter with 80% and 100% treatments.',
+    specRefs: ['UI-DSH-12', 'UI-DSH-10'],
+    states: ['ok', 'near limit', 'limit reached'],
+    a11y: 'Warning shown with icon and text, not colour alone.',
+  },
+  // ---- Overlays
+  {
+    name: 'UiDialog',
+    category: 'Overlays',
+    summary: 'Base modal on native <dialog>: focus trap, Escape, focus return.',
+    specRefs: ['Spec 5', 'UI-A11Y-03'],
+    states: ['closed', 'open', 'persistent'],
+    a11y: 'Title is an h2; focus returns to the trigger; no click-outside dismissal.',
+  },
+  {
+    name: 'UiConfirmDialog',
+    category: 'Overlays',
+    summary: 'Confirm and destructive confirmation with optional typed phrase.',
+    specRefs: ['UI-DSH-13', 'UI-RWD-02', 'UI-ADM-03'],
+    states: ['confirm', 'destructive', 'typed phrase'],
+    a11y: 'Verb + object button; reason shown when the button is disabled.',
+  },
+  {
+    name: 'UiConflictDialog',
+    category: 'Overlays',
+    summary: 'Version-conflict dialog for 412 responses; never loses input.',
+    specRefs: ['UI-BLD-03', 'UXA-011'],
+    states: ['open'],
+    a11y: 'Persistent: cannot be dismissed without choosing a path.',
+  },
+  {
+    name: 'UiStepUpDialog',
+    category: 'Overlays',
+    summary: 'Step-up authentication with a required audited purpose.',
+    specRefs: ['UI-DSH-07', 'R-IAM-03'],
+    states: ['open', 'error', 'loading'],
+    a11y: 'Purpose and code are labelled; the audit notice is visible.',
+  },
+  // ---- Data
+  {
+    name: 'UiDataTable',
+    category: 'Data',
+    summary:
+      'Sticky-header, sortable table with load-more, priority collapse and card layout on mobile.',
+    specRefs: ['UI-DSH-04', 'UI-DSH-06', 'UI-A11Y-11'],
+    states: ['loading', 'empty', 'rows', 'sorted', 'has more'],
+    a11y: 'Focusable named scroll region; aria-sort; stacked labels below 768 px.',
+  },
+  {
+    name: 'UiMaskedValue',
+    category: 'Data',
+    summary: 'Masked PII with permission-gated reveal that re-masks after 30 s.',
+    specRefs: ['UI-DSH-07', 'UXA-012', 'Spec 7.4'],
+    states: ['masked', 'revealed', 'no permission'],
+    a11y: 'Reveal/hide buttons name the field; re-masking is announced.',
+  },
+  {
+    name: 'UiChart',
+    category: 'Data',
+    summary: 'Line, bar and funnel SVG charts with markers, patterns, data table and summary.',
+    specRefs: ['UI-A11Y-10', 'UI-DSH-08'],
+    states: ['chart', 'data table', 'approx', 'provisional'],
+    a11y: 'Never colour alone; text summary always shown; table alternative.',
+  },
+  // ---- Navigation
+  {
+    name: 'UiStepper',
+    category: 'Navigation',
+    summary: 'Builder stages (with status) and participant "Step n of N" progress.',
+    specRefs: ['UI-BLD-01', 'UI-PUB-05'],
+    states: ['flow', 'builder', 'every stage status'],
+    a11y: 'Step text and bar; aria-current=step; status as icon + text.',
+  },
+  {
+    name: 'UiTabs',
+    category: 'Navigation',
+    summary: 'Tabs with arrow-key navigation.',
+    specRefs: ['Spec 5'],
+    states: ['selected', 'unselected'],
+    a11y: 'Native tab roles, roving tabindex, Home/End.',
+  },
+  {
+    name: 'UiAccordion',
+    category: 'Navigation',
+    summary: 'Disclosure list for how-it-works and FAQ.',
+    specRefs: ['Spec 5', 'UI-PUB-01'],
+    states: ['collapsed', 'expanded'],
+    a11y: 'aria-expanded buttons inside headings.',
+  },
+  {
+    name: 'UiBreadcrumbs',
+    category: 'Navigation',
+    summary: 'Breadcrumb trail with the current page marked.',
+    specRefs: ['UI-DSH-01'],
+    states: ['default'],
+    a11y: 'nav landmark; aria-current=page on the last item.',
+  },
+  {
+    name: 'UiSidebarNav',
+    category: 'Navigation',
+    summary: 'Primary navigation filtered by role by the caller.',
+    specRefs: ['UI-DSH-01', 'Spec 2.2'],
+    states: ['default', 'current', 'badge'],
+    a11y: 'aria-current=page; 32 px targets in the dashboard.',
+  },
+  {
+    name: 'UiTopBar',
+    category: 'Navigation',
+    summary: 'Business name and role, search, help, notifications and user menu.',
+    specRefs: ['UI-DSH-01', 'UI-A11Y-13', 'UI-DSH-14'],
+    states: ['default', 'unread'],
+    a11y: 'Help in the same place on every page; bell announces unread count.',
+  },
+  {
+    name: 'UiSkipLink',
+    category: 'Navigation',
+    summary: 'Skip-to-content link, first focusable element on every page.',
+    specRefs: ['UI-A11Y-06'],
+    states: ['hidden', 'focused'],
+    a11y: 'Visible on focus; targets #main.',
+  },
+  {
+    name: 'UiDashboardShell',
+    category: 'Navigation',
+    summary: 'Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark.',
+    specRefs: ['UI-DSH-01', 'UI-FND-05'],
+    states: ['sidebar (lg+)', 'drawer (<lg)', 'with banner'],
+    a11y: 'One main landmark; Escape closes the drawer; dashboard 32 px targets.',
+  },
+  {
+    name: 'UiPublicShell',
+    category: 'Navigation',
+    summary: 'Public page frame: brand, language switcher, reading column, required footer links.',
+    specRefs: ['UI-PUB-01', 'UI-PUB-23', 'UI-A11Y-13'],
+    states: ['single locale', 'multi locale'],
+    a11y: 'Footer always has Privacy, Terms, Help, Report abuse; no per-user data (edge-cached).',
+  },
+  // ---- Domain
+  {
+    name: 'UiReorderableList',
+    category: 'Domain',
+    summary:
+      'List with move up, move down and remove buttons (questions, options, landing blocks).',
+    specRefs: ['UI-A11Y-08', 'UI-BLD-09'],
+    states: ['default', 'first', 'last'],
+    a11y: 'Item-specific button names; drag is only an enhancement.',
+  },
+  {
+    name: 'UiMediaUploader',
+    category: 'Domain',
+    summary: 'Upload flow: choosing, uploading, validating, approved, rejected with reason.',
+    specRefs: ['UI-PUB-16', 'Spec 11'],
+    states: ['choosing', 'uploading', 'validating', 'approved', 'rejected'],
+    a11y: 'Keyboard operable without drag; state changes announced.',
+  },
+  {
+    name: 'UiCountdown',
+    category: 'Domain',
+    summary: 'Campaign countdown and quiz timer with milestone announcements and extension.',
+    specRefs: ['UI-A11Y-07', 'UI-PUB-13'],
+    states: ['running', '50%', '20%', '10%', 'extendable'],
+    a11y: 'Announced at 50, 20 and 10% only; extension needs no reason.',
+  },
+  {
+    name: 'UiRewardCard',
+    category: 'Domain',
+    summary: 'Prize image, name, value, quantity and rules link.',
+    specRefs: ['Spec 5', 'UI-FND-08'],
+    states: ['default', 'with remaining'],
+    a11y: 'Explicit image dimensions; alt text or decorative flag.',
+  },
+  {
+    name: 'UiDrawProofPanel',
+    category: 'Domain',
+    summary: 'Algorithm, snapshot hash, seed commitment, revealed seed and verify steps.',
+    specRefs: ['UI-RWD-03', 'R-RWD-04'],
+    states: ['default'],
+    a11y: 'Copy buttons name what they copy; steps are an ordered list.',
+  },
+];
