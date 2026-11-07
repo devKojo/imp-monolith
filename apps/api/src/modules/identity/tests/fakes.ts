@@ -16,7 +16,7 @@ type UserRow = {
   id: string;
   email: string;
   name: string;
-  passwordHash: string;
+  passwordHash: string | null;
   emailVerifiedAt: Date | null;
   failed: number;
   lockedUntil: Date | null;
@@ -77,6 +77,28 @@ export class FakeIdentityRepository implements IdentityRepository {
       used: false,
     });
     return 'created' as const;
+  }
+
+  async registerGoogleParticipant(i: { userId: string; email: string; name: string }) {
+    if (this.users.has(i.email)) return 'exists' as const;
+    this.users.set(i.email, {
+      id: i.userId,
+      email: i.email,
+      name: i.name,
+      passwordHash: null,
+      emailVerifiedAt: new Date(),
+      failed: 0,
+      lockedUntil: null,
+      membership: null,
+      accountType: 'PARTICIPANT',
+    });
+    return 'created' as const;
+  }
+
+  async adoptVerifiedEmail(userId: string, now: Date) {
+    const u = [...this.users.values()].find((x) => x.id === userId)!;
+    u.emailVerifiedAt = now;
+    u.passwordHash = null;
   }
 
   async findLoginUser(email: string): Promise<LoginUser | null> {

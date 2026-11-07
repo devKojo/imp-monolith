@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { t } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import AuthFailureNotice from './AuthFailureNotice.vue';
+import GoogleSigninButton from './GoogleSigninButton.vue';
 import { HOME } from '../constants';
 import type { Portal } from '../types';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
@@ -70,6 +71,12 @@ async function submit() {
     loading.value = false; // input is kept so nothing is lost on a recoverable failure
   }
 }
+// The API sends people back here with ?error= when Google sign-in did not complete.
+const googleError = computed(() => {
+  const e = route.query.error;
+  return e === 'google' || e === 'google_business' ? e : null;
+});
+
 const crumbs = [
   { label: t('nav.discover'), to: '/discover' },
   { label: isBusiness ? t('footer.business.signin') : t('nav.signin') },
@@ -82,6 +89,15 @@ const crumbs = [
     :title="t('signin.title')"
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
+    <UiBanner
+      v-if="googleError"
+      tone="error"
+      :title="
+        googleError === 'google_business' ? t('auth.google.business') : t('auth.google.error')
+      "
+    />
+    <GoogleSigninButton v-if="!isBusiness" />
+
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice

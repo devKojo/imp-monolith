@@ -52,3 +52,10 @@ export class ServiceBusyError extends AppError {
     super('Service is busy, retry shortly', 503, 'SERVICE_BUSY');
   }
 }
+
+/** Google sign-in failed (bad state, bad code, unverified email...). Never says which. */
+export class OAuthFailedError extends AppError {
+  constructor() {
+    super('Google sign-in failed', 401, 'OAUTH_FAILED');
+  }
+}
