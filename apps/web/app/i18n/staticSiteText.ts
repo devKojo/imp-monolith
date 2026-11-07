@@ -73,7 +73,7 @@ export const staticSiteText = {
   'register.business.submit': 'Create business account',
   'register.business.haveAccount': 'Already have a business account?',
   'register.business.signin': 'Sign in to the business portal',
-  'register.emailHint': 'We will send a link to verify it.',
+  'register.emailHint': 'You can verify it later, after you sign in.',
   'register.password': 'Create password',
   'register.passwordHint': 'We also check passwords against known data breaches.',
   'register.passwordBreached':
@@ -95,11 +95,14 @@ export const staticSiteText = {
 
   // check email
   'checkEmail.title': 'Check your email',
-  'checkEmail.body':
-    'If {email} is not registered yet, we sent it a verification link. Open the link to activate your account. If you already have an account, sign in instead.',
-  'checkEmail.bodyNoEmail':
-    'We sent a verification link. Open it to activate your account. If you already have an account, sign in instead.',
-  'checkEmail.dev': 'Development only: the verification link is printed in the API console.',
+  'checkEmail.body': 'If {email} is new, we sent it a link. Open it to finish signing up.',
+  'checkEmail.resend': 'Resend email',
+  'checkEmail.resendEmail': 'Your email address',
+  'checkEmail.resendWait': 'You can resend in {time}.',
+  'checkEmail.resent': 'If that address is waiting to be verified, we sent a new link.',
+  'checkEmail.resendLimited': 'Too many resends for now. Try again in {time}.',
+  'checkEmail.resendFailed': 'We could not send that right now. Try again in a moment.',
+  'checkEmail.bodyNoEmail': 'We sent you a link. Open it to finish signing up.',
   'checkEmail.signin': 'Go to sign in',
 
   // verify email
@@ -205,6 +208,14 @@ export const staticSiteText = {
     'This page shows example figures. Your real entries and rewards appear here once campaigns are connected.',
   'me.logout': 'Sign out',
   'me.verified': 'Verified',
+  'me.verify.title': 'Verify your email (optional)',
+  'me.verify.body':
+    'Confirm that this address is yours. You can skip this and keep using your account.',
+  'me.verify.send': 'Send verification email',
+  'me.verify.sent': 'We sent a link to {email}. Open it to finish.',
+  'me.verify.wait': 'You can resend in {time}.',
+  'me.verify.limited': 'Too many requests. Try again in {time}.',
+  'me.verify.failed': 'We could not send that right now. Try again in a moment.',
   'me.loggingOut': 'Signing out...',
   'me.footer': 'IMP',
 

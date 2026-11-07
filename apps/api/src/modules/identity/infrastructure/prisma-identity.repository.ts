@@ -67,13 +67,15 @@ export class PrismaIdentityRepository implements IdentityRepository {
             passwordHash: input.passwordHash,
           },
         });
-        await tx.emailVerification.create({
-          data: {
-            userId: input.userId,
-            tokenHash: input.verificationTokenHash,
-            expiresAt: input.verificationExpiresAt,
-          },
-        });
+        if (input.verificationTokenHash && input.verificationExpiresAt) {
+          await tx.emailVerification.create({
+            data: {
+              userId: input.userId,
+              tokenHash: input.verificationTokenHash,
+              expiresAt: input.verificationExpiresAt,
+            },
+          });
+        }
         await audit(tx, {
           tenantId: null,
           actorId: input.userId,
@@ -120,6 +122,19 @@ export class PrismaIdentityRepository implements IdentityRepository {
       if (err instanceof ConflictError) return 'exists';
       throw err;
     }
+  }
+
+  createEmailVerification(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    return withIdentity(this.db, { userId }, async (tx) => {
+      await tx.emailVerification.create({ data: { userId, tokenHash, expiresAt } });
+      await audit(tx, {
+        tenantId: null,
+        actorId: userId,
+        action: 'auth.verification_resent',
+        targetType: 'user',
+        targetId: userId,
+      });
+    });
   }
 
   adoptVerifiedEmail(userId: string, now: Date): Promise<void> {

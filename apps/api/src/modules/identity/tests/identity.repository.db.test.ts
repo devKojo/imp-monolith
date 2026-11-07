@@ -35,6 +35,9 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     mailer,
     loginLimiter: new MemoryRateLimiter(1000, 60_000),
     registerLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendIpLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendEmailLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendCooldown: new MemoryRateLimiter(1000, 60_000),
     csrfSecret: 's'.repeat(32),
   });
 
@@ -95,7 +98,6 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
 
   it('registers a participant with no business or membership, and signs in on its own portal', async () => {
     const e = email('part');
-    const before = mailer.sent.length;
     await auth.registerParticipant({
       name: 'Part',
       email: e,
@@ -103,10 +105,10 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
       agreementVersion: '1.0',
       ip: '1.1.1.1',
     });
-    await auth.verifyEmail(mailer.sent[before]!.token);
-
+    // No verification step: a participant can sign in straight away.
     const user = await platform.user.findUniqueOrThrow({ where: { email: e } });
     expect(user.accountType).toBe('PARTICIPANT');
+    expect(user.emailVerifiedAt).toBeNull();
     expect(await platform.membership.count({ where: { userId: user.id } })).toBe(0);
     const [audit] = await platform.$queryRaw<
       { tenant_id: string | null; metadata: { agreementVersion: string } }[]

@@ -45,11 +45,13 @@ export class FakeIdentityRepository implements IdentityRepository {
       membership: null,
       accountType: 'PARTICIPANT',
     });
-    this.verifications.set(i.verificationTokenHash, {
-      userId: i.userId,
-      expiresAt: i.verificationExpiresAt,
-      used: false,
-    });
+    if (i.verificationTokenHash && i.verificationExpiresAt) {
+      this.verifications.set(i.verificationTokenHash, {
+        userId: i.userId,
+        expiresAt: i.verificationExpiresAt,
+        used: false,
+      });
+    }
     return 'created' as const;
   }
 
@@ -93,6 +95,10 @@ export class FakeIdentityRepository implements IdentityRepository {
       accountType: 'PARTICIPANT',
     });
     return 'created' as const;
+  }
+
+  async createEmailVerification(userId: string, tokenHash: string, expiresAt: Date) {
+    this.verifications.set(tokenHash, { userId, expiresAt, used: false });
   }
 
   async adoptVerifiedEmail(userId: string, now: Date) {
@@ -148,7 +154,12 @@ export class FakeIdentityRepository implements IdentityRepository {
   }
 
   async findSession(tokenHash: string) {
-    return this.sessions.get(tokenHash) ?? null;
+    const row = this.sessions.get(tokenHash);
+    if (!row) return null;
+    // Like the real repository, read the user's current state rather than a login-time snapshot.
+    const u = [...this.users.values()].find((x) => x.id === row.userId);
+    if (u) row.user.emailVerified = u.emailVerifiedAt !== null;
+    return row;
   }
   async touchSession(_userId: string, sessionId: string, now: Date) {
     this.touched.push(sessionId);

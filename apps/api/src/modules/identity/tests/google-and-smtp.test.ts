@@ -44,6 +44,9 @@ function setup(withGoogle = true) {
     google: withGoogle ? google : undefined,
     loginLimiter: new MemoryRateLimiter(50, 60_000),
     registerLimiter: new MemoryRateLimiter(50, 60_000),
+    resendIpLimiter: new MemoryRateLimiter(50, 60_000),
+    resendEmailLimiter: new MemoryRateLimiter(50, 60_000),
+    resendCooldown: new MemoryRateLimiter(50, 60_000),
     csrfSecret: SECRET,
   });
   const app = express();

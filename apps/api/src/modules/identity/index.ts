@@ -37,6 +37,9 @@ export function createIdentityModule(cfg: IdentityConfig) {
     google: cfg.google,
     loginLimiter: new MemoryRateLimiter(20, 15 * 60 * 1000), // failures per IP / 15 min
     registerLimiter: new MemoryRateLimiter(10, 60 * 60 * 1000), // attempts per IP / hour
+    resendIpLimiter: new MemoryRateLimiter(10, 60 * 60 * 1000), // resends per IP / hour
+    resendEmailLimiter: new MemoryRateLimiter(5, 60 * 60 * 1000), // resends per address / hour
+    resendCooldown: new MemoryRateLimiter(1, 60 * 1000), // one resend per address / minute
     csrfSecret: cfg.sessionSecret ?? randomBytes(32).toString('hex'),
   });
   return {

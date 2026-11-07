@@ -37,6 +37,10 @@ export type AuthDeps = {
   google?: GoogleIdentityProvider | undefined;
   loginLimiter: LoginRateLimiter;
   registerLimiter: LoginRateLimiter;
+  /** Resend: per client IP (hourly), per address (hourly) and per address (short cooldown). */
+  resendIpLimiter: LoginRateLimiter;
+  resendEmailLimiter: LoginRateLimiter;
+  resendCooldown: LoginRateLimiter;
   csrfSecret: string;
   clock?: Clock;
 };
@@ -97,19 +101,16 @@ export class AuthService {
     ip: string;
   }): Promise<void> {
     const { email, passwordHash } = await this.prepareRegistration(input);
-    const now = this.now();
-    const verificationToken = generateToken();
-    const result = await this.deps.repo.registerParticipant({
-      userId: uuidv7(now.getTime()),
+    // No verification email and no verification gate: a participant can sign in straight away and
+    // may verify the address later from their account (sendOwnVerification). Same result whether
+    // or not the address already existed, so the response reveals nothing (UI-CPY-03).
+    await this.deps.repo.registerParticipant({
+      userId: uuidv7(this.now().getTime()),
       email,
       name: input.name.trim(),
       passwordHash,
       agreementVersion: input.agreementVersion,
-      verificationTokenHash: hashToken(verificationToken),
-      verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
     });
-    if (result === 'created')
-      await this.deps.mailer.sendVerificationEmail(email, verificationToken);
   }
 
   async register(input: {
@@ -137,6 +138,74 @@ export class AuthService {
     });
     if (result === 'created')
       await this.deps.mailer.sendVerificationEmail(email, verificationToken);
+  }
+
+  /**
+   * Sends another verification link to an address that registered but never verified. The caller
+   * always gets the same answer, whether or not the address has an account, so this cannot be used
+   * to find out who is registered (UI-CPY-03). Limits are keyed on the address string itself, so
+   * they apply identically to unknown addresses. The mail is sent in the background so response
+   * time does not reveal whether anything was sent.
+   */
+  async resendVerification(input: { email: string; ip: string }): Promise<void> {
+    const email = normalizeEmail(input.email);
+    const {
+      resendIpLimiter: ip,
+      resendEmailLimiter: perEmail,
+      resendCooldown: cooldown,
+    } = this.deps;
+    ip.assertAllowed(input.ip);
+    cooldown.assertAllowed(email);
+    perEmail.assertAllowed(email);
+    ip.recordFailure(input.ip);
+    cooldown.recordFailure(email);
+    perEmail.recordFailure(email);
+
+    const user = await this.deps.repo.findLoginUser(email);
+    if (!user || user.emailVerifiedAt) return;
+    const now = this.now();
+    const token = generateToken();
+    await this.deps.repo.createEmailVerification(
+      user.id,
+      hashToken(token),
+      new Date(now.getTime() + VERIFICATION_TTL_MS),
+    );
+    void this.deps.mailer.sendVerificationEmail(email, token).catch(() => {
+      // Never log the address (R-PRV-06); the failure is visible as a missing email and a warning.
+      console.warn('[mail] resend verification email failed');
+    });
+  }
+
+  /**
+   * A signed-in person asks for a verification link for their own address (optional for
+   * participants). Same limits as the public resend, keyed on their address and IP; the mail is
+   * awaited here because the caller is authenticated and can be told it failed.
+   */
+  async sendOwnVerification(
+    ctx: AuthContext,
+    ip: string,
+  ): Promise<{ status: 'sent' | 'already_verified' }> {
+    if (ctx.emailVerified) return { status: 'already_verified' };
+    const email = normalizeEmail(ctx.email);
+    const {
+      resendIpLimiter: ipLimit,
+      resendEmailLimiter: perEmail,
+      resendCooldown: cooldown,
+    } = this.deps;
+    ipLimit.assertAllowed(ip);
+    cooldown.assertAllowed(email);
+    perEmail.assertAllowed(email);
+    ipLimit.recordFailure(ip);
+    cooldown.recordFailure(email);
+    perEmail.recordFailure(email);
+    const token = generateToken();
+    await this.deps.repo.createEmailVerification(
+      ctx.userId,
+      hashToken(token),
+      new Date(this.now().getTime() + VERIFICATION_TTL_MS),
+    );
+    await this.deps.mailer.sendVerificationEmail(email, token);
+    return { status: 'sent' };
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -169,7 +238,8 @@ export class AuthService {
       if (user && !locked) await this.deps.repo.recordLoginFailure(email, now);
       throw new InvalidCredentialsError();
     }
-    if (!user.emailVerifiedAt) throw new EmailNotVerifiedError();
+    // Only businesses must verify their address before signing in; participants may verify later.
+    if (!user.emailVerifiedAt && user.accountType === 'BUSINESS') throw new EmailNotVerifiedError();
     // Only after the password is proven, so this never reveals whether an address has an account.
     if (
       user.accountType !==
