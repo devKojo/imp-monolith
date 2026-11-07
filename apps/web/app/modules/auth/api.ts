@@ -1,5 +1,11 @@
 import { toApiError } from './errors';
-import type { LoginResult, RegisterInput, SessionInfo } from './types';
+import type {
+  LoginResult,
+  Portal,
+  RegisterInput,
+  RegisterParticipantInput,
+  SessionInfo,
+} from './types';
 
 /** The part of $fetch the client needs; injected so the client is testable without Nuxt. */
 export type Fetcher = <T>(
@@ -32,9 +38,11 @@ export function createAuthApi(fetcher: Fetcher, base = '/api/v1/auth') {
   return {
     register: (input: RegisterInput) =>
       call<{ status: string }>('POST', '/register', { body: input }),
+    registerParticipant: (input: RegisterParticipantInput) =>
+      call<{ status: string }>('POST', '/register-participant', { body: input }),
     verifyEmail: (token: string) => call<void>('POST', '/verify-email', { body: { token } }),
-    login: (email: string, password: string) =>
-      call<LoginResult>('POST', '/login', { body: { email, password } }),
+    login: (email: string, password: string, portal: Portal) =>
+      call<LoginResult>('POST', '/login', { body: { email, password, portal } }),
     session: () => call<SessionInfo>('GET', '/session'),
     logout: (csrf: string) => call<void>('POST', '/logout', { csrf }),
     switchTenant: (membershipId: string, csrf: string) =>

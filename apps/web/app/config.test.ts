@@ -27,12 +27,16 @@ describe('route classes (R-WEB-02, R-WEB-05)', () => {
     );
   });
 
-  it.each(['/signin', '/signup', '/signup/**', '/verify-email'])(
-    '%s is never cached or shared',
-    (path) => {
-      expect(cache(path)).toBe('no-store');
-    },
-  );
+  it.each([
+    '/signin',
+    '/signup',
+    '/check-email',
+    '/business/signin',
+    '/business/register',
+    '/verify-email',
+  ])('%s is never cached or shared', (path) => {
+    expect(cache(path)).toBe('no-store');
+  });
 
   it('the dashboard is client-rendered (no SSR) and no-store', () => {
     expect(config.routeRules['/app/**']).toMatchObject({ ssr: false });

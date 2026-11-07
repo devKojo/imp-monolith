@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { t } from '../../../i18n';
 import type { AuthFailure } from '../errors';
+import type { Portal } from '../types';
 
 /**
  * Presents a failed auth call as the matching state from the UI spec's section 11 matrix. Field
@@ -9,6 +10,8 @@ import type { AuthFailure } from '../errors';
  */
 defineProps<{
   failure: AuthFailure | null;
+  /** The portal the form belongs to, used to point a wrong-portal user at the other one. */
+  portal?: Portal;
   /** Remaining time text (m:ss) for rate limits; the page owns the countdown. */
   countdown?: string;
 }>();
@@ -23,6 +26,22 @@ const emit = defineEmits<{ retry: [] }>();
       tone="error"
       :title="t('signin.invalid')"
     />
+    <UiBanner
+      v-else-if="failure.kind === 'wrong-portal'"
+      tone="warning"
+      :title="
+        portal === 'business' ? t('wrongPortal.business.title') : t('wrongPortal.participant.title')
+      "
+    >
+      {{
+        portal === 'business' ? t('wrongPortal.business.body') : t('wrongPortal.participant.body')
+      }}
+      <UiLink :to="portal === 'business' ? '/signin' : '/business/signin'">{{
+        portal === 'business'
+          ? t('wrongPortal.business.action')
+          : t('wrongPortal.participant.action')
+      }}</UiLink>
+    </UiBanner>
     <UiBanner
       v-else-if="failure.kind === 'email-not-verified'"
       tone="warning"

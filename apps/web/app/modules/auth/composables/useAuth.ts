@@ -1,6 +1,6 @@
 import { createAuthApi, type AuthApi, type Fetcher } from '../api';
 import { toApiError } from '../errors';
-import type { RegisterInput, SessionInfo } from '../types';
+import type { Portal, RegisterInput, RegisterParticipantInput, SessionInfo } from '../types';
 
 /** The API client wired to $fetch. Client-side only: auth pages never call the API during SSR. */
 export function useAuthApi(): AuthApi {
@@ -33,8 +33,12 @@ export function useAuth() {
 
   const ensure = async () => (checked.value ? session.value : refresh());
 
-  async function login(email: string, password: string): Promise<SessionInfo | null> {
-    await api.login(email, password);
+  async function login(
+    email: string,
+    password: string,
+    portal: Portal,
+  ): Promise<SessionInfo | null> {
+    await api.login(email, password, portal);
     return refresh();
   }
 
@@ -59,7 +63,19 @@ export function useAuth() {
   }
 
   const register = (input: RegisterInput) => api.register(input);
+  const registerParticipant = (input: RegisterParticipantInput) => api.registerParticipant(input);
   const verifyEmail = (token: string) => api.verifyEmail(token);
 
-  return { session, checked, refresh, ensure, login, logout, switchTenant, register, verifyEmail };
+  return {
+    session,
+    checked,
+    refresh,
+    ensure,
+    login,
+    logout,
+    switchTenant,
+    register,
+    registerParticipant,
+    verifyEmail,
+  };
 }

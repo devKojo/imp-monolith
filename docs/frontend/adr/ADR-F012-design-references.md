@@ -42,6 +42,8 @@ Every design reference is processed in four steps, and the result is recorded he
 
 ### Adapted
 
+- **Superseded by ADR-P001:** participants now have their own accounts and sign-up; business
+  registration is a separate single form. The original reasoning is kept below for history.
 - **Sign-up is two steps for a business account**, not a participant portal. Participants have no
   accounts in this platform (tenant-scoped participants, R-TEN-06, ADR-009; they verify per
   campaign). The "account" screen becomes step 1 and "business registration" step 2.

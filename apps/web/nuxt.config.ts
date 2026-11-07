@@ -30,10 +30,13 @@ export default defineNuxtConfig({
     // Authentication pages must never be cached or shared.
     '/signin': { headers: noStore },
     '/signup': { headers: noStore },
-    '/signup/**': { headers: noStore },
+    '/check-email': { headers: noStore },
+    '/business/signin': { headers: noStore },
+    '/business/register': { headers: noStore },
     '/verify-email': { headers: noStore },
     // Dashboard: client-rendered so private data never passes through the SSR tier.
     '/app/**': { ssr: false, headers: noStore },
+    '/me/**': { ssr: false, headers: noStore },
   },
   nitro: {
     devProxy: { '/api/': { target: apiProxyTarget, changeOrigin: true } },

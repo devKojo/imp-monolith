@@ -39,6 +39,7 @@ export function toApiError(err: unknown): ApiError {
 export type AuthFailure =
   | { kind: 'invalid-credentials' }
   | { kind: 'email-not-verified' }
+  | { kind: 'wrong-portal' }
   | { kind: 'rate-limited'; retryAfter: number }
   | { kind: 'busy'; retryAfter: number }
   | { kind: 'weak-password'; message: string }
@@ -52,6 +53,8 @@ export function classifyAuthError(err: ApiError): AuthFailure {
   switch (err.code) {
     case 'INVALID_CREDENTIALS':
       return { kind: 'invalid-credentials' };
+    case 'WRONG_PORTAL':
+      return { kind: 'wrong-portal' };
     case 'EMAIL_NOT_VERIFIED':
       return { kind: 'email-not-verified' };
     case 'TOO_MANY_REQUESTS':
