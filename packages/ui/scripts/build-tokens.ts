@@ -145,9 +145,12 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
+// Windows checkouts with core.autocrlf give working copies CRLF; compare content, not line endings.
+const normalizeEol = (s: string) => s.replace(/\r\n/g, '\n');
+
 if (process.argv.includes('--check')) {
   const stale = targets.filter(
-    ([path, content]) => !existsSync(path) || readFileSync(path, 'utf8') !== content,
+    ([path, content]) => !existsSync(path) || normalizeEol(readFileSync(path, 'utf8')) !== content,
   );
   if (stale.length > 0) {
     console.error(

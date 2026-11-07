@@ -103,7 +103,11 @@ const out: Array<[string, string]> = [
   [docsOut, mdText],
 ];
 if (process.argv.includes('--check')) {
-  const stale = out.filter(([p, c]) => !existsSync(p) || readFileSync(p, 'utf8') !== c);
+  // Windows checkouts with core.autocrlf give working copies CRLF; compare content, not endings.
+  const normalizeEol = (s: string) => s.replace(/\r\n/g, '\n');
+  const stale = out.filter(
+    ([p, c]) => !existsSync(p) || normalizeEol(readFileSync(p, 'utf8')) !== c,
+  );
   if (stale.length) {
     console.error(
       `FAIL: catalogue:check - stale: ${stale.map(([p]) => p).join(', ')}\nRun: npm run catalogue:build -w @imp/ui`,
