@@ -24,17 +24,17 @@ read by Business Management only through this module's interface.
 
 ## Endpoints (`/api/v1/auth`)
 
-| Route                  | Requirement    | Notes                                                                                                                                                           |
-| ---------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /register`       | public         | Always 202; identical response for existing emails. Body includes `agreement: { accepted: true, version }` (R-PRV-01); the version is recorded in the audit log |
-| `POST /verify-email`   | public         | 204; 400 for invalid, used or expired token                                                                                                                     |
-| `POST /resend-verification` | public | Always 202 with the same body for unknown, verified and unverified addresses. Limits: 1 per address per minute, 5 per address per hour, 10 per IP per hour (429 with Retry-After). Mail is sent in the background so response time reveals nothing |
-| `POST /login`          | public         | Sets `__Host-sid`; returns csrfToken and memberships                                                                                                            |
-| `POST /logout`         | session + csrf | Revokes immediately; clears cookie                                                                                                                              |
-| `GET /google/start`    | public         | 302 to Google; 404 when Google sign-in is not configured                                                                                                        |
-| `GET /google/callback` | public         | Validates state + ID token; 302 to `/me` on success                                                                                                             |
-| `GET /session`         | session        | User, active membership, memberships, csrfToken                                                                                                                 |
-| `POST /switch-tenant`  | session + csrf | Rotates session id and CSRF token; keeps absolute expiry                                                                                                        |
+| Route                       | Requirement    | Notes                                                                                                                                                                                                                                              |
+| --------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /register`            | public         | Always 202; identical response for existing emails. Body includes `agreement: { accepted: true, version }` (R-PRV-01); the version is recorded in the audit log                                                                                    |
+| `POST /verify-email`        | public         | 204; 400 for invalid, used or expired token                                                                                                                                                                                                        |
+| `POST /resend-verification` | public         | Always 202 with the same body for unknown, verified and unverified addresses. Limits: 1 per address per minute, 5 per address per hour, 10 per IP per hour (429 with Retry-After). Mail is sent in the background so response time reveals nothing |
+| `POST /login`               | public         | Sets `__Host-sid`; returns csrfToken and memberships                                                                                                                                                                                               |
+| `POST /logout`              | session + csrf | Revokes immediately; clears cookie                                                                                                                                                                                                                 |
+| `GET /google/start`         | public         | 302 to Google; 404 when Google sign-in is not configured                                                                                                                                                                                           |
+| `GET /google/callback`      | public         | Validates state + ID token; 302 to `/me` on success                                                                                                                                                                                                |
+| `GET /session`              | session        | User, active membership, memberships, csrfToken                                                                                                                                                                                                    |
+| `POST /switch-tenant`       | session + csrf | Rotates session id and CSRF token; keeps absolute expiry                                                                                                                                                                                           |
 
 ## Email (Gmail SMTP)
 
