@@ -95,11 +95,14 @@ export const staticSiteText = {
 
   // check email
   'checkEmail.title': 'Check your email',
-  'checkEmail.body':
-    'If {email} is not registered yet, we sent it a verification link. Open the link to activate your account. If you already have an account, sign in instead.',
-  'checkEmail.bodyNoEmail':
-    'We sent a verification link. Open it to activate your account. If you already have an account, sign in instead.',
-  'checkEmail.dev': 'Development only: the verification link is printed in the API console.',
+  'checkEmail.body': 'If {email} is new, we sent it a link. Open it to finish signing up.',
+  'checkEmail.resend': 'Resend email',
+  'checkEmail.resendEmail': 'Your email address',
+  'checkEmail.resendWait': 'You can resend in {time}.',
+  'checkEmail.resent': 'If that address is waiting to be verified, we sent a new link.',
+  'checkEmail.resendLimited': 'Too many resends for now. Try again in {time}.',
+  'checkEmail.resendFailed': 'We could not send that right now. Try again in a moment.',
+  'checkEmail.bodyNoEmail': 'We sent you a link. Open it to finish signing up.',
   'checkEmail.signin': 'Go to sign in',
 
   // verify email

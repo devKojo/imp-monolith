@@ -19,6 +19,10 @@ export const registerSchema = z
   })
   .strict();
 
+export const resendVerificationSchema = z
+  .object({ email: z.string().trim().email().max(254) })
+  .strict();
+
 /** Participants join campaigns with a plain account: no business, no membership (ADR-P001). */
 export const registerParticipantSchema = z
   .object({

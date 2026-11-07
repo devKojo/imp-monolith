@@ -37,6 +37,10 @@ export type AuthDeps = {
   google?: GoogleIdentityProvider | undefined;
   loginLimiter: LoginRateLimiter;
   registerLimiter: LoginRateLimiter;
+  /** Resend: per client IP (hourly), per address (hourly) and per address (short cooldown). */
+  resendIpLimiter: LoginRateLimiter;
+  resendEmailLimiter: LoginRateLimiter;
+  resendCooldown: LoginRateLimiter;
   csrfSecret: string;
   clock?: Clock;
 };
@@ -137,6 +141,42 @@ export class AuthService {
     });
     if (result === 'created')
       await this.deps.mailer.sendVerificationEmail(email, verificationToken);
+  }
+
+  /**
+   * Sends another verification link to an address that registered but never verified. The caller
+   * always gets the same answer, whether or not the address has an account, so this cannot be used
+   * to find out who is registered (UI-CPY-03). Limits are keyed on the address string itself, so
+   * they apply identically to unknown addresses. The mail is sent in the background so response
+   * time does not reveal whether anything was sent.
+   */
+  async resendVerification(input: { email: string; ip: string }): Promise<void> {
+    const email = normalizeEmail(input.email);
+    const {
+      resendIpLimiter: ip,
+      resendEmailLimiter: perEmail,
+      resendCooldown: cooldown,
+    } = this.deps;
+    ip.assertAllowed(input.ip);
+    cooldown.assertAllowed(email);
+    perEmail.assertAllowed(email);
+    ip.recordFailure(input.ip);
+    cooldown.recordFailure(email);
+    perEmail.recordFailure(email);
+
+    const user = await this.deps.repo.findLoginUser(email);
+    if (!user || user.emailVerifiedAt) return;
+    const now = this.now();
+    const token = generateToken();
+    await this.deps.repo.createEmailVerification(
+      user.id,
+      hashToken(token),
+      new Date(now.getTime() + VERIFICATION_TTL_MS),
+    );
+    void this.deps.mailer.sendVerificationEmail(email, token).catch(() => {
+      // Never log the address (R-PRV-06); the failure is visible as a missing email and a warning.
+      console.warn('[mail] resend verification email failed');
+    });
   }
 
   async verifyEmail(token: string): Promise<void> {

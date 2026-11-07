@@ -35,6 +35,9 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     mailer,
     loginLimiter: new MemoryRateLimiter(1000, 60_000),
     registerLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendIpLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendEmailLimiter: new MemoryRateLimiter(1000, 60_000),
+    resendCooldown: new MemoryRateLimiter(1000, 60_000),
     csrfSecret: 's'.repeat(32),
   });
 

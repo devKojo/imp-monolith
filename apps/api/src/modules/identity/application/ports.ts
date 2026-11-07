@@ -100,6 +100,8 @@ export interface IdentityRepository {
     now: Date,
   ): Promise<boolean>;
   listMemberships(userId: string): Promise<MembershipSummary[]>;
+  /** Adds a fresh verification token for an existing, unverified user (resend). */
+  createEmailVerification(userId: string, tokenHash: string, expiresAt: Date): Promise<void>;
   /** Single-use: true only for the one call that redeems a valid token. */
   consumeEmailVerification(tokenHash: string, now: Date): Promise<boolean>;
 }

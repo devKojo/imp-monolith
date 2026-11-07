@@ -95,6 +95,10 @@ export class FakeIdentityRepository implements IdentityRepository {
     return 'created' as const;
   }
 
+  async createEmailVerification(userId: string, tokenHash: string, expiresAt: Date) {
+    this.verifications.set(tokenHash, { userId, expiresAt, used: false });
+  }
+
   async adoptVerifiedEmail(userId: string, now: Date) {
     const u = [...this.users.values()].find((x) => x.id === userId)!;
     u.emailVerifiedAt = now;
