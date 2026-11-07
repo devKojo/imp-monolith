@@ -34,8 +34,15 @@ describe('route classes (R-WEB-02, R-WEB-05)', () => {
     '/business/signin',
     '/business/register',
     '/verify-email',
+    '/forgot-password',
+    '/reset-password',
   ])('%s is never cached or shared', (path) => {
     expect(cache(path)).toBe('no-store');
+  });
+
+  it('the reset link page never leaks its one-time token in a Referer header', () => {
+    const rule = config.routeRules['/reset-password'] as { headers?: Record<string, string> };
+    expect(rule.headers?.['referrer-policy']).toBe('no-referrer');
   });
 
   it('the dashboard is client-rendered (no SSR) and no-store', () => {

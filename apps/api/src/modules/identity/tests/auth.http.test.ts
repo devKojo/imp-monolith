@@ -170,6 +170,104 @@ describe('identity HTTP', () => {
     });
   });
 
+  describe('password reset', () => {
+    const tick = () => new Promise((r) => setImmediate(r));
+    const NEW = 'a brand new passphrase 42';
+    const pBody = { name: 'Kofi', email: 'Kofi@Example.com', password: PASSWORD, agreement };
+    const forgot = (email: string) => post('/forgot-password', { email });
+    const reset = (token: string, password: string) => post('/reset-password', { token, password });
+    const loginAs = (password: string, portal = 'participant') =>
+      post('/login', { email: 'kofi@example.com', password, portal });
+
+    async function requestLink() {
+      await post('/register-participant', pBody).expect(202);
+      await forgot('kofi@example.com').expect(202);
+      await tick();
+      return s.mailer.resets[0]!.token;
+    }
+
+    it('mails a link only for an existing account, with the same answer for every address', async () => {
+      await post('/register-participant', pBody).expect(202);
+      const known = await forgot('KOFI@example.com').expect(202);
+      s.advance(61_000);
+      const unknown = await forgot('nobody@example.com').expect(202);
+      await tick();
+      expect(known.body).toEqual(unknown.body);
+      expect(s.mailer.resets).toHaveLength(1);
+      expect(s.mailer.resets[0]!.to).toBe('kofi@example.com');
+    });
+
+    it('allows one request per address per minute and three an hour, known or not', async () => {
+      await forgot('ghost@example.com').expect(202);
+      const res = await forgot('ghost@example.com').expect(429);
+      expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+      for (let i = 0; i < 2; i++) {
+        s.advance(61_000);
+        await forgot('ghost@example.com').expect(202);
+      }
+      s.advance(61_000);
+      await forgot('ghost@example.com').expect(429);
+    });
+
+    it('sets the new password, signs everyone out, and the link works once', async () => {
+      await post('/register-participant', pBody).expect(202);
+      const before = await loginAs(PASSWORD).expect(200);
+      const oldCookie = cookieOf(before);
+      await forgot('kofi@example.com').expect(202);
+      await tick();
+      const token = s.mailer.resets[0]!.token;
+
+      const ok = await reset(token, NEW).expect(200);
+      expect(ok.body).toEqual({ accountType: 'PARTICIPANT' });
+      await tick();
+      expect(s.mailer.changed).toEqual(['kofi@example.com']);
+
+      expect((await loginAs(PASSWORD)).status).toBe(401); // old password
+      await loginAs(NEW).expect(200);
+      await request(s.app).get('/api/v1/auth/session').set('Cookie', oldCookie).expect(401);
+
+      const again = await reset(token, 'another passphrase 77');
+      expect(again.status).toBe(400);
+      expect(again.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    it('rejects a weak password without using up the link', async () => {
+      const token = await requestLink();
+      const weak = await reset(token, 'short');
+      expect(weak.status).toBe(422);
+      await reset(token, NEW).expect(200);
+    });
+
+    it('rejects unknown, malformed and expired tokens', async () => {
+      await requestLink();
+      const unknown = await reset('x'.repeat(43), NEW);
+      expect(unknown.status).toBe(400);
+      expect(unknown.body.error.code).toBe('INVALID_TOKEN');
+      await post('/reset-password', { token: 'short', password: NEW }).expect(400);
+      await post('/reset-password', { token: 'x'.repeat(43) }).expect(400);
+
+      s.advance(61 * 60_000);
+      const expired = await reset(s.mailer.resets[0]!.token, NEW);
+      expect(expired.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    it('lets an unverified business back in, because the link proves the address', async () => {
+      await post('/register', body).expect(202);
+      expect((await post('/login', { email: 'ada@example.com', password: PASSWORD })).status).toBe(
+        403,
+      );
+      await forgot('ada@example.com').expect(202);
+      await tick();
+      const res = await reset(s.mailer.resets[0]!.token, NEW).expect(200);
+      expect(res.body).toEqual({ accountType: 'BUSINESS' });
+      await post('/login', { email: 'ada@example.com', password: NEW }).expect(200);
+    });
+
+    it('rejects a malformed address', async () => {
+      await forgot('not-an-email').expect(400);
+    });
+  });
+
   describe('login', () => {
     it('requires a verified email', async () => {
       await post('/register', body).expect(202);

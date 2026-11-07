@@ -9,6 +9,7 @@ import type {
   NewSession,
   RegisterOwnerInput,
   RegisterParticipantInput,
+  ResetOwner,
   SessionRecord,
 } from '../application/ports';
 import { UnauthenticatedError } from '../domain/errors';
@@ -134,6 +135,75 @@ export class PrismaIdentityRepository implements IdentityRepository {
         targetType: 'user',
         targetId: userId,
       });
+    });
+  }
+
+  createPasswordReset(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    return withIdentity(this.db, { userId }, async (tx) => {
+      await tx.passwordReset.create({ data: { userId, tokenHash, expiresAt } });
+      await audit(tx, {
+        tenantId: null,
+        actorId: userId,
+        action: 'auth.password_reset_requested',
+        targetType: 'user',
+        targetId: userId,
+      });
+    });
+  }
+
+  peekPasswordReset(tokenHash: string, now: Date): Promise<ResetOwner | null> {
+    return withIdentity(this.db, { resetTokenHash: tokenHash }, async (tx) => {
+      const r = await tx.passwordReset.findUnique({ where: { tokenHash } });
+      if (!r || r.usedAt || r.expiresAt <= now) return null;
+      await setIdentityUser(tx, r.userId);
+      const u = await tx.user.findUnique({ where: { id: r.userId } });
+      return u ? { userId: u.id, email: u.email, accountType: u.accountType } : null;
+    });
+  }
+
+  completePasswordReset(input: {
+    tokenHash: string;
+    passwordHash: string;
+    now: Date;
+  }): Promise<ResetOwner | null> {
+    const { tokenHash, passwordHash, now } = input;
+    return withIdentity(this.db, { resetTokenHash: tokenHash }, async (tx) => {
+      const r = await tx.passwordReset.findUnique({ where: { tokenHash } });
+      if (!r) return null;
+      await setIdentityUser(tx, r.userId);
+      // The conditional update is the single-use guard: only one concurrent redeemer matches.
+      const { count } = await tx.passwordReset.updateMany({
+        where: { id: r.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (count !== 1) return null;
+      const user = await tx.user.findUniqueOrThrow({ where: { id: r.userId } });
+      await tx.user.update({
+        where: { id: r.userId },
+        data: {
+          passwordHash,
+          emailVerifiedAt: user.emailVerifiedAt ?? now,
+          failedLoginCount: 0,
+          lockedUntil: null,
+          lastFailedLoginAt: null,
+        },
+      });
+      await tx.session.updateMany({
+        where: { userId: r.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await tx.passwordReset.updateMany({
+        where: { userId: r.userId, usedAt: null },
+        data: { usedAt: now },
+      });
+      await audit(tx, {
+        tenantId: null,
+        actorId: r.userId,
+        action: 'auth.password_reset_completed',
+        targetType: 'user',
+        targetId: r.userId,
+      });
+      return { userId: user.id, email: user.email, accountType: user.accountType };
     });
   }
 

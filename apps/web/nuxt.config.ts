@@ -37,6 +37,10 @@ export default defineNuxtConfig({
     '/business/signin': { headers: noStore },
     '/business/register': { headers: noStore },
     '/verify-email': { headers: noStore },
+    '/forgot-password': { headers: noStore },
+    // The emailed link carries a one-time token in the address: never cache it or leak it in
+    // a Referer header.
+    '/reset-password': { headers: { ...noStore, 'referrer-policy': 'no-referrer' } },
     // Dashboard: client-rendered so private data never passes through the SSR tier.
     '/app/**': { ssr: false, headers: noStore },
     '/me/**': { ssr: false, headers: noStore },

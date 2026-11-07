@@ -101,6 +101,37 @@ export class FakeIdentityRepository implements IdentityRepository {
     this.verifications.set(tokenHash, { userId, expiresAt, used: false });
   }
 
+  resetTokens = new Map<string, { userId: string; expiresAt: Date; used: boolean }>();
+
+  async createPasswordReset(userId: string, tokenHash: string, expiresAt: Date) {
+    this.resetTokens.set(tokenHash, { userId, expiresAt, used: false });
+  }
+
+  private ownerOf(userId: string) {
+    const u = [...this.users.values()].find((x) => x.id === userId)!;
+    return { userId: u.id, email: u.email, accountType: u.accountType };
+  }
+
+  async peekPasswordReset(tokenHash: string, now: Date) {
+    const t = this.resetTokens.get(tokenHash);
+    if (!t || t.used || t.expiresAt <= now) return null;
+    return this.ownerOf(t.userId);
+  }
+
+  async completePasswordReset(i: { tokenHash: string; passwordHash: string; now: Date }) {
+    const t = this.resetTokens.get(i.tokenHash);
+    if (!t || t.used || t.expiresAt <= i.now) return null;
+    t.used = true;
+    for (const other of this.resetTokens.values()) if (other.userId === t.userId) other.used = true;
+    const u = [...this.users.values()].find((x) => x.id === t.userId)!;
+    u.passwordHash = i.passwordHash;
+    u.emailVerifiedAt ??= i.now;
+    u.failed = 0;
+    u.lockedUntil = null;
+    for (const s of this.sessions.values()) if (s.userId === u.id) s.revokedAt = i.now;
+    return this.ownerOf(u.id);
+  }
+
   async adoptVerifiedEmail(userId: string, now: Date) {
     const u = [...this.users.values()].find((x) => x.id === userId)!;
     u.emailVerifiedAt = now;
@@ -220,6 +251,14 @@ export class FakeBreached implements BreachedPasswordChecker {
 
 export class FakeMailer implements Mailer {
   sent: Array<{ to: string; token: string }> = [];
+  resets: Array<{ to: string; token: string }> = [];
+  changed: string[] = [];
+  async sendPasswordResetEmail(to: string, token: string) {
+    this.resets.push({ to, token });
+  }
+  async sendPasswordChangedEmail(to: string) {
+    this.changed.push(to);
+  }
   async sendVerificationEmail(to: string, token: string) {
     this.sent.push({ to, token });
   }

@@ -29,9 +29,14 @@ const countdown = useCountdown();
 const draft = useSignupDraft();
 const email = ref('');
 const justRegistered = ref(false);
-if (draft.value.submittedEmail && draft.value.portal === props.portal) {
+const passwordChanged = ref(false);
+if (
+  (draft.value.submittedEmail || draft.value.passwordReset) &&
+  draft.value.portal === props.portal
+) {
   email.value = draft.value.submittedEmail;
   justRegistered.value = !!draft.value.registered;
+  passwordChanged.value = !!draft.value.passwordReset;
   draft.value = { submittedEmail: '', portal: props.portal };
 }
 const password = ref('');
@@ -100,6 +105,7 @@ const crumbs = [
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
     <UiBanner v-if="justRegistered" tone="info" :title="t('signin.created')" />
+    <UiBanner v-if="passwordChanged" tone="info" :title="t('signin.passwordChanged')" />
     <UiBanner
       v-if="googleError"
       tone="error"
@@ -135,7 +141,11 @@ const crumbs = [
         required
         :label="t('signin.password')"
         :error="errors.password"
-      />
+      >
+        <template #labelAside>
+          <UiLink to="/forgot-password">{{ t('signin.forgot') }}</UiLink>
+        </template>
+      </UiPasswordField>
       <UiButton
         type="submit"
         block

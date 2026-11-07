@@ -31,6 +31,8 @@ read by Business Management only through this module's interface.
 | `POST /resend-verification` | public         | Always 202 with the same body for unknown, verified and unverified addresses. Limits: 1 per address per minute, 5 per address per hour, 10 per IP per hour (429 with Retry-After). Mail is sent in the background so response time reveals nothing |
 | `GET /providers`            | public         | `{ google: boolean }`: which optional sign-in methods are enabled                                                                                                                                                                                  |
 | `POST /send-verification`   | session + csrf | Participant asks for a link for their own address. 202 `{status:'sent'}`, or 200 `{status:'already_verified'}`. Limits as for resend                                                                                                               |
+| `POST /forgot-password`     | public         | Always 202 with the same body for known and unknown addresses. Limits (per address, keyed `pw:`): 1 a minute, 3 an hour; 10 an hour per IP. 429 + Retry-After. The email is sent in the background so timing reveals nothing                       |
+| `POST /reset-password`      | public (token) | Body `{ token, password }`. 200 `{ accountType }`; 400 `INVALID_TOKEN` for unknown, used or expired; 422 for a weak or breached password (the link is **not** consumed). Failed token guesses count against the IP's login limit                   |
 | `POST /login`               | public         | Sets `__Host-sid`; returns csrfToken and memberships                                                                                                                                                                                               |
 | `POST /logout`              | session + csrf | Revokes immediately; clears cookie                                                                                                                                                                                                                 |
 | `GET /google/start`         | public         | 302 to Google; 404 when Google sign-in is not configured                                                                                                                                                                                           |
@@ -72,6 +74,17 @@ Design choices to revisit:
   unverified participant address as unproven: do not send campaign mail to it.
 - Terms acceptance is stated on the sign-up page but, unlike password sign-up, no agreement
   version is recorded for Google sign-ups yet (R-PRV-01 gap).
+
+## Password reset
+
+`POST /forgot-password` stores a single-use token (SHA-256 hash only, 1 hour) in `password_resets` and
+emails a link to `{APP_PUBLIC_URL}/reset-password?token=...`. `POST /reset-password` checks the token,
+vets the password (policy and breach check), then in one transaction: consumes the token, sets the
+password, marks the address verified (the link proved ownership), clears any failed-login lock,
+**revokes every session** and voids other outstanding reset tokens. A "your password was changed"
+email follows. Works for every account type, including a Google-only account (it gains a password).
+Rows are reachable only by the token being redeemed (`app.reset_hash`) or the owning user, like email
+verification.
 
 ## Events
 

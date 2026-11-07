@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { parse } from '@/shared/http';
 import type { AuthService } from '../application/auth.service';
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerParticipantSchema,
   registerSchema,
   resendVerificationSchema,
+  resetPasswordSchema,
   switchTenantSchema,
   verifyEmailSchema,
 } from '../contracts/auth.schemas';
@@ -39,6 +41,7 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   //   POST /verify-email  public       POST /logout          session + csrf
   //   POST /resend-verification  public (rate limited per IP and per address)
   //   GET  /providers     public       POST /send-verification  session + csrf
+  //   POST /forgot-password  public (rate limited)   POST /reset-password  public (token)
   //   GET  /session       session      POST /switch-tenant   session + csrf
   //   GET  /google/start  public       GET  /google/callback public
   r.post('/register', async (req, res) => {
@@ -78,6 +81,24 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
     await auth.resendVerification({ email: body.email, ip: req.ip ?? 'unknown' });
     // Same response for unknown, verified and unverified addresses.
     res.status(202).json({ status: 'verification_sent' });
+  });
+
+  r.post('/forgot-password', async (req, res) => {
+    const body = parse(forgotPasswordSchema, req.body);
+    await auth.forgotPassword({ email: body.email, ip: req.ip ?? 'unknown' });
+    // Same response whether or not the address has an account.
+    res.status(202).json({ status: 'reset_sent' });
+  });
+
+  r.post('/reset-password', async (req, res) => {
+    const body = parse(resetPasswordSchema, req.body);
+    const { accountType } = await auth.resetPassword({
+      token: body.token,
+      password: body.password,
+      ip: req.ip ?? 'unknown',
+    });
+    // The person proved they own the address, so naming their portal discloses nothing new.
+    res.json({ accountType });
   });
 
   // Which optional sign-in methods this deployment offers (public, no per-user data).

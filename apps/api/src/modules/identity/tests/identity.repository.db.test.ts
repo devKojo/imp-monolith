@@ -72,6 +72,7 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     const memberships = await platform.membership.findMany({ where: { userId: { in: ids } } });
     await platform.session.deleteMany({ where: { userId: { in: ids } } });
     await platform.emailVerification.deleteMany({ where: { userId: { in: ids } } });
+    await platform.passwordReset.deleteMany({ where: { userId: { in: ids } } });
     await platform.membership.deleteMany({ where: { userId: { in: ids } } });
     await platform.user.deleteMany({ where: { id: { in: ids } } });
     await platform.business.deleteMany({
@@ -94,6 +95,49 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     const [registered] = await platform.$queryRaw<{ metadata: { agreementVersion: string } }[]>`
       SELECT metadata FROM audit_log WHERE actor_id = ${user.id}::uuid AND action = 'auth.registered'`;
     expect(registered?.metadata).toEqual({ agreementVersion: '1.0' });
+  });
+
+  it('resets a password through real RLS: new password works, old fails, sessions revoked, link single use', async () => {
+    const e = email('pwreset');
+    const NEW = 'a brand new passphrase 42';
+    await auth.registerParticipant({
+      name: 'Rst',
+      email: e,
+      password: PASSWORD,
+      agreementVersion: '1.0',
+      ip: '1.1.1.1',
+    });
+    const old = await auth.login({
+      email: e,
+      password: PASSWORD,
+      portal: 'participant',
+      ip: '1.1.1.1',
+    });
+    expect(await auth.authenticate(old.session.token)).not.toBeNull();
+
+    const before = mailer.resets.length;
+    await auth.forgotPassword({ email: e, ip: '9.9.9.9' });
+    await new Promise((r) => setImmediate(r)); // the email is sent in the background
+    const token = mailer.resets[before]!.token;
+    // Never stored in the clear: only the hash is in the table.
+    const rows = await platform.$queryRaw<{ token_hash: string }[]>`
+      SELECT token_hash FROM password_resets WHERE token_hash = ${token}`;
+    expect(rows).toHaveLength(0);
+
+    await auth.resetPassword({ token, password: NEW, ip: '9.9.9.9' });
+
+    await expect(
+      auth.login({ email: e, password: PASSWORD, portal: 'participant', ip: '1.1.1.1' }),
+    ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    await auth.login({ email: e, password: NEW, portal: 'participant', ip: '1.1.1.1' });
+    expect(await auth.authenticate(old.session.token)).toBeNull();
+    const user = await platform.user.findUniqueOrThrow({ where: { email: e } });
+    expect(user.emailVerifiedAt).not.toBeNull();
+    await expect(auth.resetPassword({ token, password: NEW, ip: '9.9.9.9' })).rejects.toMatchObject(
+      {
+        code: 'INVALID_TOKEN',
+      },
+    );
   });
 
   it('registers a participant with no business or membership, and signs in on its own portal', async () => {

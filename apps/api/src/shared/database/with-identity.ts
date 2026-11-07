@@ -16,6 +16,8 @@ export type IdentityScope = {
   sessionTokenHash?: string;
   /** SHA-256 hex of an email-verification token being redeemed. */
   verificationTokenHash?: string;
+  /** SHA-256 hex of a password-reset token being redeemed. */
+  resetTokenHash?: string;
   /** Registration only: creates the business and first membership in the same transaction. */
   tenantId?: string;
 };
@@ -38,6 +40,7 @@ export function withIdentity<T>(
   if (scope.verificationTokenHash) {
     settings.push(['app.verification_hash', scope.verificationTokenHash]);
   }
+  if (scope.resetTokenHash) settings.push(['app.reset_hash', scope.resetTokenHash]);
   if (scope.tenantId) settings.push(['app.tenant_id', scope.tenantId]);
   return runScoped(db, settings, fn, opts);
 }

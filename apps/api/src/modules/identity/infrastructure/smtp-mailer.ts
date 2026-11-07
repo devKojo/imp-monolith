@@ -45,4 +45,26 @@ export class SmtpMailer implements Mailer {
       html: `<p>Welcome to IMP.</p><p><a href="${link}">Confirm your email address</a> (valid for 24 hours).</p><p>If you did not create an account, you can ignore this email.</p>`,
     });
   }
+
+  async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+    const base = this.cfg.publicUrl.replace(/\/$/, '');
+    const link = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+    await this.transport.sendMail({
+      from: this.cfg.from ?? this.cfg.user,
+      to,
+      subject: 'Reset your password',
+      text: `We received a request to reset your IMP password.\n\nChoose a new password by opening this link (valid for 1 hour, works once):\n${link}\n\nIf you did not ask for this, ignore this email. Your password stays the same.`,
+      html: `<p>We received a request to reset your IMP password.</p><p><a href="${link}">Choose a new password</a> (valid for 1 hour, works once).</p><p>If you did not ask for this, ignore this email. Your password stays the same.</p>`,
+    });
+  }
+
+  async sendPasswordChangedEmail(to: string): Promise<void> {
+    await this.transport.sendMail({
+      from: this.cfg.from ?? this.cfg.user,
+      to,
+      subject: 'Your password was changed',
+      text: 'The password for your IMP account was just changed, and you were signed out everywhere.\n\nIf this was you, no action is needed. If it was not, reset your password again right away.',
+      html: '<p>The password for your IMP account was just changed, and you were signed out everywhere.</p><p>If this was you, no action is needed. If it was not, reset your password again right away.</p>',
+    });
+  }
 }
