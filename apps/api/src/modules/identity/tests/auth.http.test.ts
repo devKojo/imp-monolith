@@ -238,9 +238,9 @@ describe('identity HTTP', () => {
         password: PASSWORD,
         ...(portal ? { portal } : {}),
       });
+    // Participants do not need to verify; registering is enough to sign in.
     async function registerParticipantAndVerify() {
       await post('/register-participant', pBody).expect(202);
-      await post('/verify-email', { token: s.mailer.sent[0]!.token }).expect(204);
     }
 
     it('registers without a business and signs in through the participant portal', async () => {
@@ -262,11 +262,64 @@ describe('identity HTTP', () => {
       await post('/register-participant', { ...pBody, businessName: 'Acme' }).expect(400);
     });
 
-    it('responds identically for an existing email and sends nothing more', async () => {
-      await post('/register-participant', pBody).expect(202);
+    it('responds identically for an existing email and sends no email', async () => {
+      const first = await post('/register-participant', pBody).expect(202);
       const again = await post('/register-participant', pBody).expect(202);
-      expect(again.body).toEqual({ status: 'verification_sent' });
+      expect(again.body).toEqual(first.body);
+      expect(again.body).toEqual({ status: 'created' });
+      expect(s.mailer.sent).toHaveLength(0);
+    });
+
+    it('signs in without verifying the email, and reports it as unverified', async () => {
+      await post('/register-participant', pBody).expect(202);
+      const res = await pLogin('participant').expect(200);
+      const session = await request(s.app)
+        .get('/api/v1/auth/session')
+        .set('Cookie', cookieOf(res))
+        .expect(200);
+      expect(session.body.user.emailVerified).toBe(false);
+    });
+
+    it('can verify later: sends a link on request, which verifies the address', async () => {
+      await post('/register-participant', pBody).expect(202);
+      const login = await pLogin('participant').expect(200);
+      const cookie = cookieOf(login);
+      const csrf = login.body.csrfToken as string;
+      const send = () =>
+        request(s.app)
+          .post('/api/v1/auth/send-verification')
+          .set('Origin', ORIGIN)
+          .set('Cookie', cookie)
+          .set('X-CSRF-Token', csrf);
+
+      await request(s.app).post('/api/v1/auth/send-verification').set('Origin', ORIGIN).expect(401);
+      await send().set('X-CSRF-Token', 'forged').expect(403);
+
+      const sent = await send().expect(202);
+      expect(sent.body).toEqual({ status: 'sent' });
       expect(s.mailer.sent).toHaveLength(1);
+      expect(s.mailer.sent[0]!.to).toBe('kofi@example.com');
+      expect((await send()).status).toBe(429); // one per minute per address
+
+      await post('/verify-email', { token: s.mailer.sent[0]!.token }).expect(204);
+      const session = await request(s.app)
+        .get('/api/v1/auth/session')
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(session.body.user.emailVerified).toBe(true);
+      const again = await send().expect(200);
+      expect(again.body).toEqual({ status: 'already_verified' });
+    });
+
+    it('still requires a business to verify before it can sign in', async () => {
+      await post('/register', body).expect(202);
+      const res = await post('/login', { email: 'ada@example.com', password: PASSWORD });
+      expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+    });
+
+    it('lists the sign-in providers on offer', async () => {
+      const res = await request(s.app).get('/api/v1/auth/providers').expect(200);
+      expect(res.body).toEqual({ google: false });
     });
 
     it('rejects weak passwords with 422', async () => {

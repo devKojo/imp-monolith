@@ -62,8 +62,9 @@ export type RegisterParticipantInput = {
   passwordHash: string;
   /** Version of the terms the participant accepted (R-PRV-01). */
   agreementVersion: string;
-  verificationTokenHash: string;
-  verificationExpiresAt: Date;
+  /** Participants are not required to verify; a token is stored only if one is issued. */
+  verificationTokenHash?: string;
+  verificationExpiresAt?: Date;
 };
 
 export interface IdentityRepository {

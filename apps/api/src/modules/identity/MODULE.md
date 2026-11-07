@@ -29,6 +29,8 @@ read by Business Management only through this module's interface.
 | `POST /register`            | public         | Always 202; identical response for existing emails. Body includes `agreement: { accepted: true, version }` (R-PRV-01); the version is recorded in the audit log                                                                                    |
 | `POST /verify-email`        | public         | 204; 400 for invalid, used or expired token                                                                                                                                                                                                        |
 | `POST /resend-verification` | public         | Always 202 with the same body for unknown, verified and unverified addresses. Limits: 1 per address per minute, 5 per address per hour, 10 per IP per hour (429 with Retry-After). Mail is sent in the background so response time reveals nothing |
+| `GET /providers`            | public         | `{ google: boolean }`: which optional sign-in methods are enabled                                                                                                                                                                                  |
+| `POST /send-verification`   | session + csrf | Participant asks for a link for their own address. 202 `{status:'sent'}`, or 200 `{status:'already_verified'}`. Limits as for resend                                                                                                               |
 | `POST /login`               | public         | Sets `__Host-sid`; returns csrfToken and memberships                                                                                                                                                                                               |
 | `POST /logout`              | session + csrf | Revokes immediately; clears cookie                                                                                                                                                                                                                 |
 | `GET /google/start`         | public         | 302 to Google; 404 when Google sign-in is not configured                                                                                                                                                                                           |
@@ -53,7 +55,7 @@ then signs the participant in, creating the account on first use. Failures redir
 `/signin?error=google` (or `google_business`) and never say why. Enabled when `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` are set; the authorised redirect URI is
 `{APP_PUBLIC_URL}/api/v1/auth/google/callback`. The web app shows the button when
-`NUXT_PUBLIC_GOOGLE_SIGNIN=true`.
+`GET /providers` reports `google: true`; there is no separate web flag.
 
 Design choices to revisit:
 
@@ -64,6 +66,10 @@ Design choices to revisit:
 - Signing in with Google onto an account whose email was never verified discards its password
   (pre-registration squatting defence).
 - Business accounts are refused (they use email and password).
+- Participants are not required to verify their email: registration sends no mail and they can
+  sign in at once (businesses must still verify first). From their account they can ask for a
+  link (`POST /send-verification`, session + CSRF, same limits as the public resend). Treat an
+  unverified participant address as unproven: do not send campaign mail to it.
 - Terms acceptance is stated on the sign-up page but, unlike password sign-up, no agreement
   version is recorded for Google sign-ups yet (R-PRV-01 gap).
 

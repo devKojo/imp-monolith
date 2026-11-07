@@ -67,13 +67,15 @@ export class PrismaIdentityRepository implements IdentityRepository {
             passwordHash: input.passwordHash,
           },
         });
-        await tx.emailVerification.create({
-          data: {
-            userId: input.userId,
-            tokenHash: input.verificationTokenHash,
-            expiresAt: input.verificationExpiresAt,
-          },
-        });
+        if (input.verificationTokenHash && input.verificationExpiresAt) {
+          await tx.emailVerification.create({
+            data: {
+              userId: input.userId,
+              tokenHash: input.verificationTokenHash,
+              expiresAt: input.verificationExpiresAt,
+            },
+          });
+        }
         await audit(tx, {
           tenantId: null,
           actorId: input.userId,

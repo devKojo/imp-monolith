@@ -42,6 +42,9 @@ export function createAuthApi(fetcher: Fetcher, base = '/api/v1/auth') {
       call<{ status: string }>('POST', '/register-participant', { body: input }),
     resendVerification: (email: string) =>
       call<{ status: string }>('POST', '/resend-verification', { body: { email } }),
+    providers: () => call<{ google: boolean }>('GET', '/providers'),
+    sendVerification: (csrf: string) =>
+      call<{ status: 'sent' | 'already_verified' }>('POST', '/send-verification', { csrf }),
     verifyEmail: (token: string) => call<void>('POST', '/verify-email', { body: { token } }),
     login: (email: string, password: string, portal: Portal) =>
       call<LoginResult>('POST', '/login', { body: { email, password, portal } }),

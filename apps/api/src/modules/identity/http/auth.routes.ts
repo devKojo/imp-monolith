@@ -38,6 +38,7 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   //   POST /register-participant  public
   //   POST /verify-email  public       POST /logout          session + csrf
   //   POST /resend-verification  public (rate limited per IP and per address)
+  //   GET  /providers     public       POST /send-verification  session + csrf
   //   GET  /session       session      POST /switch-tenant   session + csrf
   //   GET  /google/start  public       GET  /google/callback public
   r.post('/register', async (req, res) => {
@@ -63,7 +64,8 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
       agreementVersion: body.agreement.version,
       ip: req.ip ?? 'unknown',
     });
-    res.status(202).json({ status: 'verification_sent' });
+    // Participants are not asked to verify before signing in (they can later, from their account).
+    res.status(202).json({ status: 'created' });
   });
 
   r.post('/verify-email', async (req, res) => {
@@ -76,6 +78,16 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
     await auth.resendVerification({ email: body.email, ip: req.ip ?? 'unknown' });
     // Same response for unknown, verified and unverified addresses.
     res.status(202).json({ status: 'verification_sent' });
+  });
+
+  // Which optional sign-in methods this deployment offers (public, no per-user data).
+  r.get('/providers', (_req, res) => {
+    res.json({ google: auth.googleEnabled });
+  });
+
+  r.post('/send-verification', requireSession, requireCsrfToken, async (req, res) => {
+    const out = await auth.sendOwnVerification(req.auth!, req.ip ?? 'unknown');
+    res.status(out.status === 'sent' ? 202 : 200).json(out);
   });
 
   r.post('/login', async (req, res) => {

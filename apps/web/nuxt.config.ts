@@ -21,8 +21,6 @@ export default defineNuxtConfig({
   typescript: { strict: true },
   runtimeConfig: {
     public: {
-      // Show "Continue with Google" (needs GOOGLE_CLIENT_ID/SECRET on the API); NUXT_PUBLIC_GOOGLE_SIGNIN=true.
-      googleSignin: false,
       apiBase: 'http://localhost:3000', // override with NUXT_PUBLIC_API_BASE
       // 'sample' shows labelled example campaigns; 'api' calls GET /api/v1/public/campaigns.
       discoverySource: process.env.NODE_ENV === 'production' ? 'api' : 'sample',
