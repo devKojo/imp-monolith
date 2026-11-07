@@ -122,6 +122,19 @@ export class PrismaIdentityRepository implements IdentityRepository {
     }
   }
 
+  createEmailVerification(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    return withIdentity(this.db, { userId }, async (tx) => {
+      await tx.emailVerification.create({ data: { userId, tokenHash, expiresAt } });
+      await audit(tx, {
+        tenantId: null,
+        actorId: userId,
+        action: 'auth.verification_resent',
+        targetType: 'user',
+        targetId: userId,
+      });
+    });
+  }
+
   adoptVerifiedEmail(userId: string, now: Date): Promise<void> {
     return withIdentity(this.db, { userId }, async (tx) => {
       // Only ever called for an account whose email was never verified, so any password on it

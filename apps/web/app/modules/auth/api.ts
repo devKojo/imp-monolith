@@ -40,6 +40,8 @@ export function createAuthApi(fetcher: Fetcher, base = '/api/v1/auth') {
       call<{ status: string }>('POST', '/register', { body: input }),
     registerParticipant: (input: RegisterParticipantInput) =>
       call<{ status: string }>('POST', '/register-participant', { body: input }),
+    resendVerification: (email: string) =>
+      call<{ status: string }>('POST', '/resend-verification', { body: { email } }),
     verifyEmail: (token: string) => call<void>('POST', '/verify-email', { body: { token } }),
     login: (email: string, password: string, portal: Portal) =>
       call<LoginResult>('POST', '/login', { body: { email, password, portal } }),

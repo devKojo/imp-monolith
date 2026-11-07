@@ -5,6 +5,7 @@ import {
   loginSchema,
   registerParticipantSchema,
   registerSchema,
+  resendVerificationSchema,
   switchTenantSchema,
   verifyEmailSchema,
 } from '../contracts/auth.schemas';
@@ -36,6 +37,7 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   //   POST /register      public       POST /login           public
   //   POST /register-participant  public
   //   POST /verify-email  public       POST /logout          session + csrf
+  //   POST /resend-verification  public (rate limited per IP and per address)
   //   GET  /session       session      POST /switch-tenant   session + csrf
   //   GET  /google/start  public       GET  /google/callback public
   r.post('/register', async (req, res) => {
@@ -67,6 +69,13 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   r.post('/verify-email', async (req, res) => {
     await auth.verifyEmail(parse(verifyEmailSchema, req.body).token);
     res.status(204).end();
+  });
+
+  r.post('/resend-verification', async (req, res) => {
+    const body = parse(resendVerificationSchema, req.body);
+    await auth.resendVerification({ email: body.email, ip: req.ip ?? 'unknown' });
+    // Same response for unknown, verified and unverified addresses.
+    res.status(202).json({ status: 'verification_sent' });
   });
 
   r.post('/login', async (req, res) => {

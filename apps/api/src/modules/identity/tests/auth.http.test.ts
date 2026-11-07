@@ -32,6 +32,9 @@ function setup() {
     mailer,
     loginLimiter: new MemoryRateLimiter(3, 15 * 60_000, clock),
     registerLimiter: new MemoryRateLimiter(100, 60 * 60_000, clock),
+    resendIpLimiter: new MemoryRateLimiter(10, 60 * 60_000, clock),
+    resendEmailLimiter: new MemoryRateLimiter(3, 60 * 60_000, clock),
+    resendCooldown: new MemoryRateLimiter(1, 60_000, clock),
     csrfSecret: 'k'.repeat(32),
     clock,
   });
@@ -116,6 +119,54 @@ describe('identity HTTP', () => {
       await post('/register', { ...body, email: 'b@example.com' }).expect(202);
       s.advance(25 * 60 * 60_000);
       await post('/verify-email', { token: s.mailer.sent[1]!.token }).expect(400);
+    });
+  });
+
+  describe('resend verification', () => {
+    const tick = () => new Promise((r) => setImmediate(r));
+
+    it('sends a fresh working link to an unverified address', async () => {
+      await post('/register', body).expect(202);
+      s.advance(61_000);
+      await post('/resend-verification', { email: 'ADA@example.com' }).expect(202);
+      await tick();
+      expect(s.mailer.sent).toHaveLength(2);
+      expect(s.mailer.sent[1]!.to).toBe('ada@example.com');
+      expect(s.mailer.sent[1]!.token).not.toBe(s.mailer.sent[0]!.token);
+      await post('/verify-email', { token: s.mailer.sent[1]!.token }).expect(204);
+    });
+
+    it('answers the same and sends nothing for unknown and already verified addresses', async () => {
+      await registerAndVerify();
+      const unknown = await post('/resend-verification', { email: 'nobody@example.com' }).expect(
+        202,
+      );
+      s.advance(61_000);
+      const verified = await post('/resend-verification', { email: 'ada@example.com' }).expect(202);
+      await tick();
+      expect(unknown.body).toEqual(verified.body);
+      expect(s.mailer.sent).toHaveLength(1); // only the original registration mail
+    });
+
+    it('allows one resend per address per minute, with Retry-After', async () => {
+      await post('/register', body).expect(202);
+      await post('/resend-verification', { email: 'ada@example.com' }).expect(202);
+      const res = await post('/resend-verification', { email: 'ada@example.com' }).expect(429);
+      expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+      s.advance(61_000);
+      await post('/resend-verification', { email: 'ada@example.com' }).expect(202);
+    });
+
+    it('limits an address to three resends an hour, known or not', async () => {
+      for (let i = 0; i < 3; i++) {
+        await post('/resend-verification', { email: 'ghost@example.com' }).expect(202);
+        s.advance(61_000);
+      }
+      await post('/resend-verification', { email: 'ghost@example.com' }).expect(429);
+    });
+
+    it('rejects a malformed address', async () => {
+      await post('/resend-verification', { email: 'not-an-email' }).expect(400);
     });
   });
 
