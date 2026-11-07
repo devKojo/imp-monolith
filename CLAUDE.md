@@ -23,3 +23,19 @@ plan is `docs/execution-plan.md`. Key rules for code in this repo:
 - Raw SQL only via tagged-template `$queryRaw` / `$executeRaw`; unsafe variants are banned.
 - Schema changes ship as reviewed migrations; roles are provisioned by `db:provision-roles`,
   never in SQL with passwords. Secrets live in `.env` (gitignored), never in the repo.
+
+## Frontend rules (mandatory when touching apps/web or packages/ui)
+
+Active decisions and practices are in `docs/frontend/README.md` (ADR-F001 to ADR-F011 in
+`docs/frontend/adr/`). Cite the decision you apply in PR descriptions.
+
+- Reuse first: search the gallery (`/ui/components`) or `docs/frontend/component-catalogue.md`
+  before writing UI. Compose existing components, then extend one, and only then add a new one
+  (a new component needs a registry entry and a gallery demo block, enforced by tests).
+- Reusable UI lives in `packages/ui` (`@imp/ui`), never in `apps/web`. Features use `Ui*`
+  components, not raw `<button>`/`<input>`.
+- Semantic tokens only (`var(--ui-*)`), logical CSS properties, no hard-coded colours/sizes,
+  no `v-html`. Run `npm run check -w @imp/ui` and `npm test -w @imp/ui` before opening a PR.
+- Strings come from the catalogue (`i18n/en.ts`) or props; every state in spec section 11 uses
+  `UiSystemState`; status uses `UiStatusChip` vocabularies.
+- No module-level mutable state in SSR code; no storing participant form state in browser storage.

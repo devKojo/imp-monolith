@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm-run-all --parallel dev:api dev:web",
