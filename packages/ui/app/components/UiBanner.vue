@@ -53,8 +53,8 @@ const fallbackTitle = computed(() => uiText(`banner.${props.tone}` as const));
   align-items: flex-start;
   gap: var(--ui-space-3);
   padding: var(--ui-space-3) var(--ui-space-4);
-  border: 1px solid currentcolor;
-  border-radius: var(--ui-radius-md);
+  border: 1px solid color-mix(in srgb, currentcolor 24%, transparent);
+  border-radius: var(--ui-radius-lg);
 }
 .ui-banner__body {
   flex: 1;

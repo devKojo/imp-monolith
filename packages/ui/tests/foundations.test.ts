@@ -40,8 +40,8 @@ describe('design tokens (UXA-003)', () => {
 
   it('exposes the spacing, radius and breakpoint scales from the spec', () => {
     expect(tokenSource.space).toMatchObject({ '1': 4, '4': 16, '12': 48 });
-    // Tighter than spec 3.4 (4/8/16) to match the design references (ADR-F013).
-    expect(tokenSource.radius).toMatchObject({ sm: 2, md: 4, lg: 8, xl: 12 });
+    // Softer, larger radii for the startup look (ADR-F014).
+    expect(tokenSource.radius).toMatchObject({ sm: 6, md: 10, lg: 14, xl: 20 });
     expect(tokenSource.breakpoint).toMatchObject({ md: 768, lg: 1024 });
     expect(tokenSource.target).toMatchObject({ public: 44, dashboard: 32, minimum: 24 });
   });

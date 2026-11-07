@@ -45,7 +45,7 @@ function goTo(fieldId: string, e: Event) {
   background: var(--ui-color-danger-bg);
   color: var(--ui-color-danger-text);
   border: 1px solid var(--ui-color-danger-text);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-lg);
 }
 .ui-error-summary__title {
   display: flex;

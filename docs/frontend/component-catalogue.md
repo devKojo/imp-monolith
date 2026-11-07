@@ -10,7 +10,7 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPublicShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
 | `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
 | `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
 | `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
@@ -91,7 +91,7 @@
 | `UiTopBar` | Business name and role, search, help, notifications and user menu. | `UiButton`, `UiIcon`, `UiLink` | `UiDashboardShell` | UI-DSH-01, UI-A11Y-13, UI-DSH-14 |
 | `UiSkipLink` | Skip-to-content link, first focusable element on every page. | - | `UiAuthShell`, `UiConsoleShell`, `UiDashboardShell`, `UiPortalShell`, `UiPublicShell` | UI-A11Y-06 |
 | `UiDashboardShell` | Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark. | `UiSidebarNav`, `UiSkipLink`, `UiTopBar` | - | UI-DSH-01, UI-FND-05 |
-| `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
+| `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiIcon`, `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
 | `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column. | `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
 | `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
 | `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
@@ -113,7 +113,7 @@
 
 ## Most reused
 
-- `UiIcon`: used by 28 components
+- `UiIcon`: used by 29 components
 - `UiButton`: used by 22 components
 - `UiLink`: used by 8 components
 - `UiLiveRegion`: used by 6 components

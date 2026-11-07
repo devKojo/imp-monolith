@@ -81,10 +81,10 @@ export const tokens = {
     "12": 48
   },
   "radius": {
-    "sm": 2,
-    "md": 4,
-    "lg": 8,
-    "xl": 12,
+    "sm": 6,
+    "md": 10,
+    "lg": 14,
+    "xl": 20,
     "pill": 999
   },
   "font": {

@@ -80,7 +80,7 @@ function request() {
   color: var(--ui-color-text-primary);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-lg);
+  border-radius: var(--ui-radius-xl);
   box-shadow: var(--ui-elevation-3);
 }
 .ui-dialog::backdrop {

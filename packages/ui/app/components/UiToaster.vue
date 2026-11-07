@@ -79,7 +79,7 @@ onBeforeUnmount(() => timers.forEach((t) => clearTimeout(t)));
   padding: var(--ui-space-2) var(--ui-space-3);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-lg);
   box-shadow: var(--ui-elevation-2);
   pointer-events: auto;
 }

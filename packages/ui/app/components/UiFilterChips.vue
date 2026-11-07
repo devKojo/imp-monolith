@@ -48,8 +48,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
   padding: var(--ui-space-1) var(--ui-space-3);
   background: var(--ui-color-surface);
   color: var(--ui-color-text-secondary);
-  border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-pill);
+  box-shadow: var(--ui-elevation-1);
   font: inherit;
   cursor: pointer;
 }
@@ -61,7 +62,6 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
   background: var(--ui-color-selected-bg);
   color: var(--ui-color-selected-text);
   border-color: var(--ui-color-action-primary);
-  border-width: var(--ui-focus-width);
   font-weight: 600;
 }
 </style>
