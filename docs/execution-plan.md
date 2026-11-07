@@ -78,6 +78,12 @@ Scope is the database layer only (no auth/MFA, HTTP profiles, RabbitMQ publisher
 
 Applying migrations and provisioning roles requires explicit confirmation of the target database.
 
+### Phase 1 progress
+
+- Done: DB foundation (tenancy, RLS, roles, outbox/inbox/audit tables).
+- Done (core auth PR): registration, email verification, Argon2id login with throttling and lock, PostgreSQL sessions (`__Host-sid`, idle 30 min / absolute 12 h), CSRF token + Origin checks, tenant derived from the active membership, session rotation on tenant switch. See `apps/api/src/modules/identity/MODULE.md`.
+- Next: MFA (TOTP, recovery codes, step-up), invitations and ownership transfer, password reset, permission matrix and route metadata, outbox publisher, Redis session cache.
+
 ## 3. Open points
 
 - The spec mandates pnpm; confirm before migrating from npm (touches CI, husky, lockfile).

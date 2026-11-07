@@ -23,8 +23,8 @@ for (const model of models) {
     const refs = (/references:\s*\[([^\]]*)\]/.exec(rel)?.[1] ?? '')
       .split(',')
       .map((s) => s.trim());
-    const composite =
-      parts.length === 2 && parts[0] === 'tenantId' && refs[0] === 'tenantId' && refs[1] === 'id';
+    // The child column names may differ (e.g. activeTenantId); the reference must be [tenantId, id].
+    const composite = parts.length === 2 && refs[0] === 'tenantId' && refs[1] === 'id';
     if (!composite) {
       problems.push(`${model.name}.${field.name} -> ${target} must be composite on [tenantId, id]`);
     }
