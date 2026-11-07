@@ -5,6 +5,7 @@ import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
+import GoogleSigninButton from './GoogleSigninButton.vue';
 import { AGREEMENT_VERSION, HOME } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
@@ -135,6 +136,8 @@ const crumbs = [
     :title="k('title')"
     :subtitle="k('subtitle')"
   >
+    <GoogleSigninButton v-if="!isBusiness" note />
+
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
