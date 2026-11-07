@@ -40,7 +40,11 @@ Active decisions and practices are in `docs/frontend/README.md` (ADR-F001 to ADR
 - Reusable UI lives in `packages/ui` (`@imp/ui`), never in `apps/web`. Features use `Ui*`
   components, not raw `<button>`/`<input>`.
 - Semantic tokens only (`var(--ui-*)`), logical CSS properties, no hard-coded colours/sizes,
-  no `v-html`. Run `npm run check -w @imp/ui` and `npm test -w @imp/ui` before opening a PR.
+  no `v-html`. The UI kit checks run in CI.
+- Generated files: after changing a `@imp/ui` component's props, slots or events, run
+  `npm run catalogue:build -w @imp/ui` and commit the regenerated `component-catalogue.md` and
+  `composition.generated.ts`; after editing `tokens.json`, run `npm run tokens:build -w @imp/ui`.
+  CI fails with "stale" otherwise.
 - Strings come from the catalogue (`i18n/en.ts`) or props; every state in spec section 11 uses
   `UiSystemState`; status uses `UiStatusChip` vocabularies.
 - No module-level mutable state in SSR code; no storing participant form state in browser storage.
