@@ -63,6 +63,37 @@ export const icons = {
   'wifi-off': stroke(
     'M2 2l20 20M8.5 16.4a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5a15 15 0 0 1 11.3 3.8M5 12.9a10 10 0 0 1 5.2-2.7M12 20h.01',
   ),
+  // Added for the auth, onboarding and discovery screens.
+  'eye-off': stroke(
+    'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24',
+    'M1 1l22 22',
+  ),
+  mail: stroke(
+    'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    'm22 6-10 7L2 6',
+  ),
+  building: stroke('M3 21h18M5 21V7l8-4v18M19 21V11l-6-4', 'M9 9v.01M9 12v.01M9 15v.01M9 18v.01'),
+  gift: stroke(
+    'M20 12v10H4V12M2 7h20v5H2zM12 22V7',
+    'M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z',
+  ),
+  zap: stroke('M13 2 3 14h9l-1 8 10-12h-9z'),
+  'arrow-right': stroke('M5 12h14M12 5l7 7-7 7'),
+  filter: stroke('M22 3H2l8 9.46V19l4 2v-8.54z'),
+  'shield-check': stroke('M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6Z', 'm9 12 2 2 4-4'),
+  'clipboard-list': stroke(
+    'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 2h6v4H9z',
+    'M9 12h6M9 16h6',
+  ),
+  'bar-chart': stroke('M12 20V10M18 20V4M6 20v-4'),
+  trophy: stroke(
+    'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16',
+    'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z',
+  ),
+  'log-in': stroke('M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3'),
+  'log-out': stroke('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9'),
+  circle: stroke('M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z'),
+  loader: stroke('M21 12a9 9 0 1 1-6.22-8.56'),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof icons;

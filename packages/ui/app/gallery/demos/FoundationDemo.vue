@@ -7,6 +7,7 @@ import UiLink from '../../components/UiLink.vue';
 import UiLiveRegion from '../../components/UiLiveRegion.vue';
 import UiProgress from '../../components/UiProgress.vue';
 import { icons, type IconName } from '../../icons';
+import UiDivider from '../../components/UiDivider.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const names = Object.keys(icons) as IconName[];
@@ -55,6 +56,12 @@ const message = ref('');
     <UiCard title="Default card">Content goes here.</UiCard>
     <UiCard title="Subtle card" tone="subtle">Used for secondary groupings.</UiCard>
     <UiCard title="Raised card" raised>Raised cards keep their border.</UiCard>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiDivider">
+    <UiDivider />
+    <UiDivider label="or" />
+    <UiDivider label="or sign in with email" />
   </GalleryBlock>
 </template>
 

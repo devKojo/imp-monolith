@@ -43,28 +43,33 @@ svg {
   font-size: var(--ui-font-display-mobile-size);
   line-height: var(--ui-font-display-mobile-line);
   font-weight: var(--ui-font-display-mobile-weight);
+  letter-spacing: var(--ui-font-display-mobile-tracking);
 }
 @media (min-width: 768px) {
   .ui-text-display {
     font-size: var(--ui-font-display-size);
     line-height: var(--ui-font-display-line);
     font-weight: var(--ui-font-display-weight);
+    letter-spacing: var(--ui-font-display-tracking);
   }
 }
 .ui-text-h1 {
   font-size: var(--ui-font-h1-size);
   line-height: var(--ui-font-h1-line);
   font-weight: var(--ui-font-h1-weight);
+  letter-spacing: var(--ui-font-h1-tracking);
 }
 .ui-text-h2 {
   font-size: var(--ui-font-h2-size);
   line-height: var(--ui-font-h2-line);
   font-weight: var(--ui-font-h2-weight);
+  letter-spacing: var(--ui-font-h2-tracking);
 }
 .ui-text-h3 {
   font-size: var(--ui-font-h3-size);
   line-height: var(--ui-font-h3-line);
   font-weight: var(--ui-font-h3-weight);
+  letter-spacing: var(--ui-font-h3-tracking);
 }
 .ui-text-body-l {
   font-size: var(--ui-font-body-l-size);
@@ -78,6 +83,17 @@ svg {
   font-size: var(--ui-font-caption-size);
   line-height: var(--ui-font-caption-line);
   font-weight: var(--ui-font-caption-weight);
+}
+.ui-text-label {
+  font-size: var(--ui-font-label-size);
+  line-height: var(--ui-font-label-line);
+  font-weight: var(--ui-font-label-weight);
+}
+.ui-text-label-sm {
+  font-size: var(--ui-font-label-sm-size);
+  line-height: var(--ui-font-label-sm-line);
+  font-weight: var(--ui-font-label-sm-weight);
+  letter-spacing: var(--ui-font-label-sm-tracking);
 }
 .ui-text-hint {
   color: var(--ui-color-text-hint);

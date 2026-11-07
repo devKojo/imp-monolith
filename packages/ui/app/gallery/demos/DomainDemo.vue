@@ -5,6 +5,8 @@ import UiDrawProofPanel from '../../components/UiDrawProofPanel.vue';
 import UiMediaUploader, { type UploadState } from '../../components/UiMediaUploader.vue';
 import UiReorderableList from '../../components/UiReorderableList.vue';
 import UiRewardCard from '../../components/UiRewardCard.vue';
+import UiCampaignCard from '../../components/UiCampaignCard.vue';
+import UiFeatureTile from '../../components/UiFeatureTile.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const questions = ref([
@@ -108,6 +110,53 @@ const proof = {
 
   <GalleryBlock name="UiDrawProofPanel">
     <UiDrawProofPanel :proof="proof" />
+  </GalleryBlock>
+
+  <GalleryBlock name="UiFeatureTile">
+    <div class="demo-grid">
+      <UiFeatureTile
+        icon="shield-check"
+        title="Fair draws you can check"
+        description="Every draw publishes its snapshot, seed commitment and proof."
+      />
+      <UiFeatureTile
+        icon="zap"
+        title="Enter in a minute"
+        description="We only ask for what the campaign needs and say why."
+      />
+      <UiFeatureTile
+        icon="lock"
+        title="Your data stays yours"
+        description="Consent is explicit and you can withdraw it at any time."
+      />
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiCampaignCard">
+    <div class="demo-grid">
+      <UiCampaignCard
+        title="Black Friday Quiz"
+        summary="Answer five questions about Ghana for a chance to win a weekend getaway for two."
+        business-name="Acme Ltd"
+        type-label="Quiz"
+        type-icon="clipboard-list"
+        to="/ui/screens"
+        time-left="2 days left"
+        ends-at-iso="2026-11-30T23:59:00Z"
+        ends-at-label="30 Nov, 23:59 GMT"
+        prize-label="Prize"
+        prize-value="Weekend getaway"
+      />
+      <UiCampaignCard
+        title="Brand Poll"
+        summary="Tell us which flavour should launch next. Results are shown when voting closes."
+        business-name="Fizz Drinks"
+        type-label="Poll"
+        type-icon="bar-chart"
+        to="/ui/screens"
+        time-left="Ends today"
+      />
+    </div>
   </GalleryBlock>
 </template>
 

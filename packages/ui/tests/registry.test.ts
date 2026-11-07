@@ -51,6 +51,7 @@ describe('reuse over duplication', () => {
   it('raw <button> and <input> live only in the components that own that pattern', () => {
     // One owner per native control, so styling and accessibility fixes happen in one place.
     const rawButtonOwners = new Set([
+      'UiFilterChips',
       'UiButton',
       'UiSwitch',
       'UiTabs',

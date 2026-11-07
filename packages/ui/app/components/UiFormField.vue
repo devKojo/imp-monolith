@@ -8,6 +8,10 @@ import UiIcon from './UiIcon.vue';
  * placeholder is never the label), required stated in text, help text linked by aria-describedby,
  * and an error that replaces the help text and pairs an icon with text.
  * Text inputs, selects, phone, OTP, date/time and choice groups all reuse it.
+ *
+ * `labelAside` puts a secondary link on the label row ("Forgot password?"). `hideLabel` keeps the
+ * label for assistive tech but hides it visually; use it only where the control's purpose is
+ * unmistakable from a visible button, such as a search box.
  */
 const props = defineProps<{
   label: string;
@@ -16,6 +20,7 @@ const props = defineProps<{
   hint?: string;
   error?: string;
   required?: boolean;
+  hideLabel?: boolean;
 }>();
 
 const generated = useId();
@@ -30,12 +35,15 @@ const describedBy = computed(() =>
 
 <template>
   <div class="ui-field" :data-invalid="invalid">
-    <label :for="id" class="ui-field__label">
-      {{ label }}
-      <span class="ui-field__req ui-text-body-s">{{
-        required ? `(${uiText('common.required').toLowerCase()})` : ''
-      }}</span>
-    </label>
+    <div class="ui-field__head" :class="{ 'ui-sr-only': hideLabel }">
+      <label :for="id" class="ui-field__label ui-text-label">
+        {{ label }}
+        <span class="ui-field__req ui-text-body-s">{{
+          required ? `(${uiText('common.required').toLowerCase()})` : ''
+        }}</span>
+      </label>
+      <slot name="labelAside" />
+    </div>
     <slot :id="id" :described-by="describedBy" :invalid="invalid" />
     <p v-if="error" :id="errorId" class="ui-field__error ui-text-body-s">
       <UiIcon name="alert-circle" :size="16" />
@@ -52,6 +60,12 @@ const describedBy = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-1);
+}
+.ui-field__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
 }
 .ui-field__label {
   font-weight: 600;

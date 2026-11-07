@@ -34,6 +34,17 @@ const activated = ref(false);
       Labels are verb + object. The loading button keeps its width. Disabled buttons explain why in
       text.
     </p>
+
+    <div class="demo-row">
+      <UiButton to="/ui/components" icon-trailing="arrow-right">Link styled as a button</UiButton>
+      <UiButton variant="secondary" to="/ui/states">Secondary link</UiButton>
+      <UiButton icon-trailing="arrow-right">Create account</UiButton>
+      <UiButton loading loading-label="Creating your account...">Create account</UiButton>
+    </div>
+    <p class="ui-text-body-s ui-text-hint">
+      With <code>to</code> it renders an anchor with the same styling; loading shows a spinner and
+      keeps the width.
+    </p>
   </GalleryBlock>
 
   <GalleryBlock name="UiCopyButton">

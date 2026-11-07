@@ -17,6 +17,8 @@ const props = defineProps<{
   terms: { label: string; version: string; href: string };
   optional?: Purpose[];
   error?: string;
+  /** Id for the required-terms checkbox, so an error summary can link to it. */
+  termsId?: string;
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: ConsentValue] }>();
@@ -31,6 +33,7 @@ const setOptional = (id: string, on: boolean) =>
   <fieldset class="ui-consent">
     <legend class="ui-consent__legend ui-text-h3">{{ legend }}</legend>
     <UiCheckbox
+      :id="termsId"
       :model-value="modelValue.accepted"
       :label="`${terms.label} (${uiText('consent.required').toLowerCase()})`"
       :error="error"

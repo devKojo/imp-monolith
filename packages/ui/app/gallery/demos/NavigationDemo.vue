@@ -12,6 +12,12 @@ import UiStepper, { type Step } from '../../components/UiStepper.vue';
 import UiTabs from '../../components/UiTabs.vue';
 import UiTopBar from '../../components/UiTopBar.vue';
 import type { NavItem } from '../../components/UiSidebarNav.vue';
+import UiAuthShell from '../../components/UiAuthShell.vue';
+import UiBadge from '../../components/UiBadge.vue';
+import UiDivider from '../../components/UiDivider.vue';
+import UiLink from '../../components/UiLink.vue';
+import UiPasswordField from '../../components/UiPasswordField.vue';
+import UiTextInput from '../../components/UiTextInput.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const tab = ref('overview');
@@ -38,6 +44,9 @@ const nav: NavItem[] = [
   { label: 'Reports', to: '/ui/screens#reports', icon: 'download', badge: '2' },
 ];
 const locale = ref('en');
+
+const authEmail = ref('');
+const authPassword = ref('');
 </script>
 
 <template>
@@ -150,6 +159,36 @@ const locale = ref('en');
           abuse.
         </p>
       </UiPublicShell>
+    </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiAuthShell">
+    <div class="demo-frame">
+      <UiAuthShell
+        brand-name="Acme Ltd"
+        title="Welcome back"
+        subtitle="Sign in to manage your campaigns."
+      >
+        <template #badge
+          ><UiBadge shape="pill" tone="info" icon="shield-check"
+            >Business sign in</UiBadge
+          ></template
+        >
+        <UiTextInput
+          v-model="authEmail"
+          label="Email address"
+          type="email"
+          icon="mail"
+          autocomplete="email"
+        />
+        <UiPasswordField v-model="authPassword" label="Password" autocomplete="current-password" />
+        <UiDivider label="or" />
+        <UiButton block icon-trailing="arrow-right">Sign in</UiButton>
+        <template #footer
+          >Don't have an account? <UiLink to="/ui/screens">Create an account</UiLink></template
+        >
+        <template #below>Your session ends after 30 minutes of inactivity.</template>
+      </UiAuthShell>
     </div>
   </GalleryBlock>
 </template>

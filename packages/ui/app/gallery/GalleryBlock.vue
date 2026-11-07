@@ -36,6 +36,10 @@ const comp = computed(() => composition[props.name]);
         <dt>Spec</dt>
         <dd>{{ entry.specRefs.join(', ') }}</dd>
       </div>
+      <div v-if="entry.origin">
+        <dt>Origin</dt>
+        <dd>{{ entry.origin }}</dd>
+      </div>
       <div v-if="comp?.composes.length">
         <dt>Built from</dt>
         <dd>{{ comp.composes.join(', ') }}</dd>

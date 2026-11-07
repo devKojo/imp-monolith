@@ -99,7 +99,24 @@ export default tseslint.config(
   },
   {
     files: ['apps/web/**/*.{ts,vue}'],
-    languageOptions: { globals: { ...globals.browser } },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        // Nuxt auto-imports used in the web app.
+        $fetch: 'readonly',
+        useHead: 'readonly',
+        useRoute: 'readonly',
+        useRouter: 'readonly',
+        useState: 'readonly',
+        useAsyncData: 'readonly',
+        useRuntimeConfig: 'readonly',
+        navigateTo: 'readonly',
+        definePageMeta: 'readonly',
+        defineNuxtPlugin: 'readonly',
+        defineNuxtRouteMiddleware: 'readonly',
+        useCountdown: 'readonly',
+      },
+    },
     rules: { 'vue/multi-word-component-names': 'off' },
   },
   {

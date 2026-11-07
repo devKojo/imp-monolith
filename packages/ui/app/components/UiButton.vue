@@ -3,12 +3,19 @@ import { computed, useId } from 'vue';
 import type { IconName } from '../icons';
 import { uiText } from '../composables/useUiText';
 import UiIcon from './UiIcon.vue';
+import UiLink from './UiLink.vue';
 
+/**
+ * One button for every action, including navigation: pass `to` to render a link with identical
+ * styling (call-to-action links are buttons visually but anchors semantically).
+ */
 const props = withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
     size?: 'md' | 'lg';
     type?: 'button' | 'submit' | 'reset';
+    /** Render as a link to this route or URL instead of a <button>. */
+    to?: string;
     /** Keeps width and announces busy; the label switches to `loadingLabel`. */
     loading?: boolean;
     loadingLabel?: string;
@@ -16,6 +23,8 @@ const props = withDefaults(
     /** Why the button is disabled. Shown as text beside it, never only as a tooltip (spec 5). */
     disabledReason?: string;
     icon?: IconName;
+    /** Icon after the label (for example an arrow on a forward action). */
+    iconTrailing?: IconName;
     block?: boolean;
   }>(),
   { variant: 'primary', size: 'md', type: 'button' },
@@ -31,6 +40,19 @@ const label = computed(() =>
   props.loading ? (props.loadingLabel ?? uiText('common.saving')) : undefined,
 );
 
+const element = computed(() => (props.to ? UiLink : 'button'));
+const elementProps = computed(() =>
+  props.to
+    ? { to: props.to, bare: true }
+    : {
+        type: props.type,
+        disabled: props.disabled,
+        'aria-busy': props.loading ? 'true' : undefined,
+        'aria-disabled': props.loading ? 'true' : undefined,
+        'aria-describedby': props.disabled && props.disabledReason ? reasonId : undefined,
+      },
+);
+
 function onClick(e: MouseEvent) {
   if (props.loading || props.disabled) return e.preventDefault();
   emit('click', e);
@@ -39,24 +61,22 @@ function onClick(e: MouseEvent) {
 
 <template>
   <span class="ui-button-wrap" :data-block="block">
-    <button
+    <component
+      :is="element"
+      v-bind="{ ...elementProps, ...$attrs }"
       class="ui-button"
-      :type="type"
       :data-variant="variant"
       :data-size="size"
-      :disabled="disabled"
-      :aria-busy="loading ? 'true' : undefined"
-      :aria-disabled="loading ? 'true' : undefined"
-      :aria-describedby="disabled && disabledReason ? reasonId : undefined"
-      v-bind="$attrs"
       @click="onClick"
     >
-      <UiIcon v-if="icon && !loading" :name="icon" :size="18" />
+      <UiIcon v-if="loading" name="loader" :size="18" class="ui-button__spinner" />
+      <UiIcon v-else-if="icon" :name="icon" :size="18" />
       <span class="ui-button__label">
         <template v-if="loading">{{ label }}</template>
         <slot v-else />
       </span>
-    </button>
+      <UiIcon v-if="iconTrailing && !loading" :name="iconTrailing" :size="18" />
+    </component>
     <span
       v-if="disabled && disabledReason"
       :id="reasonId"
@@ -100,28 +120,46 @@ function onClick(e: MouseEvent) {
 .ui-button-wrap[data-block='true'] .ui-button {
   inline-size: 100%;
 }
+
+/* Interaction states come from tokens (design reference: Components > Buttons). */
 .ui-button[data-variant='primary'] {
   background: var(--ui-color-action-primary);
   color: var(--ui-color-action-primary-text);
 }
+.ui-button[data-variant='primary']:hover:not(:disabled) {
+  background: var(--ui-color-action-primary-hover);
+}
+.ui-button[data-variant='primary']:active:not(:disabled) {
+  background: var(--ui-color-action-primary-active);
+}
 .ui-button[data-variant='secondary'] {
   background: var(--ui-color-surface);
-  color: var(--ui-color-text-primary);
+  color: var(--ui-color-text-secondary);
   border-color: var(--ui-color-border-strong);
+}
+.ui-button[data-variant='secondary']:hover:not(:disabled) {
+  background: var(--ui-color-surface-hover);
+  color: var(--ui-color-text-primary);
+}
+.ui-button[data-variant='secondary']:active:not(:disabled) {
+  background: var(--ui-color-surface-pressed);
 }
 .ui-button[data-variant='tertiary'] {
   background: transparent;
   color: var(--ui-color-link);
 }
+.ui-button[data-variant='tertiary']:hover:not(:disabled) {
+  background: var(--ui-color-selected-bg);
+}
 .ui-button[data-variant='danger'] {
-  background: var(--ui-color-danger-text);
+  background: var(--ui-color-danger-action);
   color: var(--ui-color-action-primary-text);
 }
-.ui-button:hover:not(:disabled) {
-  filter: brightness(0.94);
+.ui-button[data-variant='danger']:hover:not(:disabled) {
+  background: var(--ui-color-danger-action-hover);
 }
-.ui-button:active:not(:disabled) {
-  filter: brightness(0.88);
+.ui-button[data-variant='danger']:active:not(:disabled) {
+  background: var(--ui-color-danger-action-active);
 }
 .ui-button:disabled {
   background: var(--ui-color-surface-subtle);
@@ -131,5 +169,13 @@ function onClick(e: MouseEvent) {
 }
 .ui-button[aria-busy='true'] {
   cursor: progress;
+}
+.ui-button__spinner {
+  animation: ui-spin 0.9s linear infinite;
+}
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
