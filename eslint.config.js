@@ -115,6 +115,7 @@ export default tseslint.config(
         defineNuxtPlugin: 'readonly',
         defineNuxtRouteMiddleware: 'readonly',
         useCountdown: 'readonly',
+        useClearOnInput: 'readonly',
       },
     },
     rules: { 'vue/multi-word-component-names': 'off' },

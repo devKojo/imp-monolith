@@ -24,17 +24,13 @@ const emit = defineEmits<{ menu: []; notifications: []; userMenu: [] }>();
 
 <template>
   <header class="ui-topbar">
-    <UiButton
-      v-if="showMenu"
-      variant="tertiary"
-      icon="menu"
-      :aria-expanded="menuOpen"
-      @click="emit('menu')"
-    >
-      <span class="ui-sr-only">{{
-        menuOpen ? uiText('nav.closeMenu') : uiText('nav.openMenu')
-      }}</span>
-    </UiButton>
+    <span v-if="showMenu" class="ui-topbar__menu">
+      <UiButton variant="tertiary" icon="menu" :aria-expanded="menuOpen" @click="emit('menu')">
+        <span class="ui-sr-only">{{
+          menuOpen ? uiText('nav.closeMenu') : uiText('nav.openMenu')
+        }}</span>
+      </UiButton>
+    </span>
     <div class="ui-topbar__business">
       <slot name="switcher">
         <strong class="ui-topbar__name">{{ businessName }}</strong>
@@ -92,6 +88,12 @@ const emit = defineEmits<{ menu: []; notifications: []; userMenu: [] }>();
   background: var(--ui-color-danger-text);
   color: var(--ui-color-action-primary-text);
   border-radius: var(--ui-radius-pill);
+}
+/* The navigation is a sidebar from lg up, so the drawer button is only needed below it. */
+@media (min-width: 1024px) {
+  .ui-topbar__menu {
+    display: none;
+  }
 }
 @media (max-width: 767px) {
   .ui-topbar__user {

@@ -24,6 +24,7 @@ const password = ref('');
 const errors = ref<FieldErrors<'email' | 'password'>>({});
 const failure = ref<AuthFailure | null>(null);
 const loading = ref(false);
+useClearOnInput(errors, { email, password });
 
 // Only same-site relative paths are followed after sign-in (open-redirect protection).
 const next = computed(() => safeRedirect(route.query.next));

@@ -24,6 +24,7 @@ const password = ref(draft.value.password);
 const errors = ref<FieldErrors<'name' | 'email' | 'password'>>({});
 // A server rejection from step 2 (for example a breached password) is shown on the password field.
 if (draft.value.passwordError) errors.value = { password: draft.value.passwordError };
+useClearOnInput(errors, { name, email, password });
 
 const rules = computed(() => passwordRules(password.value, email.value));
 const summary = computed(() =>

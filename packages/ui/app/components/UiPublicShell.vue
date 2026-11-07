@@ -106,6 +106,25 @@ const emit = defineEmits<{ 'update:locale': [locale: string] }>();
   flex-wrap: wrap;
   gap: var(--ui-space-1) var(--ui-space-2);
 }
+/* Navigation links read as nav items, not inline text links; the current page is marked. */
+.ui-public__nav :deep(a) {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--ui-target-public);
+  padding-inline: var(--ui-space-3);
+  color: var(--ui-color-text-secondary);
+  border-radius: var(--ui-radius-md);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ui-public__nav :deep(a:hover) {
+  background: var(--ui-color-surface-hover);
+  color: var(--ui-color-text-primary);
+}
+.ui-public__nav :deep(a[aria-current='page']) {
+  background: var(--ui-color-selected-bg);
+  color: var(--ui-color-selected-text);
+}
 .ui-public__actions {
   display: flex;
   align-items: center;

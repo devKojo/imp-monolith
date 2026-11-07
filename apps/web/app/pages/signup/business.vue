@@ -20,6 +20,7 @@ const consent = ref<ConsentValue>({ accepted: false, optional: {} });
 const errors = ref<FieldErrors<'businessName' | 'agreement'>>({});
 const failure = ref<AuthFailure | null>(null);
 const loading = ref(false);
+useClearOnInput(errors, { businessName, agreement: computed(() => consent.value.accepted) });
 
 // Step 1 lives in memory only; after a reload there is nothing to submit, so start again.
 onMounted(() => {

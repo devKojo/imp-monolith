@@ -33,6 +33,11 @@ a {
   color: var(--ui-color-link);
 }
 
+/* Headings receive focus after navigation (UI-A11Y-06) but are not controls: no ring. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
 img,
 svg {
   max-inline-size: 100%;
