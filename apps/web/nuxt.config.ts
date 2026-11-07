@@ -8,7 +8,10 @@ const publicEdge = {
 // In development the browser talks only to this origin and Nitro forwards /api/** to the API, which
 // mirrors production (CloudFront routes /api/* to the ALB) and keeps __Host- cookies and CSRF
 // checks working without CORS. Override the target with API_PROXY_TARGET.
-const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:3000/api/';
+// The default uses 127.0.0.1, not "localhost": Node resolves localhost to ::1 first, and when port
+// 3001 is taken (for example by Docker Desktop) Nuxt falls back to port 3000 on ::1. A "localhost"
+// target would then point at Nuxt itself, and every /api request would hang.
+const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:3000/api/';
 
 export default defineNuxtConfig({
   // Design tokens, components and the dev-only /ui gallery come from the shared layer.
