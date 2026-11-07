@@ -292,7 +292,6 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiMeter",
       "UiPasswordField",
       "UiPermissionGate",
-      "UiPublicShell",
       "UiSidebarNav",
       "UiStepper",
       "UiTextInput",
@@ -417,7 +416,6 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiPublicShell": {
     "composes": [
-      "UiIcon",
       "UiLink",
       "UiSelect",
       "UiSkipLink"

@@ -1,10 +1,12 @@
 /**
- * Copy for the web app's own pages (the shared UI library keeps its words in packages/ui). Same
+ * STATIC SITE TEXT: the one file that holds every word the web app shows (brand, navigation,
+ * footer, page copy). Edit text here; nothing else needs to change. Keys are grouped by page or
+ * area. Copy for the web app's own pages (the shared UI library keeps its words in packages/ui). Same
  * rules (UI-CPY-01..06): plain language, active voice, say what happened and what to do next,
  * verb + object on buttons, "Business" not "Tenant", errors never blame the user and never reveal
  * whether an account exists. Keys are i18n-ready (ADR-F007).
  */
-export const en = {
+export const staticSiteText = {
   // navigation
   'nav.discover': 'Discover',
   'nav.forBusinesses': 'For businesses',
@@ -108,7 +110,24 @@ export const en = {
   'verify.signup': 'Create your account',
   'verify.business': 'Business account? Sign in here',
 
+  // brand and site footer (public pages)
+  'brand.name': 'IMP',
+  'footer.tagline': 'Quizzes, polls and giveaways you can trust.',
+  'footer.participants': 'Participants',
+  'footer.participants.discover': 'Discover campaigns',
+  'footer.participants.signin': 'Sign in',
+  'footer.participants.signup': 'Create account',
+  'footer.business': 'For businesses',
+  'footer.business.register': 'Register your business',
+  'footer.business.signin': 'Business sign in',
+  'footer.support': 'Support',
+  'footer.support.help': 'Help centre',
+  'footer.support.report': 'Report abuse',
+  'footer.copyright': '© {year} IMP. All rights reserved.',
+
   // discovery
+  'discover.more': 'Show more campaigns',
+  'discover.shown': 'Showing {shown} of {total} campaigns',
   'discover.title': 'Discover live campaigns',
   'discover.subtitle':
     'Take part in quizzes, polls and giveaways run by businesses on the platform.',
@@ -121,22 +140,11 @@ export const en = {
   'discover.results.trust': 'Entries confirmed by one-time code',
   'discover.count.one': '1 campaign',
   'discover.count.other': '{n} campaigns',
-  'discover.sample.title': 'Sample data',
-  'discover.sample.body':
-    'These campaigns are examples for development. Live campaigns appear here once businesses publish them.',
   'discover.empty.title': 'No campaigns match',
   'discover.empty.body': 'Try a different search, or clear the filters.',
   'discover.empty.clear': 'Clear filters',
   'discover.none.title': 'No campaigns are live right now',
   'discover.none.body': 'Check back soon.',
-  'discover.how.title': 'How entries stay fair',
-  'discover.how.verified.title': 'Verified entries',
-  'discover.how.verified.body':
-    'Campaigns that give prizes confirm each entry with a one-time code.',
-  'discover.how.draws.title': 'Draws with proof',
-  'discover.how.draws.body': 'Winners are picked by a published method you can check yourself.',
-  'discover.how.privacy.title': 'Clear consent',
-  'discover.how.privacy.body': 'We ask only what a campaign needs, and tell you why.',
   'type.all': 'All campaigns',
   'type.quiz': 'Quizzes',
   'type.poll': 'Polls',
@@ -195,7 +203,7 @@ export const en = {
   'me.logout': 'Sign out',
   'me.verified': 'Verified',
   'me.loggingOut': 'Signing out...',
-  'me.footer': 'Interactive Marketing Platform',
+  'me.footer': 'IMP',
 
   // business console (sample data until campaign APIs exist)
   'console.title': 'Campaign operations',
@@ -252,4 +260,4 @@ export const en = {
   'console.soon.back': 'Back to overview',
 } as const;
 
-export type AppTextKey = keyof typeof en;
+export type AppTextKey = keyof typeof staticSiteText;

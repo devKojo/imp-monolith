@@ -8,8 +8,13 @@
 - Do not add `Co-Authored-By` trailers or "Generated with Claude Code" lines to commits or PR
   descriptions.
 - Never force-push or rewrite history on `main`.
-- Before opening a PR: `npm run lint`, `npm run typecheck`, `npm test`, and for DB changes
-  `npm run db:check -w @imp/api`.
+- Lint, format, typecheck, tests and `db:check` run in GitHub Actions (`.github/workflows/ci.yml`),
+  not in a pre-commit hook and not by default on the developer machine, so development and
+  browser testing stay fast. Do not run the full suite locally after every change; run a single
+  targeted test or `eslint <files>` only when it helps you finish the task.
+- Boy Scout rule: when CI reports lint, format or test failures in code related to the feature you
+  are working on, fix them in the same branch before starting new work. Do not leave them to pile
+  up. Failures in unrelated code get their own `chore/` branch, never a drive-by in a feature PR.
 
 ## Engineering baseline
 

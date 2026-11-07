@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { countText, filterCampaigns, sortByEnding, timeLeftText } from './logic';
+import {
+  PAGE_SIZE,
+  countText,
+  filterCampaigns,
+  nextVisible,
+  sortByEnding,
+  timeLeftText,
+} from './logic';
 import { createApiSource, createSampleSource, sampleCampaigns } from './source';
 import { EMPTY_QUERY, isCampaignType } from './types';
 
@@ -116,5 +123,20 @@ describe('createApiSource', () => {
   it('copes with a missing items array', async () => {
     const source = createApiSource((async () => ({})) as never);
     expect(await source.list(EMPTY_QUERY)).toEqual([]);
+  });
+});
+
+describe('paging', () => {
+  it('reveals one page at a time and stops at the total', () => {
+    expect(nextVisible(PAGE_SIZE, 20)).toBe(PAGE_SIZE * 2);
+    expect(nextVisible(PAGE_SIZE * 2, 20)).toBe(20);
+    expect(nextVisible(20, 20)).toBe(20);
+  });
+
+  it('has more sample campaigns than one page, with unique ids and slugs', () => {
+    const all = sampleCampaigns(0);
+    expect(all.length).toBeGreaterThan(PAGE_SIZE);
+    expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
+    expect(new Set(all.map((c) => c.slug)).size).toBe(all.length);
   });
 });

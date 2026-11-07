@@ -132,6 +132,12 @@ svg {
   background: var(--ui-color-surface-subtle);
   color: var(--ui-color-text-hint);
 }
+/* 16 px keeps iOS from zooming on focus; larger screens get the compact 14 px. */
+@media (min-width: 768px) {
+  .ui-control {
+    font-size: var(--ui-font-body-s-size);
+  }
+}
 textarea.ui-control {
   min-block-size: calc(var(--ui-space-12) * 2);
   resize: vertical;

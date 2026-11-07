@@ -13,7 +13,7 @@ packages/ui/                 Nuxt layer (@imp/ui): everything reusable
   app/assets/css/            tokens.css (generated), base.css
   app/components/Ui*.vue     the component library
   app/composables/           useToast, useUiText
-  app/i18n/en.ts             string catalogue
+  app/i18n/staticSiteText.ts  all site text (one file)
   app/gallery/               registry.ts, demos, gallery pages (/ui, dev only)
   scripts/                   build-tokens, build-catalogue, lint-ui
   tests/                     unit, behaviour and axe tests
@@ -54,7 +54,7 @@ docs/frontend/               this file, ADRs, generated component-catalogue.md
    only in the components that own them (tested).
 4. **Tokens only.** No hex/rgb colours, no px font sizes or spacing, no `left`/`right`; use
    `var(--ui-*)` and logical properties. `npm run lint:ui -w @imp/ui` fails otherwise.
-5. **No loose strings.** Words the library renders come from `i18n/en.ts`; words that belong to
+5. **No loose strings.** Words the library renders come from `i18n/staticSiteText.ts`; words that belong to
    the product are passed as props/slots. Buttons are verb + object; never "OK" or "Submit";
    "Business" not "Tenant"; errors say what to do next and never blame the user.
 6. **Every state is designed.** Loading, empty, error, forbidden, offline, paused, ended and the

@@ -5,6 +5,7 @@
  */
 export const AGREEMENT_VERSION = '1.0';
 
+import { staticSiteText } from '../../i18n/staticSiteText';
 import type { AccountType, Portal } from './types';
 
 /** Where each kind of account lives, and where its sign-in page is. */
@@ -14,7 +15,7 @@ export const SIGNIN: Record<Portal, string> = {
   business: '/business/signin',
 };
 
-export const BRAND_NAME = 'Interactive Marketing Platform';
+export const BRAND_NAME = staticSiteText['brand.name'];
 
 /** Seconds before a page that auto-retries after a 429/503 tries again. */
 export const MIN_RETRY_SECONDS = 1;

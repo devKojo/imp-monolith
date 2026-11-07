@@ -66,20 +66,20 @@ const titleId = useId();
       </div>
     </div>
     <div class="ui-campaign__body">
-      <p class="ui-campaign__by ui-text-label-sm">
+      <p class="ui-campaign__by ui-text-caption">
         <span class="ui-campaign__initial" aria-hidden="true">{{
           businessName.trim().charAt(0).toUpperCase()
         }}</span>
         <span>{{ uiText('campaign.by', { name: businessName }) }}</span>
       </p>
-      <h3 :id="titleId" class="ui-campaign__title ui-text-h3">{{ title }}</h3>
-      <p class="ui-campaign__summary ui-text-body-s">{{ summary }}</p>
+      <h3 :id="titleId" class="ui-campaign__title ui-text-label">{{ title }}</h3>
+      <p class="ui-campaign__summary ui-text-caption">{{ summary }}</p>
       <div class="ui-campaign__foot">
         <div v-if="prizeValue" class="ui-campaign__prize">
-          <span v-if="prizeLabel" class="ui-text-label-sm ui-text-hint">{{ prizeLabel }}</span>
-          <span class="ui-campaign__value ui-text-h3">{{ prizeValue }}</span>
+          <span v-if="prizeLabel" class="ui-text-caption ui-text-hint">{{ prizeLabel }}</span>
+          <span class="ui-campaign__value ui-text-label">{{ prizeValue }}</span>
         </div>
-        <UiButton :to="to">
+        <UiButton :to="to" size="sm">
           {{ ctaLabel ?? uiText('campaign.viewCta') }}<span class="ui-sr-only">: {{ title }}</span>
         </UiButton>
       </div>
@@ -99,7 +99,6 @@ const titleId = useId();
 .ui-campaign:hover,
 .ui-campaign:focus-within {
   box-shadow: var(--ui-elevation-2);
-  transform: translateY(calc(var(--ui-space-1) * -0.5));
 }
 @media (prefers-reduced-motion: reduce) {
   .ui-campaign {
@@ -112,7 +111,7 @@ const titleId = useId();
 }
 .ui-campaign__media {
   position: relative;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 16 / 7;
   overflow: hidden;
   background: linear-gradient(
     135deg,
@@ -164,7 +163,7 @@ const titleId = useId();
   flex: 1;
   flex-direction: column;
   gap: var(--ui-space-1);
-  padding: var(--ui-space-4) var(--ui-space-5) var(--ui-space-5);
+  padding: var(--ui-space-3) var(--ui-space-4) var(--ui-space-4);
 }
 .ui-campaign__by {
   display: flex;
@@ -177,23 +176,25 @@ const titleId = useId();
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: var(--ui-space-5);
-  block-size: var(--ui-space-5);
+  inline-size: var(--ui-space-4);
+  block-size: var(--ui-space-4);
   background: var(--ui-color-action-primary);
   color: var(--ui-color-action-primary-text);
   border-radius: var(--ui-radius-pill);
   font-size: var(--ui-font-caption-size);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
 }
 .ui-campaign__title {
   margin: var(--ui-space-1) 0 0;
+  font-weight: 600;
 }
 .ui-campaign__summary {
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
   color: var(--ui-color-text-secondary);
+  font-weight: 400;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -205,7 +206,7 @@ const titleId = useId();
   justify-content: space-between;
   gap: var(--ui-space-3);
   margin-block-start: auto;
-  padding-block-start: var(--ui-space-4);
+  padding-block-start: var(--ui-space-3);
 }
 .ui-campaign__prize {
   display: flex;
@@ -213,6 +214,6 @@ const titleId = useId();
 }
 .ui-campaign__value {
   color: var(--ui-color-selected-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 </style>
