@@ -58,7 +58,8 @@ describe('withTenant', () => {
     const result = await withTenant(db, ctx, async () => 'ok');
     expect(result).toBe('ok');
     expect(executed).toHaveLength(1);
-    expect(executed[0]![1]).toBe(TENANT); // tenant id bound as a parameter, not interpolated
+    expect(executed[0]![1]).toBe('app.tenant_id');
+    expect(executed[0]![2]).toBe(TENANT); // tenant id bound as a parameter, not interpolated
     expect(db.$transaction.mock.calls[0]![1]).toEqual({
       maxWait: MAX_WAIT_MS,
       timeout: MAX_TIMEOUT_MS,
