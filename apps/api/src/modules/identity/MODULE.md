@@ -24,14 +24,14 @@ read by Business Management only through this module's interface.
 
 ## Endpoints (`/api/v1/auth`)
 
-| Route                 | Requirement    | Notes                                                    |
-| --------------------- | -------------- | -------------------------------------------------------- |
-| `POST /register`      | public         | Always 202; identical response for existing emails       |
-| `POST /verify-email`  | public         | 204; 400 for invalid, used or expired token              |
-| `POST /login`         | public         | Sets `__Host-sid`; returns csrfToken and memberships     |
-| `POST /logout`        | session + csrf | Revokes immediately; clears cookie                       |
-| `GET /session`        | session        | User, active membership, memberships, csrfToken          |
-| `POST /switch-tenant` | session + csrf | Rotates session id and CSRF token; keeps absolute expiry |
+| Route                 | Requirement    | Notes                                                                                                                                                           |
+| --------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /register`      | public         | Always 202; identical response for existing emails. Body includes `agreement: { accepted: true, version }` (R-PRV-01); the version is recorded in the audit log |
+| `POST /verify-email`  | public         | 204; 400 for invalid, used or expired token                                                                                                                     |
+| `POST /login`         | public         | Sets `__Host-sid`; returns csrfToken and memberships                                                                                                            |
+| `POST /logout`        | session + csrf | Revokes immediately; clears cookie                                                                                                                              |
+| `GET /session`        | session        | User, active membership, memberships, csrfToken                                                                                                                 |
+| `POST /switch-tenant` | session + csrf | Rotates session id and CSRF token; keeps absolute expiry                                                                                                        |
 
 ## Events
 

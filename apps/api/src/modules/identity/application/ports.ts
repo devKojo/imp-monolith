@@ -46,6 +46,8 @@ export type RegisterOwnerInput = {
   name: string;
   passwordHash: string;
   businessName: string;
+  /** Version of the agreement (terms + DPA) the owner accepted at registration (R-PRV-01). */
+  agreementVersion: string;
   verificationTokenHash: string;
   verificationExpiresAt: Date;
 };

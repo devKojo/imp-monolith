@@ -30,7 +30,14 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   //   GET  /session       session      POST /switch-tenant   session + csrf
   r.post('/register', async (req, res) => {
     const body = parse(registerSchema, req.body);
-    await auth.register({ ...body, ip: req.ip ?? 'unknown' });
+    await auth.register({
+      name: body.name,
+      email: body.email,
+      password: body.password,
+      businessName: body.businessName,
+      agreementVersion: body.agreement.version,
+      ip: req.ip ?? 'unknown',
+    });
     // Same response whether or not the address was already registered.
     res.status(202).json({ status: 'verification_sent' });
   });

@@ -10,7 +10,14 @@ import { FakeBreached, FakeHasher, FakeIdentityRepository, FakeMailer } from './
 
 const ORIGIN = 'https://app.example.test';
 const PASSWORD = 'correct horse battery';
-const body = { name: 'Ada', email: 'Ada@Example.com', password: PASSWORD, businessName: 'Acme' };
+const agreement = { accepted: true, version: '1.0' };
+const body = {
+  name: 'Ada',
+  email: 'Ada@Example.com',
+  password: PASSWORD,
+  businessName: 'Acme',
+  agreement,
+};
 
 function setup() {
   let now = new Date('2026-11-07T10:00:00Z');
@@ -84,6 +91,16 @@ describe('identity HTTP', () => {
     it('rejects weak and breached passwords with 422', async () => {
       await post('/register', { ...body, password: 'short' }).expect(422);
       await post('/register', { ...body, password: 'password1234567' }).expect(422);
+      expect(s.repo.users.size).toBe(0);
+    });
+
+    it('requires the agreement to be accepted (R-PRV-01)', async () => {
+      const { agreement: _omit, ...withoutAgreement } = body;
+      await post('/register', withoutAgreement).expect(400);
+      await post('/register', { ...body, agreement: { accepted: false, version: '1.0' } }).expect(
+        400,
+      );
+      await post('/register', { ...body, agreement: { accepted: true } }).expect(400);
       expect(s.repo.users.size).toBe(0);
     });
 

@@ -70,6 +70,7 @@ export class AuthService {
     email: string;
     password: string;
     businessName: string;
+    agreementVersion: string;
     ip: string;
   }): Promise<void> {
     this.deps.registerLimiter.assertAllowed(input.ip);
@@ -93,6 +94,7 @@ export class AuthService {
       name: input.name.trim(),
       passwordHash,
       businessName: input.businessName.trim(),
+      agreementVersion: input.agreementVersion,
       verificationTokenHash: hashToken(verificationToken),
       verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
     });

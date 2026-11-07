@@ -21,13 +21,16 @@ type AuditEntry = {
   action: string;
   targetType?: string;
   targetId?: string;
+  /** Identifiers and versions only; never PII (R-PRV-06). */
+  metadata?: Record<string, string>;
 };
 
 /** Audit rows hold identifiers only, never PII (R-SEC-04, R-PRV-06). INSERT-only, so no RETURNING. */
 const audit = (tx: TenantTx, e: AuditEntry) =>
-  tx.$executeRaw`INSERT INTO audit_log (id, tenant_id, actor_id, action, target_type, target_id)
+  tx.$executeRaw`INSERT INTO audit_log (id, tenant_id, actor_id, action, target_type, target_id, metadata)
     VALUES (${uuidv7()}::uuid, ${e.tenantId}::uuid, ${e.actorId}::uuid, ${e.action},
-            ${e.targetType ?? null}, ${e.targetId ?? null}::uuid)`;
+            ${e.targetType ?? null}, ${e.targetId ?? null}::uuid,
+            ${JSON.stringify(e.metadata ?? {})}::jsonb)`;
 
 async function membershipsOf(tx: TenantTx, userId: string): Promise<MembershipSummary[]> {
   const memberships = await tx.membership.findMany({
@@ -87,6 +90,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
             action: 'auth.registered',
             targetType: 'user',
             targetId: input.userId,
+            metadata: { agreementVersion: input.agreementVersion },
           });
         },
       );

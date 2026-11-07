@@ -55,6 +55,7 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
       email: e,
       password: PASSWORD,
       businessName: `${name} Co`,
+      agreementVersion: '1.0',
       ip: '1.1.1.1',
     });
     expect(mailer.sent).toHaveLength(before + 1);
@@ -86,6 +87,10 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     const audits = await platform.$queryRaw<{ action: string }[]>`
       SELECT action FROM audit_log WHERE actor_id = ${user.id}::uuid ORDER BY created_at`;
     expect(audits.map((a) => a.action)).toEqual(['auth.registered', 'auth.email_verified']);
+    // The accepted agreement version is recorded at registration (R-PRV-01).
+    const [registered] = await platform.$queryRaw<{ metadata: { agreementVersion: string } }[]>`
+      SELECT metadata FROM audit_log WHERE actor_id = ${user.id}::uuid AND action = 'auth.registered'`;
+    expect(registered?.metadata).toEqual({ agreementVersion: '1.0' });
   });
 
   it('a duplicate email rolls everything back and reports exists', async () => {
@@ -98,6 +103,7 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
       name: 'x',
       passwordHash: 'h',
       businessName: `Ghost Co ${tag}`,
+      agreementVersion: '1.0',
       verificationTokenHash: hashToken(randomUUID()),
       verificationExpiresAt: new Date(Date.now() + 1000),
     });
@@ -185,6 +191,7 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
       email: e,
       password: PASSWORD,
       businessName: 'Race Co',
+      agreementVersion: '1.0',
       ip: '5.5.5.5',
     });
     const token = mailer.sent.at(-1)!.token;
