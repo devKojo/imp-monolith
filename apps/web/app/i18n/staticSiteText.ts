@@ -51,6 +51,7 @@ export const staticSiteText = {
   'auth.google.business':
     'That Google account belongs to a business. Use the business sign-in instead.',
   'auth.or': 'or',
+  'signin.created': 'Account created. Sign in to continue.',
   'signin.sessionNote': 'For your security, your session ends after 30 minutes of inactivity.',
 
   // registration (one form, two portals: ADR-P001)

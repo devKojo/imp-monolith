@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { t } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
+import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
 import GoogleSigninButton from './GoogleSigninButton.vue';
 import { HOME } from '../constants';
@@ -23,7 +24,16 @@ const route = useRoute();
 const auth = useAuth();
 const countdown = useCountdown();
 
+// Coming from registration: the address is filled in (kept in memory, never in the URL) and
+// used once, so only the password is left to type.
+const draft = useSignupDraft();
 const email = ref('');
+const justRegistered = ref(false);
+if (draft.value.submittedEmail && draft.value.portal === props.portal) {
+  email.value = draft.value.submittedEmail;
+  justRegistered.value = !!draft.value.registered;
+  draft.value = { submittedEmail: '', portal: props.portal };
+}
 const password = ref('');
 const errors = ref<FieldErrors<'email' | 'password'>>({});
 const failure = ref<AuthFailure | null>(null);
@@ -89,6 +99,7 @@ const crumbs = [
     :title="t('signin.title')"
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
+    <UiBanner v-if="justRegistered" tone="info" :title="t('signin.created')" />
     <UiBanner
       v-if="googleError"
       tone="error"
