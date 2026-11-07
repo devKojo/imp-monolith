@@ -1,4 +1,9 @@
+import { config } from 'dotenv';
 import { z } from 'zod';
+
+// Load .env for local development (cwd is apps/api under npm workspaces, so also try the repo
+// root). Variables already in the environment win, so production and CI are unaffected.
+config({ path: ['.env', '../../.env'], quiet: true });
 
 const optionalUrl = z.string().url().optional();
 
