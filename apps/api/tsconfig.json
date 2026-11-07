@@ -6,5 +6,5 @@
     "paths": { "@/*": ["src/*"] },
     "noEmit": true
   },
-  "include": ["src", "*.ts"]
+  "include": ["src", "scripts", "*.ts"]
 }

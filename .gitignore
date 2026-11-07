@@ -6,3 +6,4 @@ dist
 *.log
 coverage
 .idea
+apps/api/src/generated

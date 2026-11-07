@@ -16,6 +16,8 @@
     "build": "npm run build -w @imp/api && npm run build -w @imp/web",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "smoke:db": "npm run smoke:db -w @imp/api",
+    "db:migrate": "npm run prisma:migrate -w @imp/api",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "lint": "eslint .",

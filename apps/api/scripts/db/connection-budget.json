@@ -1,0 +1,10 @@
+{
+  "_note": "Placeholder values; ratify with the pooler decision (ADR-013). Replicas x poolMax summed must stay <= 70% of maxConnections (R-DAT-05).",
+  "maxConnections": 200,
+  "profiles": [
+    { "name": "public-api", "replicas": 3, "poolMax": 15 },
+    { "name": "management-api", "replicas": 2, "poolMax": 10 },
+    { "name": "worker", "replicas": 2, "poolMax": 10 },
+    { "name": "scheduler", "replicas": 2, "poolMax": 3 }
+  ]
+}
