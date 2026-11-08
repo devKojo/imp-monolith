@@ -103,7 +103,8 @@ describe('app string catalogue', () => {
     expect(en['signin.invalid']).not.toMatch(
       /no account|not found|does not exist|already (registered|exists)/i,
     );
-    expect(en['checkEmail.body']).toMatch(/If \{email\}/);
+    // Signup says so on purpose (EMAIL_TAKEN); sign-in and password reset must not.
+    expect(en['forgot.sent']).toMatch(/If \{email\}/);
   });
 
   it('the dashboard session note matches the 30 minute idle timeout (R-IAM-01)', () => {
