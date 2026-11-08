@@ -1,5 +1,6 @@
 import {
   EmailNotVerifiedError,
+  EmailTakenError,
   WrongPortalError,
   ForbiddenError,
   InvalidCredentialsError,
@@ -74,10 +75,6 @@ export class AuthService {
     this.now = deps.clock ?? (() => new Date());
   }
 
-  /**
-   * Responds identically whether or not the email is already registered (no account
-   * enumeration). The password is hashed first so both paths cost the same.
-   */
   /** Shared by both registration flows: throttle, normalise, and vet + hash the password. */
   private async prepareRegistration(input: { email: string; password: string; ip: string }) {
     this.deps.registerLimiter.assertAllowed(input.ip);
@@ -103,15 +100,18 @@ export class AuthService {
   }): Promise<void> {
     const { email, passwordHash } = await this.prepareRegistration(input);
     // No verification email and no verification gate: a participant can sign in straight away and
-    // may verify the address later from their account (sendOwnVerification). Same result whether
-    // or not the address already existed, so the response reveals nothing (UI-CPY-03).
-    await this.deps.repo.registerParticipant({
+    // may verify the address later from their account (sendOwnVerification). An address that
+    // already has an account is rejected (EMAIL_TAKEN) instead of reported as success, so nobody is
+    // told "account created" for a password that was never stored. Probing is bounded by the
+    // per-IP register limiter.
+    const result = await this.deps.repo.registerParticipant({
       userId: uuidv7(this.now().getTime()),
       email,
       name: input.name.trim(),
       passwordHash,
       agreementVersion: input.agreementVersion,
     });
+    if (result === 'exists') throw new EmailTakenError();
   }
 
   async register(input: {
@@ -137,8 +137,8 @@ export class AuthService {
       verificationTokenHash: hashToken(verificationToken),
       verificationExpiresAt: new Date(now.getTime() + VERIFICATION_TTL_MS),
     });
-    if (result === 'created')
-      await this.deps.mailer.sendVerificationEmail(email, verificationToken);
+    if (result === 'exists') throw new EmailTakenError();
+    await this.deps.mailer.sendVerificationEmail(email, verificationToken);
   }
 
   /**

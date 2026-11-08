@@ -202,6 +202,21 @@ describe.skipIf(!(runtimeUrl && platformUrl))('identity repository (real Postgre
     expect(await platform.business.count({ where: { name: `Ghost Co ${tag}` } })).toBe(0);
   });
 
+  it('registering an existing email (any case) fails with EMAIL_TAKEN and keeps the first password', async () => {
+    const e = email('taken');
+    const input = { name: 'T', agreementVersion: '1.0', ip: '1.1.1.1' };
+    await auth.registerParticipant({ ...input, email: e, password: PASSWORD });
+    await expect(
+      auth.registerParticipant({
+        ...input,
+        email: e.toUpperCase(),
+        password: 'a brand new passphrase 42',
+      }),
+    ).rejects.toMatchObject({ code: 'EMAIL_TAKEN', status: 409 });
+    expect(await platform.user.count({ where: { email: e } })).toBe(1);
+    await auth.login({ email: e, password: PASSWORD, portal: 'participant', ip: '1.1.1.1' });
+  });
+
   it('rejects emails that are not normalised (database constraint)', async () => {
     await expect(
       platform.user.create({ data: { email: `UPPER-${tag}@test.local`, name: 'x' } }),

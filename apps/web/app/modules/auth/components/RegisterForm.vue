@@ -114,6 +114,8 @@ async function submit() {
           ? t('register.passwordBreached')
           : t('register.passwordRejected'),
       };
+    } else if (f.kind === 'email-taken') {
+      errors.value = { email: t('register.emailTaken') };
     } else if (f.kind === 'validation') {
       errors.value = compact({
         businessName: f.fields.businessName,

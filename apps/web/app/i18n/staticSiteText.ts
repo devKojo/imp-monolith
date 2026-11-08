@@ -96,6 +96,8 @@ export const staticSiteText = {
   'register.business.submit': 'Create business account',
   'register.business.haveAccount': 'Already have a business account?',
   'register.business.signin': 'Sign in to the business portal',
+  'register.emailTaken':
+    'An account with this email already exists. Sign in, or reset your password if you forgot it.',
   'register.emailHint': 'You can verify it later, after you sign in.',
   'register.password': 'Create password',
   'register.passwordHint': 'We also check passwords against known data breaches.',
@@ -118,7 +120,7 @@ export const staticSiteText = {
 
   // check email
   'checkEmail.title': 'Check your email',
-  'checkEmail.body': 'If {email} is new, we sent it a link. Open it to finish signing up.',
+  'checkEmail.body': 'We sent a link to {email}. Open it to finish signing up.',
   'checkEmail.resend': 'Resend email',
   'checkEmail.resendEmail': 'Your email address',
   'checkEmail.resendWait': 'You can resend in {time}.',

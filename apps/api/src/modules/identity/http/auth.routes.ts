@@ -54,7 +54,7 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
       agreementVersion: body.agreement.version,
       ip: req.ip ?? 'unknown',
     });
-    // Same response whether or not the address was already registered.
+    // An already registered address is rejected with 409 EMAIL_TAKEN by the service.
     res.status(202).json({ status: 'verification_sent' });
   });
 

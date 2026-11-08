@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { setIdentityUser, withIdentity, type TenantTx } from '@/shared/database';
 import { ConflictError } from '@/shared/errors';
+import { TransactionConflictError } from '@/shared/database/errors';
 import { uuidv7 } from '@/shared/uuid';
 import type {
   IdentityRepository,
@@ -52,6 +53,14 @@ async function membershipsOf(tx: TenantTx, userId: string): Promise<MembershipSu
   }));
 }
 
+/**
+ * A unique violation (the email index is the arbiter, R-DAT-08). TransactionConflictError is also a
+ * ConflictError but means a transient write conflict, not a taken address, so it is re-thrown.
+ */
+function isDuplicate(err: unknown): boolean {
+  return err instanceof ConflictError && !(err instanceof TransactionConflictError);
+}
+
 /** All access goes through withIdentity so RLS scopes every statement (identity or tenant). */
 export class PrismaIdentityRepository implements IdentityRepository {
   constructor(private readonly db: PrismaClient) {}
@@ -88,7 +97,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
       });
       return 'created';
     } catch (err) {
-      if (err instanceof ConflictError) return 'exists';
+      if (isDuplicate(err)) return 'exists';
       throw err;
     }
   }
@@ -120,7 +129,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
       });
       return 'created';
     } catch (err) {
-      if (err instanceof ConflictError) return 'exists';
+      if (isDuplicate(err)) return 'exists';
       throw err;
     }
   }
@@ -268,7 +277,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
       return 'created';
     } catch (err) {
       // The email unique index is the arbiter (R-DAT-08): the whole transaction rolled back.
-      if (err instanceof ConflictError) return 'exists';
+      if (isDuplicate(err)) return 'exists';
       throw err;
     }
   }

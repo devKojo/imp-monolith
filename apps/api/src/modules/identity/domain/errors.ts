@@ -5,6 +5,12 @@ export class InvalidCredentialsError extends AppError {
     super('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 }
+/** Registration with an address that already has an account (the unique email index decides). */
+export class EmailTakenError extends AppError {
+  constructor() {
+    super('An account with this email already exists', 409, 'EMAIL_TAKEN');
+  }
+}
 export class UnauthenticatedError extends AppError {
   constructor() {
     super('Authentication required', 401, 'UNAUTHENTICATED');
