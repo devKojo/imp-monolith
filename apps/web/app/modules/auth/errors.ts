@@ -40,6 +40,7 @@ export type AuthFailure =
   | { kind: 'invalid-credentials' }
   | { kind: 'email-not-verified' }
   | { kind: 'wrong-portal' }
+  | { kind: 'email-taken' }
   | { kind: 'rate-limited'; retryAfter: number }
   | { kind: 'busy'; retryAfter: number }
   | { kind: 'weak-password'; message: string }
@@ -55,6 +56,8 @@ export function classifyAuthError(err: ApiError): AuthFailure {
       return { kind: 'invalid-credentials' };
     case 'WRONG_PORTAL':
       return { kind: 'wrong-portal' };
+    case 'EMAIL_TAKEN':
+      return { kind: 'email-taken' };
     case 'EMAIL_NOT_VERIFIED':
       return { kind: 'email-not-verified' };
     case 'TOO_MANY_REQUESTS':

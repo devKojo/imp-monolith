@@ -84,11 +84,37 @@ describe('identity HTTP', () => {
       expect(s.repo.users.has('ada@example.com')).toBe(true);
     });
 
-    it('responds identically for an existing email and sends nothing (no enumeration)', async () => {
+    it('rejects a business signup for an existing email with 409, keeping the first account', async () => {
       await post('/register', body).expect(202);
-      const again = await post('/register', body).expect(202);
-      expect(again.body).toEqual({ status: 'verification_sent' });
-      expect(s.mailer.sent).toHaveLength(1);
+      const again = await post('/register', {
+        ...body,
+        email: 'ADA@example.com',
+        password: 'another long passphrase 99',
+      }).expect(409);
+      expect(again.body.error.code).toBe('EMAIL_TAKEN');
+      expect(s.mailer.sent).toHaveLength(1); // no second verification email
+      expect(s.repo.users.size).toBe(1);
+    });
+
+    it('rejects a participant signup for an existing email and does not change the password', async () => {
+      const pBody = { name: 'Pat', email: 'pat@example.com', password: PASSWORD, agreement };
+      await post('/register-participant', pBody).expect(202);
+      const again = await post('/register-participant', {
+        ...pBody,
+        password: 'a different long passphrase 7',
+      }).expect(409);
+      expect(again.body.error.code).toBe('EMAIL_TAKEN');
+      // The original password still works; the rejected attempt stored nothing.
+      await post('/login', {
+        email: 'pat@example.com',
+        password: PASSWORD,
+        portal: 'participant',
+      }).expect(200);
+      await post('/login', {
+        email: 'pat@example.com',
+        password: 'a different long passphrase 7',
+        portal: 'participant',
+      }).expect(401);
     });
 
     it('rejects weak and breached passwords with 422', async () => {
@@ -358,14 +384,6 @@ describe('identity HTTP', () => {
     it('requires the agreement and rejects a business name (strict schema)', async () => {
       await post('/register-participant', { ...pBody, agreement: undefined }).expect(400);
       await post('/register-participant', { ...pBody, businessName: 'Acme' }).expect(400);
-    });
-
-    it('responds identically for an existing email and sends no email', async () => {
-      const first = await post('/register-participant', pBody).expect(202);
-      const again = await post('/register-participant', pBody).expect(202);
-      expect(again.body).toEqual(first.body);
-      expect(again.body).toEqual({ status: 'created' });
-      expect(s.mailer.sent).toHaveLength(0);
     });
 
     it('signs in without verifying the email, and reports it as unverified', async () => {

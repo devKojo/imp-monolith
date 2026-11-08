@@ -107,6 +107,7 @@ describe('classifyAuthError', () => {
       kind: 'invalid-credentials',
     });
     expect(classifyAuthError(err(409, 'WRONG_PORTAL'))).toEqual({ kind: 'wrong-portal' });
+    expect(classifyAuthError(err(409, 'EMAIL_TAKEN'))).toEqual({ kind: 'email-taken' });
     expect(classifyAuthError(err(403, 'EMAIL_NOT_VERIFIED'))).toEqual({
       kind: 'email-not-verified',
     });
