@@ -29,7 +29,7 @@ const schema = z.object({
   /** Comma-separated origins allowed to make state-changing requests. */
   APP_ORIGINS: z
     .string()
-    .default('http://localhost:3000')
+    .default('http://localhost:3001')
     .transform((v) =>
       v
         .split(',')
@@ -37,7 +37,7 @@ const schema = z.object({
         .filter(Boolean),
     ),
   /** Public origin of the site (the web app; /api is proxied under it): email links, OAuth redirect. */
-  APP_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
+  APP_PUBLIC_URL: z.string().url().default('http://localhost:3001'),
   /** Gmail SMTP (smtp.gmail.com). Use an App Password, never the Google account password. */
   SMTP_HOST: optionalText,
   SMTP_PORT: z.coerce.number().int().default(465),

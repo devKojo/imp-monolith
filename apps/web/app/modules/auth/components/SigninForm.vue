@@ -40,6 +40,10 @@ if (
   draft.value = { submittedEmail: '', portal: props.portal };
 }
 const password = ref('');
+/** "Forgot password?" starts with the address already typed here (in memory, not the URL). */
+function carryEmail() {
+  draft.value = { submittedEmail: email.value.trim(), portal: props.portal };
+}
 const errors = ref<FieldErrors<'email' | 'password'>>({});
 const failure = ref<AuthFailure | null>(null);
 const loading = ref(false);
@@ -143,7 +147,7 @@ const crumbs = [
         :error="errors.password"
       >
         <template #labelAside>
-          <UiLink to="/forgot-password">{{ t('signin.forgot') }}</UiLink>
+          <UiLink to="/forgot-password" @click="carryEmail">{{ t('signin.forgot') }}</UiLink>
         </template>
       </UiPasswordField>
       <UiButton

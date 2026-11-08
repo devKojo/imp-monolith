@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { t } from '../i18n';
 import { useAuthApi } from '../modules/auth/composables/useAuth';
+import { useSignupDraft } from '../modules/auth/composables/useSignupDraft';
 import { toApiError } from '../modules/auth/errors';
 import { maskEmail } from '../modules/auth/mask';
 import { emailProblem } from '../modules/auth/validation';
@@ -16,7 +17,10 @@ useHead({ title: t('forgot.title') });
 const api = useAuthApi();
 const countdown = useCountdown();
 
-const email = ref('');
+// Sign-in and sign-up hand over the address they already have (memory only); used once.
+const draft = useSignupDraft();
+const email = ref(draft.value.submittedEmail);
+if (draft.value.submittedEmail) draft.value = { submittedEmail: '', portal: draft.value.portal };
 const error = ref<string | undefined>();
 const sending = ref(false);
 const sentTo = ref('');
