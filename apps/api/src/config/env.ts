@@ -36,7 +36,7 @@ const schema = z.object({
         .map((o) => o.trim())
         .filter(Boolean),
     ),
-  /** Public origin of the site (the web app; /api is proxied under it): email links, OAuth redirect. */
+  /** Public origin of the site (the web app; /api is proxied under it): email links. */
   APP_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
   /** Gmail SMTP (smtp.gmail.com). Use an App Password, never the Google account password. */
   SMTP_HOST: optionalText,
@@ -50,9 +50,6 @@ const schema = z.object({
   SMTP_PASS: optionalText,
   /** Display address, e.g. `IMP <you@gmail.com>`. Gmail rewrites it to the authenticated account. */
   MAIL_FROM: optionalText,
-  /** Google OAuth client (Sign in with Google). Both must be set to enable it. */
-  GOOGLE_CLIENT_ID: optionalText,
-  GOOGLE_CLIENT_SECRET: optionalText,
   /** Max pg pool connections for this process profile (R-DAT-05). */
   DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
 });

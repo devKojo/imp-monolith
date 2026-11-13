@@ -102,38 +102,6 @@ export class PrismaIdentityRepository implements IdentityRepository {
     }
   }
 
-  async registerGoogleParticipant(input: {
-    userId: string;
-    email: string;
-    name: string;
-  }): Promise<'created' | 'exists'> {
-    try {
-      await withIdentity(this.db, { userId: input.userId }, async (tx) => {
-        await tx.user.create({
-          data: {
-            id: input.userId,
-            email: input.email,
-            name: input.name,
-            accountType: 'PARTICIPANT',
-            passwordHash: null,
-            emailVerifiedAt: new Date(),
-          },
-        });
-        await audit(tx, {
-          tenantId: null,
-          actorId: input.userId,
-          action: 'auth.participant_registered_google',
-          targetType: 'user',
-          targetId: input.userId,
-        });
-      });
-      return 'created';
-    } catch (err) {
-      if (isDuplicate(err)) return 'exists';
-      throw err;
-    }
-  }
-
   createEmailVerification(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
     return withIdentity(this.db, { userId }, async (tx) => {
       await tx.emailVerification.create({ data: { userId, tokenHash, expiresAt } });
@@ -213,24 +181,6 @@ export class PrismaIdentityRepository implements IdentityRepository {
         targetId: r.userId,
       });
       return { userId: user.id, email: user.email, accountType: user.accountType };
-    });
-  }
-
-  adoptVerifiedEmail(userId: string, now: Date): Promise<void> {
-    return withIdentity(this.db, { userId }, async (tx) => {
-      // Only ever called for an account whose email was never verified, so any password on it
-      // was set by whoever pre-registered the address and is discarded.
-      await tx.user.update({
-        where: { id: userId },
-        data: { emailVerifiedAt: now, passwordHash: null },
-      });
-      await audit(tx, {
-        tenantId: null,
-        actorId: userId,
-        action: 'auth.email_verified_via_google',
-        targetType: 'user',
-        targetId: userId,
-      });
     });
   }
 

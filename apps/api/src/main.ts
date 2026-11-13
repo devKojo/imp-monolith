@@ -1,6 +1,6 @@
 import { createApp } from './app';
 import { env } from './config/env';
-import { GoogleOAuth, SmtpMailer, createIdentityModule } from './modules/identity';
+import { SmtpMailer, createIdentityModule } from './modules/identity';
 import { createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
 
@@ -19,17 +19,8 @@ const mailer =
         publicUrl: env.APP_PUBLIC_URL,
       })
     : undefined;
-const google =
-  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
-    ? new GoogleOAuth({
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-        redirectUri: `${env.APP_PUBLIC_URL.replace(/\/$/, '')}/api/v1/auth/google/callback`,
-      })
-    : undefined;
 const identity = createIdentityModule({
   mailer,
-  google,
   db,
   allowedOrigins: env.APP_ORIGINS,
   sessionSecret: env.SESSION_SECRET,

@@ -5,12 +5,10 @@ import {
   ForbiddenError,
   InvalidCredentialsError,
   InvalidTokenError,
-  OAuthFailedError,
   UnauthenticatedError,
   WeakPasswordError,
 } from '../domain/errors';
 import { normalizeEmail } from '../domain/email';
-import { newOAuthAttempt, openAttempt, sealAttempt } from '../domain/oauth';
 import { isLocked } from '../domain/login-throttle';
 import { passwordProblems } from '../domain/password-policy';
 import { absoluteExpiry, isSessionActive, shouldTouch } from '../domain/session-policy';
@@ -20,7 +18,6 @@ import type {
   AccountType,
   BreachedPasswordChecker,
   Clock,
-  GoogleIdentityProvider,
   IdentityRepository,
   LoginRateLimiter,
   Mailer,
@@ -34,8 +31,6 @@ export type AuthDeps = {
   hasher: PasswordHasher;
   breached: BreachedPasswordChecker;
   mailer: Mailer;
-  /** Present only when Google sign-in is configured. */
-  google?: GoogleIdentityProvider | undefined;
   loginLimiter: LoginRateLimiter;
   registerLimiter: LoginRateLimiter;
   /** Resend: per client IP (hourly), per address (hourly) and per address (short cooldown). */
@@ -326,81 +321,6 @@ export class AuthService {
     const session = this.newSession(now);
     const memberships = await this.deps.repo.startSession(user.id, session.record, now);
     return { session: session.issued, memberships, accountType: user.accountType };
-  }
-
-  get googleEnabled(): boolean {
-    return !!this.deps.google;
-  }
-
-  /** Starts Sign in with Google: the Google URL to send the browser to, and the sealed attempt cookie. */
-  beginGoogle(): { redirectUrl: string; attemptCookie: string } {
-    const google = this.deps.google;
-    if (!google) throw new OAuthFailedError();
-    const attempt = newOAuthAttempt(this.now());
-    return {
-      redirectUrl: google.authorizeUrl({
-        state: attempt.state,
-        nonce: attempt.nonce,
-        codeChallenge: attempt.challenge,
-      }),
-      attemptCookie: sealAttempt(this.deps.csrfSecret, attempt),
-    };
-  }
-
-  /**
-   * Completes Sign in with Google for participants. Validates the sealed attempt (state, nonce,
-   * PKCE verifier), then signs in the participant with that verified email, creating the account on
-   * first use. Business accounts are refused: they sign in with email and password.
-   */
-  async finishGoogle(input: {
-    code: string;
-    state: string;
-    attemptCookie: string | undefined;
-    ip: string;
-  }): Promise<{ session: IssuedSession; accountType: AccountType }> {
-    const google = this.deps.google;
-    this.deps.loginLimiter.assertAllowed(input.ip);
-    const now = this.now();
-    const attempt = openAttempt(this.deps.csrfSecret, input.attemptCookie, now);
-    if (!google || !attempt || attempt.state !== input.state) {
-      this.deps.loginLimiter.recordFailure(input.ip);
-      throw new OAuthFailedError();
-    }
-    let claims;
-    try {
-      claims = await google.exchange({
-        code: input.code,
-        codeVerifier: attempt.verifier,
-        nonce: attempt.nonce,
-      });
-    } catch {
-      this.deps.loginLimiter.recordFailure(input.ip);
-      throw new OAuthFailedError();
-    }
-    // Google must vouch for the address, otherwise it proves nothing about who is signing in.
-    if (!claims.emailVerified) throw new OAuthFailedError();
-
-    const email = normalizeEmail(claims.email);
-    let user = await this.deps.repo.findLoginUser(email);
-    if (!user) {
-      const created = await this.deps.repo.registerGoogleParticipant({
-        userId: uuidv7(now.getTime()),
-        email,
-        name: claims.name,
-      });
-      user = await this.deps.repo.findLoginUser(email);
-      if (!user || (created === 'exists' && user.accountType !== 'PARTICIPANT')) {
-        throw new OAuthFailedError();
-      }
-    } else if (!user.emailVerifiedAt) {
-      await this.deps.repo.adoptVerifiedEmail(user.id, now);
-    }
-    if (user.accountType !== 'PARTICIPANT') throw new WrongPortalError(user.accountType);
-
-    this.deps.loginLimiter.reset(input.ip);
-    const session = this.newSession(now);
-    await this.deps.repo.startSession(user.id, session.record, now);
-    return { session: session.issued, accountType: user.accountType };
   }
 
   /** Resolves a cookie token to an authenticated context, or null. Refreshes last-seen. */

@@ -11,16 +11,9 @@ import {
   switchTenantSchema,
   verifyEmailSchema,
 } from '../contracts/auth.schemas';
-import { OAuthFailedError, UnauthenticatedError, WrongPortalError } from '../domain/errors';
+import { UnauthenticatedError } from '../domain/errors';
 import { authenticate, originCheck, requireCsrfToken, requireSession } from './auth.middleware';
-import {
-  OAUTH_COOKIE,
-  clearedOAuthCookie,
-  clearedSessionCookie,
-  oauthAttemptCookie,
-  parseCookies,
-  sessionCookie,
-} from './cookies';
+import { clearedSessionCookie, sessionCookie } from './cookies';
 
 /**
  * Handlers only parse (Zod), authorise (declared requirement), call one service method and map
@@ -40,10 +33,9 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
   //   POST /register-participant  public
   //   POST /verify-email  public       POST /logout          session + csrf
   //   POST /resend-verification  public (rate limited per IP and per address)
-  //   GET  /providers     public       POST /send-verification  session + csrf
+  //   POST /send-verification  session + csrf
   //   POST /forgot-password  public (rate limited)   POST /reset-password  public (token)
   //   GET  /session       session      POST /switch-tenant   session + csrf
-  //   GET  /google/start  public       GET  /google/callback public
   r.post('/register', async (req, res) => {
     const body = parse(registerSchema, req.body);
     await auth.register({
@@ -101,11 +93,6 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
     res.json({ accountType });
   });
 
-  // Which optional sign-in methods this deployment offers (public, no per-user data).
-  r.get('/providers', (_req, res) => {
-    res.json({ google: auth.googleEnabled });
-  });
-
   r.post('/send-verification', requireSession, requireCsrfToken, async (req, res) => {
     const out = await auth.sendOwnVerification(req.auth!, req.ip ?? 'unknown');
     res.status(out.status === 'sent' ? 202 : 200).json(out);
@@ -124,38 +111,6 @@ export function authRouter(auth: AuthService, opts: { allowedOrigins: readonly s
       memberships,
       activeMembershipId: memberships[0]?.membershipId ?? null,
     });
-  });
-
-  // Sign in with Google (participants). Both routes are browser navigations (GET): the signed
-  // attempt cookie plus the `state` parameter protect the callback, not the Origin header.
-  r.get('/google/start', (_req, res) => {
-    if (!auth.googleEnabled) return void res.status(404).json({ error: { code: 'NOT_FOUND' } });
-    const { redirectUrl, attemptCookie } = auth.beginGoogle();
-    res.append('Set-Cookie', oauthAttemptCookie(attemptCookie));
-    res.redirect(302, redirectUrl);
-  });
-
-  r.get('/google/callback', async (req, res) => {
-    res.append('Set-Cookie', clearedOAuthCookie());
-    const code = typeof req.query.code === 'string' ? req.query.code : '';
-    const state = typeof req.query.state === 'string' ? req.query.state : '';
-    try {
-      if (!code || req.query.error) throw new OAuthFailedError();
-      const { session } = await auth.finishGoogle({
-        code,
-        state,
-        attemptCookie: parseCookies(req.headers.cookie)[OAUTH_COOKIE],
-        ip: req.ip ?? 'unknown',
-      });
-      res.append('Set-Cookie', sessionCookie(session.token, session.expiresAt));
-      res.redirect(302, '/me');
-    } catch (err) {
-      // Same-site relative redirect; the sign-in page shows a generic message.
-      res.redirect(
-        302,
-        `/signin?error=${err instanceof WrongPortalError ? 'google_business' : 'google'}`,
-      );
-    }
   });
 
   r.post('/logout', requireSession, requireCsrfToken, async (req, res) => {
