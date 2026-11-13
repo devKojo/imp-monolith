@@ -17,14 +17,5 @@ export function sessionCookie(token: string, expiresAt: Date, now: Date = new Da
   return `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
 }
 
-/** Holds the signed OAuth attempt between start and callback (10 minutes, Lax so it survives the redirect back). */
-export const OAUTH_COOKIE = '__Host-oauth';
-
-export const oauthAttemptCookie = (value: string): string =>
-  `${OAUTH_COOKIE}=${value}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`;
-
-export const clearedOAuthCookie = (): string =>
-  `${OAUTH_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
-
 export const clearedSessionCookie = (): string =>
   `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;

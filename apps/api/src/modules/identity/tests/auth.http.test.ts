@@ -433,11 +433,6 @@ describe('identity HTTP', () => {
       expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED');
     });
 
-    it('lists the sign-in providers on offer', async () => {
-      const res = await request(s.app).get('/api/v1/auth/providers').expect(200);
-      expect(res.body).toEqual({ google: false });
-    });
-
     it('rejects weak passwords with 422', async () => {
       const res = await post('/register-participant', { ...pBody, password: 'short' });
       expect(res.status).toBe(422);

@@ -44,13 +44,6 @@ export const staticSiteText = {
   'signin.unverified.body':
     'We sent a verification link when you created your account. Open it, then sign in.',
   'common.waitCountdown': 'You can try again when the timer ends.',
-  'auth.google.continue': 'Continue with Google',
-  'auth.google.terms': 'By continuing you accept the Terms of Service and the Privacy Notice.',
-  'auth.google.error':
-    'We could not sign you in with Google. Try again, or use your email and password.',
-  'auth.google.business':
-    'That Google account belongs to a business. Use the business sign-in instead.',
-  'auth.or': 'or',
   'signin.forgot': 'Forgot password?',
   'signin.passwordChanged': 'Password updated. Sign in with your new password.',
   'forgot.title': 'Forgot your password?',
