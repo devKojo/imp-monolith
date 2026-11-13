@@ -75,6 +75,11 @@ onMounted(async () => {
   }
 });
 
+/** Hands the typed address to the sign-in / forgot-password pages (memory only, never the URL). */
+function carryEmail() {
+  draft.value = { submittedEmail: email.value.trim(), portal: props.portal };
+}
+
 async function submit() {
   failure.value = null;
   errors.value = compact({
@@ -115,6 +120,7 @@ async function submit() {
       };
     } else if (f.kind === 'email-taken') {
       errors.value = { email: t('register.emailTaken') };
+      carryEmail(); // sign-in and "forgot password" then open with this address filled in
     } else if (f.kind === 'validation') {
       errors.value = compact({
         businessName: f.fields.businessName,
@@ -220,7 +226,9 @@ const crumbs = [
 
     <template #footer>
       {{ k('haveAccount') }}
-      <UiLink :to="isBusiness ? '/business/signin' : '/signin'">{{ k('signin') }}</UiLink>
+      <UiLink :to="isBusiness ? '/business/signin' : '/signin'" @click="carryEmail">{{
+        k('signin')
+      }}</UiLink>
     </template>
     <template #below>
       <UiLink :to="isBusiness ? '/signup' : '/business/register'" bare>{{
