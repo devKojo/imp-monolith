@@ -1,43 +1,56 @@
 <script setup lang="ts">
-import { t } from '../../../i18n';
+import { t, type AppTextKey } from '../../../i18n';
 
 /**
- * Leading panel of the business entry page (business_entry design): badge, headline, lead, two
- * proof chips and a strip of what the portal is for. Static copy only: nothing here claims more than
- * the product does (ADR-F012), so the design's SLA badge and customer logos are not used.
+ * Leading panel shared by every sign-in, sign-up and account-recovery page (business_entry
+ * design): badge, headline, lead, two proof chips and a strip of what the place is for. Static
+ * copy only: nothing here claims more than the product does (ADR-F012).
  */
-const strip = [
-  { icon: 'rocket', key: 'campaigns' },
-  { icon: 'users', key: 'team' },
-  { icon: 'shield-check', key: 'trust' },
-] as const;
+const props = defineProps<{ variant: 'business' | 'participant' | 'general' }>();
+const text = (key: string) => t(`aside.${props.variant}.${key}` as AppTextKey);
+const strip = {
+  business: ['rocket', 'users', 'shield-check'],
+  participant: ['search', 'ticket', 'gift'],
+  general: ['clipboard-list', 'bar-chart', 'gift'],
+}[props.variant] as Array<
+  | 'rocket'
+  | 'users'
+  | 'shield-check'
+  | 'search'
+  | 'ticket'
+  | 'gift'
+  | 'clipboard-list'
+  | 'bar-chart'
+>;
 </script>
 
 <template>
-  <section class="aside" aria-labelledby="business-aside-title">
+  <section class="aside" aria-labelledby="auth-aside-title">
     <div class="aside__top">
       <p class="aside__badge ui-text-label-sm">
-        <span class="aside__dot" aria-hidden="true" />{{ t('business.entry.badge') }}
+        <span class="aside__dot" aria-hidden="true" />{{ text('badge') }}
       </p>
-      <h2 id="business-aside-title" class="aside__title">{{ t('business.entry.title') }}</h2>
-      <p class="aside__lead ui-text-body-l">{{ t('business.entry.subtitle') }}</p>
+      <h2 id="auth-aside-title" class="aside__title">{{ text('title') }}</h2>
+      <p class="aside__lead ui-text-body-l">{{ text('lead') }}</p>
       <ul class="aside__chips">
         <li class="aside__chip ui-text-label-sm">
-          <UiIcon name="check-circle" :size="18" />{{ t('business.entry.chip.codes') }}
+          <UiIcon name="check-circle" :size="18" />{{ t('aside.chip.codes') }}
         </li>
         <li class="aside__chip ui-text-label-sm">
-          <UiIcon name="shield-check" :size="18" />{{ t('business.entry.chip.draws') }}
+          <UiIcon name="shield-check" :size="18" />{{ t('aside.chip.draws') }}
         </li>
       </ul>
     </div>
     <div class="aside__bottom">
-      <p class="aside__label ui-text-label-sm">{{ t('business.entry.strip') }}</p>
+      <p class="aside__label ui-text-label-sm">{{ text('strip') }}</p>
       <ul class="aside__strip">
-        <li v-for="p in strip" :key="p.key" class="aside__item ui-text-h3">
-          <UiIcon :name="p.icon" :size="20" />{{ t(`business.entry.${p.key}`) }}
+        <li v-for="(icon, i) in strip" :key="icon" class="aside__item ui-text-h3">
+          <UiIcon :name="icon" :size="20" />{{ text(`item${i + 1}`) }}
         </li>
       </ul>
-      <p class="aside__note ui-text-body-s">{{ t('business.entry.participantNote') }}</p>
+      <p v-if="variant === 'business'" class="aside__note ui-text-body-s">
+        {{ t('aside.business.note') }}
+      </p>
     </div>
   </section>
 </template>

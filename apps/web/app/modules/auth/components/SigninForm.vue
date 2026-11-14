@@ -4,7 +4,7 @@ import { t } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import BusinessEntryAside from './BusinessEntryAside.vue';
+import AuthPage from './AuthPage.vue';
 import { HOME } from '../constants';
 import type { Portal } from '../types';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
@@ -97,14 +97,12 @@ const crumbs = [
 </script>
 
 <template>
-  <UiAuthShell
-    :size="isBusiness ? 'wide' : 'narrow'"
-    :layout="isBusiness ? 'split' : 'card'"
+  <AuthPage
+    :variant="portal"
     :breadcrumbs="crumbs"
     :title="isBusiness ? t('signin.title.business') : t('signin.title')"
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
-    <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
     <UiBanner v-if="justRegistered" tone="info" :title="t('signin.created')" />
     <UiBanner v-if="passwordChanged" tone="info" :title="t('signin.passwordChanged')" />
 
@@ -161,7 +159,7 @@ const crumbs = [
     <template #below>
       <span>{{ t('signin.sessionNote') }}</span>
     </template>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>

@@ -1,3 +1,14 @@
+/* Metric-matched fallback for Inter: text keeps its size and line breaks while the font loads, so
+   nothing jumps when it arrives. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Liberation Sans'), local('Helvetica');
+  size-adjust: 107.4%;
+  ascent-override: 90.2%;
+  descent-override: 22.5%;
+  line-gap-override: 0%;
+}
+
 /*
  * Base styles for every surface (UI spec section 3). Only semantic tokens (--ui-*) are used;
  * physical left/right properties are avoided in favour of logical ones (UI-FND-03, UI-I18N-04).

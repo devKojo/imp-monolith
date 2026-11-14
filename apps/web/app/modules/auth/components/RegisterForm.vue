@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import type { ConsentValue } from '@imp/ui/app/components/UiConsentGroup.vue';
 import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import BusinessEntryAside from './BusinessEntryAside.vue';
+import AuthPage from './AuthPage.vue';
 import { AGREEMENT_VERSION, HOME, SIGNIN } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
@@ -14,7 +13,6 @@ import {
   emailProblem,
   nameProblem,
   passwordProblem,
-  passwordRules,
   type FieldErrors,
 } from '../validation';
 import type { Portal } from '../types';
@@ -39,7 +37,7 @@ const businessName = ref('');
 const name = ref('');
 const email = ref('');
 const password = ref('');
-const consent = ref<ConsentValue>({ accepted: false, optional: {} });
+const accepted = ref(false);
 type Field = 'businessName' | 'name' | 'email' | 'password' | 'agreement';
 const errors = ref<FieldErrors<Field>>({});
 const failure = ref<AuthFailure | null>(null);
@@ -49,10 +47,9 @@ useClearOnInput(errors, {
   name,
   email,
   password,
-  agreement: computed(() => consent.value.accepted),
+  agreement: accepted,
 });
 
-const rules = computed(() => passwordRules(password.value, email.value));
 const fieldIds: Record<Field, string> = {
   businessName: 'register-business',
   name: 'register-name',
@@ -88,7 +85,7 @@ async function submit() {
     name: nameProblem(name.value),
     email: emailProblem(email.value),
     password: passwordProblem(password.value, email.value),
-    agreement: consent.value.accepted ? undefined : t('register.agreementError'),
+    agreement: accepted.value ? undefined : t('register.agreementError'),
   });
   if (Object.keys(errors.value).length > 0 || countdown.active.value) return;
 
@@ -144,15 +141,8 @@ const crumbs = [
 </script>
 
 <template>
-  <UiAuthShell
-    :size="isBusiness ? 'wide' : 'narrow'"
-    :layout="isBusiness ? 'split' : 'card'"
-    :breadcrumbs="crumbs"
-    :title="k('title')"
-    :subtitle="k('subtitle')"
-  >
-    <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
-    <form class="form" :class="{ minimal: isBusiness }" novalidate @submit.prevent="submit">
+  <AuthPage :variant="portal" :breadcrumbs="crumbs" :title="k('title')" :subtitle="k('subtitle')">
+    <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
         :failure="failure"
@@ -200,18 +190,20 @@ const crumbs = [
         autocomplete="new-password"
         required
         :label="t('register.password')"
-        :hint="isBusiness ? t('register.business.passwordHint') : t('register.passwordHint')"
+        :hint="t('register.passwordHint')"
         :error="errors.password"
-        :rules="isBusiness ? undefined : rules"
       />
 
-      <UiConsentGroup
-        v-model="consent"
-        terms-id="agreement-check"
-        :legend="t('register.agreementLegend')"
+      <UiCheckbox
+        id="agreement-check"
+        v-model="accepted"
+        class="agree"
+        :label="`${t('register.agreementPrefix')} ${k('agreement')}`"
         :error="errors.agreement"
-        :terms="{ label: k('agreement'), version: AGREEMENT_VERSION, href: '/terms' }"
-      />
+      >
+        {{ t('register.agreementPrefix') }}
+        <UiLink to="/terms" external>{{ k('agreement') }}</UiLink>
+      </UiCheckbox>
 
       <UiButton
         type="submit"
@@ -232,23 +224,14 @@ const crumbs = [
         k('signin')
       }}</UiLink>
     </template>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>
-/* Business form: plain fields, one-line support text in the smallest size. */
-.minimal :deep(.ui-field__hint),
-.minimal :deep(.ui-consent__link) {
+/* Support text is extra small. */
+.agree :deep(.ui-checkbox__label) {
   font-size: var(--ui-font-caption-size);
   line-height: var(--ui-font-caption-line);
-}
-.minimal :deep(.ui-consent__legend) {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 .form {
   display: flex;

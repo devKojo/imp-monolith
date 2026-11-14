@@ -244,6 +244,10 @@ withDefaults(
   font-size: var(--ui-font-caption-size);
   line-height: var(--ui-font-caption-line);
 }
+.ui-auth[data-layout='split'] .ui-auth__body :deep(.ui-field__hint) {
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
+}
 .ui-auth[data-layout='split'] .ui-auth__subtitle {
   max-inline-size: none;
 }

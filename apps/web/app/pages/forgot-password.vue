@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthPage from '../modules/auth/components/AuthPage.vue';
 import { ref } from 'vue';
 import { t } from '../i18n';
 import { useAuthApi } from '../modules/auth/composables/useAuth';
@@ -52,7 +53,8 @@ async function submit() {
 </script>
 
 <template>
-  <UiAuthShell
+  <AuthPage
+    variant="general"
     :breadcrumbs="[
       { label: t('nav.discover'), to: '/discover' },
       { label: t('nav.signin'), to: '/signin' },
@@ -98,7 +100,7 @@ async function submit() {
     <template #footer>
       <UiLink to="/signin">{{ t('forgot.back') }}</UiLink>
     </template>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>
