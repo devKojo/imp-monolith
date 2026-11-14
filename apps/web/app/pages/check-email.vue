@@ -81,6 +81,7 @@ async function resend() {
       @update:model-value="typedError = undefined"
     />
     <UiButton
+      size="xs"
       variant="secondary"
       block
       icon="mail"
@@ -104,7 +105,13 @@ async function resend() {
       {{ notice.text }}
     </p>
 
-    <UiButton :to="SIGNIN[draft.portal]" block icon-trailing="arrow-right" variant="tertiary">
+    <UiButton
+      size="xs"
+      :to="SIGNIN[draft.portal]"
+      block
+      icon-trailing="arrow-right"
+      variant="tertiary"
+    >
       {{ t('checkEmail.signin') }}
     </UiButton>
   </AuthPage>

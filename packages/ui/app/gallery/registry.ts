@@ -79,7 +79,7 @@ export const registry: ComponentEntry[] = [
     summary:
       'Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states.',
     specRefs: ['Spec 5', 'UI-FND-05', 'UI-CPY-02'],
-    states: ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading', 'link'],
+    states: ['default', 'hover', 'focus', 'pressed', 'disabled', 'loading', 'link', 'extra small'],
     a11y: 'Loading keeps width and sets aria-busy; the disabled reason is visible text, not a tooltip.',
   },
   {

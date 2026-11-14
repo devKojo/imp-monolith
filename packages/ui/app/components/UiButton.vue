@@ -12,7 +12,7 @@ import UiLink from './UiLink.vue';
 const props = withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'xs' | 'sm' | 'md' | 'lg';
     type?: 'button' | 'submit' | 'reset';
     /** Render as a link to this route or URL instead of a <button>. */
     to?: string;
@@ -97,6 +97,7 @@ function onClick(e: MouseEvent) {
   display: flex;
 }
 .ui-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -105,7 +106,7 @@ function onClick(e: MouseEvent) {
   min-inline-size: var(--ui-control-target, var(--ui-target-public));
   padding-inline: var(--ui-space-3);
   border: 1px solid transparent;
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-sm);
   font: inherit;
   font-size: var(--ui-font-body-s-size);
   font-weight: 500;
@@ -118,6 +119,19 @@ function onClick(e: MouseEvent) {
 }
 .ui-button:active:not(:disabled) {
   transform: translateY(1px);
+}
+.ui-button[data-size='xs'] {
+  min-block-size: calc(var(--ui-space-6) + var(--ui-space-1));
+  min-inline-size: calc(var(--ui-space-6) + var(--ui-space-1));
+  padding-inline: var(--ui-space-3);
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
+}
+/* Fitts's law: it looks extra small, but the invisible touch area stays about 44 px tall. */
+.ui-button[data-size='xs']::after {
+  position: absolute;
+  inset: calc(var(--ui-space-2) * -1) calc(var(--ui-space-1) * -1);
+  content: '';
 }
 .ui-button[data-size='sm'] {
   min-block-size: var(--ui-space-8);
@@ -137,11 +151,9 @@ function onClick(e: MouseEvent) {
 .ui-button[data-variant='primary'] {
   background: var(--ui-color-action-primary);
   color: var(--ui-color-action-primary-text);
-  box-shadow: var(--ui-elevation-1);
 }
 .ui-button[data-variant='primary']:hover:not(:disabled) {
   background: var(--ui-color-action-primary-hover);
-  box-shadow: var(--ui-elevation-2);
 }
 .ui-button[data-variant='primary']:active:not(:disabled) {
   background: var(--ui-color-action-primary-active);
@@ -149,7 +161,7 @@ function onClick(e: MouseEvent) {
 .ui-button[data-variant='secondary'] {
   background: var(--ui-color-surface);
   color: var(--ui-color-text-secondary);
-  border-color: var(--ui-color-border-strong);
+  border-color: var(--ui-color-border);
 }
 .ui-button[data-variant='secondary']:hover:not(:disabled) {
   background: var(--ui-color-surface-hover);

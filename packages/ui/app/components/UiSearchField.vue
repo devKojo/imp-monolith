@@ -34,12 +34,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
       @update:model-value="emit('update:modelValue', $event)"
     >
       <template v-if="modelValue" #suffix>
-        <UiButton variant="tertiary" icon="x" @click="emit('update:modelValue', '')">
+        <UiButton variant="tertiary" size="xs" icon="x" @click="emit('update:modelValue', '')">
           <span class="ui-sr-only">{{ uiText('search.clear') }}</span>
         </UiButton>
       </template>
     </UiTextInput>
-    <UiButton type="submit">{{ uiText('search.submit') }}</UiButton>
+    <UiButton type="submit" size="xs">{{ uiText('search.submit') }}</UiButton>
   </form>
 </template>
 
@@ -52,14 +52,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
   padding: var(--ui-space-1);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-lg);
-  box-shadow: var(--ui-elevation-1);
+  border-radius: var(--ui-radius-md);
   transition: border-color var(--ui-motion-fast) ease;
 }
 .ui-search:focus-within {
-  border-color: var(--ui-color-action-primary);
-  outline: var(--ui-focus-width) solid var(--ui-color-focus-ring);
-  outline-offset: var(--ui-focus-offset);
+  border-color: var(--ui-color-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-focus-ring) 18%, transparent);
 }
 .ui-search__field {
   flex: 1;
@@ -71,6 +69,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
   border-color: transparent;
 }
 .ui-search__field :deep(.ui-control:focus-visible) {
-  outline: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 </style>
