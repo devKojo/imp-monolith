@@ -85,8 +85,9 @@ template id (and version or source id) as metadata. No names or field content (R
 
 - **No events yet.** Publishing and unpublishing should emit outbox events (identifiers only, R-EVT-12)
   when the outbox publisher and the campaign module exist; nothing consumes them today.
-- **Delete and campaigns.** When campaigns reference templates, deleting or unpublishing a template that
-  is in use must be refused or versioned. There is no campaign table yet.
+- **Campaigns use templates.** A template that a running campaign uses (scheduled, live or paused, not past its
+  end) cannot be unpublished or deleted: `409 TEMPLATE_IN_USE`. The campaigns module answers through the
+  `TemplateUsage` port, wired at the composition root, so this module never reads campaign tables.
 - **Contracts.** Request and response types are hand-written here and in the web app; replace with the
   generated client when `packages/contracts` exists (R-STK-04). The pre-flight rules exist in both places
   until then.

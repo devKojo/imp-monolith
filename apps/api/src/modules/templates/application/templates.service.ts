@@ -8,6 +8,7 @@ import type {
 import {
   NoActiveBusinessError,
   PreflightFailedError,
+  TemplateInUseError,
   TemplateLockedError,
   TemplateNotFoundError,
   TemplatePermissionError,
@@ -18,7 +19,7 @@ import {
 import { LIMITS, type Actor, type TemplateDetail, type TemplateSummary } from '../domain/model';
 import { canManageTemplates, canReadTemplates } from '../domain/permissions';
 import { duplicateKeys, failedChecks, normalizeFields } from '../domain/rules';
-import type { TemplateRepository, WriteResult } from './ports';
+import type { TemplateRepository, TemplateUsage, WriteResult } from './ports';
 
 /**
  * Template workflows. Each method resolves the tenant from the actor (never from input), checks the
@@ -26,7 +27,10 @@ import type { TemplateRepository, WriteResult } from './ports';
  * decided here once, so no route can forget it (R-ARC-08).
  */
 export class TemplatesService {
-  constructor(private readonly repo: TemplateRepository) {}
+  constructor(
+    private readonly repo: TemplateRepository,
+    private readonly usage?: TemplateUsage,
+  ) {}
 
   private scope(actor: Actor | null, need: 'read' | 'manage'): TenantContext {
     if (!actor) throw new NoActiveBusinessError();
@@ -107,6 +111,7 @@ export class TemplatesService {
     expectedVersion: number,
   ): Promise<TemplateDetail> {
     const ctx = this.scope(actor, 'manage');
+    if (await this.usage?.isInUse(ctx, id)) throw new TemplateInUseError();
     return this.settle(await this.repo.setStatus(ctx, id, expectedVersion, 'DRAFT'));
   }
 
@@ -124,9 +129,15 @@ export class TemplatesService {
 
   async remove(actor: Actor | null, id: string): Promise<void> {
     const ctx = this.scope(actor, 'manage');
+    if (await this.usage?.isInUse(ctx, id)) throw new TemplateInUseError();
     const outcome = await this.repo.softDelete(ctx, id);
     if (outcome === 'not_found') throw new TemplateNotFoundError();
     if (outcome === 'locked') throw new TemplateLockedError();
+  }
+
+  /** Templates by id for other modules (campaigns): only what the business can see, no fields. */
+  async summariesFor(ctx: TenantContext, ids: readonly string[]): Promise<TemplateSummary[]> {
+    return ids.length === 0 ? [] : this.repo.summaries(ctx, ids);
   }
 
   private settle(result: WriteResult): TemplateDetail {
