@@ -7,7 +7,7 @@ import type { TemplateBlock } from '../types';
  * The fields of a template, in the order participants see them. Reordering uses buttons rather
  * than drag and drop, so it works with a keyboard and a screen reader (UI-A11Y-08).
  */
-defineProps<{ blocks: TemplateBlock[]; selectedId: string | null }>();
+defineProps<{ blocks: TemplateBlock[]; selectedId: string | null; readonly?: boolean }>();
 const emit = defineEmits<{
   select: [id: string];
   move: [id: string, direction: -1 | 1];
@@ -32,6 +32,7 @@ const emit = defineEmits<{
           class="row__main"
           :aria-label="t('tpl.row.edit', { item: b.label })"
           :aria-pressed="b.id === selectedId"
+          :disabled="readonly"
           @click="emit('select', b.id)"
         >
           <UiIcon :name="BLOCK_DEFS[b.kind].icon" :size="18" />
@@ -45,7 +46,7 @@ const emit = defineEmits<{
             b.required ? t('tpl.required') : t('tpl.optional')
           }}</UiBadge>
         </button>
-        <div class="row__actions">
+        <div v-if="!readonly" class="row__actions">
           <UiButton
             variant="tertiary"
             size="xs"

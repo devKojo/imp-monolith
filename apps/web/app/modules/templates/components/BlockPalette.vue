@@ -4,6 +4,7 @@ import { BLOCK_DEFS, ENGAGEMENT_KINDS, IDENTITY_KINDS } from '../blocks';
 import type { BlockKind } from '../types';
 
 /** The fields a template can ask for, grouped. One click adds a field to the end of the pipeline. */
+defineProps<{ full?: boolean }>();
 const emit = defineEmits<{ add: [kind: BlockKind] }>();
 const groups = [
   { id: 'identity', kinds: IDENTITY_KINDS },
@@ -29,6 +30,7 @@ const groups = [
           variant="secondary"
           size="xs"
           :icon="BLOCK_DEFS[kind].icon"
+          :disabled="full"
           @click="emit('add', kind)"
         >
           {{ t(`tpl.block.${kind}` as AppTextKey) }}

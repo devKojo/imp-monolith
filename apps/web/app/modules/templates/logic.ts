@@ -1,6 +1,5 @@
 import { BLOCK_DEFS } from './blocks';
 import type {
-  Archetype,
   BlockKind,
   CampaignTemplate,
   PreflightCheck,
@@ -12,6 +11,16 @@ import type {
 /** Pure helpers for the template builder: every function returns new data and never mutates. */
 
 export const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/** The API's limits, so the form stops people before the server has to. */
+export const LIMITS = {
+  name: 120,
+  label: 120,
+  helper: 240,
+  option: 120,
+  options: 10,
+  fields: 30,
+} as const;
 
 /** `email`, then `email_2`, `email_3`... so machine names stay unique inside a template. */
 export function uniqueKey(base: string, blocks: readonly TemplateBlock[]): string {
@@ -120,31 +129,4 @@ export function stageStatuses(template: CampaignTemplate): Record<StageId, Stage
 export function currentStage(statuses: Record<StageId, StageStatus>): StageId {
   const order: StageId[] = ['archetype', 'fields', 'checks', 'publish'];
   return order.find((s) => statuses[s] !== 'complete') ?? 'publish';
-}
-
-export function newTemplate(
-  id: string,
-  name: string,
-  archetype: Archetype,
-  now: Date,
-): CampaignTemplate {
-  return { id, name, archetype, status: 'DRAFT', blocks: [], updatedAt: now.toISOString() };
-}
-
-/** A copy is always a draft, with its own ids and the name marked as a copy. */
-export function copyTemplate(
-  source: CampaignTemplate,
-  id: string,
-  copyName: string,
-  blockId: () => string,
-  now: Date,
-): CampaignTemplate {
-  return {
-    ...clone(source),
-    id,
-    name: copyName,
-    status: 'DRAFT',
-    blocks: source.blocks.map((b) => ({ ...clone(b), id: blockId() })),
-    updatedAt: now.toISOString(),
-  };
 }
