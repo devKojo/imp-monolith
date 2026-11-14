@@ -36,7 +36,7 @@ const nav = computed(() => [
     :user-role="active ? `${active.businessName} · ${ROLE_LABELS[active.role] ?? active.role}` : ''"
   >
     <UiEmptyState :title="t('console.soon.title')" :description="t('console.soon.body')">
-      <UiButton to="/app" variant="secondary">{{ t('console.soon.back') }}</UiButton>
+      <UiButton to="/app" variant="secondary" size="xs">{{ t('console.soon.back') }}</UiButton>
     </UiEmptyState>
   </UiConsoleShell>
   <UiSkeleton v-else variant="card" />
