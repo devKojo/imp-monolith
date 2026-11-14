@@ -123,21 +123,29 @@ svg {
  */
 .ui-control {
   inline-size: 100%;
-  min-block-size: var(--ui-control-target, var(--ui-target-public));
+  min-block-size: var(--ui-control-target, var(--ui-space-10));
   padding: var(--ui-space-2) var(--ui-space-3);
   background: var(--ui-color-surface);
   color: var(--ui-color-text-primary);
   border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-sm);
   font: inherit;
   font-size: var(--ui-font-body-size);
   transition:
     border-color var(--ui-motion-fast) ease,
     box-shadow var(--ui-motion-fast) ease;
 }
+/* Focus: the edge turns brand blue (3:1) with a soft halo, instead of a heavy offset ring. */
+.ui-control:focus-visible {
+  border-color: var(--ui-color-focus-ring);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-focus-ring) 18%, transparent);
+}
 .ui-control[aria-invalid='true'] {
   border-color: var(--ui-color-danger-text);
-  border-width: var(--ui-focus-width);
+}
+.ui-control[aria-invalid='true']:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-danger-text) 18%, transparent);
 }
 .ui-control:disabled {
   background: var(--ui-color-surface-subtle);

@@ -138,6 +138,7 @@ const crumbs = [
         </template>
       </UiPasswordField>
       <UiButton
+        size="xs"
         type="submit"
         block
         icon-trailing="arrow-right"

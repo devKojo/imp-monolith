@@ -46,15 +46,17 @@ const title = computed(() =>
     <UiSkeleton v-if="state === 'working'" variant="text" :lines="2" />
     <template v-else-if="state === 'ok'">
       <p class="ui-text-body" role="status">{{ t('verify.ok.body') }}</p>
-      <UiButton to="/signin" block icon-trailing="arrow-right">{{ t('verify.signin') }}</UiButton>
-      <UiButton to="/business/signin" block variant="secondary">{{
+      <UiButton size="xs" to="/signin" block icon-trailing="arrow-right">{{
+        t('verify.signin')
+      }}</UiButton>
+      <UiButton size="xs" to="/business/signin" block variant="secondary">{{
         t('verify.business')
       }}</UiButton>
     </template>
     <template v-else>
       <p class="ui-text-body" role="alert">{{ t('verify.bad.body') }}</p>
-      <UiButton to="/signin" block>{{ t('verify.signin') }}</UiButton>
-      <UiButton to="/signup" block variant="secondary">{{ t('verify.signup') }}</UiButton>
+      <UiButton size="xs" to="/signin" block>{{ t('verify.signin') }}</UiButton>
+      <UiButton size="xs" to="/signup" block variant="secondary">{{ t('verify.signup') }}</UiButton>
     </template>
   </AuthPage>
 </template>

@@ -143,8 +143,6 @@ export const staticSiteText = {
   'footer.copyright': '© {year} IMP. All rights reserved.',
 
   // side panel on sign-in, sign-up and recovery pages
-  'aside.chip.codes': 'Entries confirmed by one-time code',
-  'aside.chip.draws': 'Draws you can verify',
   'aside.business.badge': 'IMP business portal',
   'aside.business.title':
     'Manage campaigns, verifiable draws and participant growth in one portal.',
@@ -171,15 +169,11 @@ export const staticSiteText = {
 
   // discovery
   'discover.more': 'Show more campaigns',
-  'discover.shown': 'Showing {shown} of {total} campaigns',
   'discover.title': 'Discover live campaigns',
   'discover.subtitle': 'Quizzes, polls and giveaways from businesses.',
   'discover.search': 'Search campaigns',
   'discover.type': 'Campaign type',
-  'discover.live.one': '1 campaign live now',
-  'discover.live.other': '{n} campaigns live now',
   'discover.results.title': 'Live campaigns',
-  'discover.results.trust': 'Entries confirmed by one-time code',
   'discover.count.one': '1 campaign',
   'discover.count.other': '{n} campaigns',
   'discover.empty.title': 'No campaigns match',

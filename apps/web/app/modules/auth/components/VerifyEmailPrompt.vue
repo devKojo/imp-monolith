@@ -59,7 +59,7 @@ async function send() {
     {{ t('me.verify.body') }}
     <template #actions>
       <UiButton
-        size="sm"
+        size="xs"
         variant="secondary"
         icon="mail"
         :loading="sending"

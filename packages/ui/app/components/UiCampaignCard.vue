@@ -79,7 +79,7 @@ const titleId = useId();
           <span v-if="prizeLabel" class="ui-text-caption ui-text-hint">{{ prizeLabel }}</span>
           <span class="ui-campaign__value ui-text-label">{{ prizeValue }}</span>
         </div>
-        <UiButton :to="to" size="sm">
+        <UiButton :to="to" size="xs">
           {{ ctaLabel ?? uiText('campaign.viewCta') }}<span class="ui-sr-only">: {{ title }}</span>
         </UiButton>
       </div>
@@ -196,8 +196,8 @@ const titleId = useId();
   color: var(--ui-color-text-secondary);
   font-weight: 400;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
 }
 .ui-campaign__foot {
   display: flex;
