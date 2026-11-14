@@ -157,9 +157,6 @@ const crumbs = [
         t('signin.createAccount')
       }}</UiLink>
     </template>
-    <template #below>
-      <span>{{ t('signin.sessionNote') }}</span>
-    </template>
   </AuthPage>
 </template>
 

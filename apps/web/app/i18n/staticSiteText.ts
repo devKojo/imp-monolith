@@ -65,7 +65,6 @@ export const staticSiteText = {
   'reset.invalid.body': 'It may have expired or already been used. Request a new one.',
   'reset.invalid.cta': 'Request a new link',
   'signin.created': 'Account created. Sign in to continue.',
-  'signin.sessionNote': 'Sessions end after 30 minutes of inactivity.',
 
   // registration (one form, two portals: ADR-P001)
   'register.participant.title': 'Create your account',
