@@ -31,6 +31,7 @@ describe('route classes (R-WEB-02, R-WEB-05)', () => {
     '/signin',
     '/signup',
     '/check-email',
+    '/business',
     '/business/signin',
     '/business/register',
     '/verify-email',

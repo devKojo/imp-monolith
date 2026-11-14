@@ -34,6 +34,7 @@ export default defineNuxtConfig({
     '/signin': { headers: noStore },
     '/signup': { headers: noStore },
     '/check-email': { headers: noStore },
+    '/business': { headers: noStore },
     '/business/signin': { headers: noStore },
     '/business/register': { headers: noStore },
     '/verify-email': { headers: noStore },
