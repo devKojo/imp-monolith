@@ -5,6 +5,8 @@ import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
+import BusinessAuthSwitch from './BusinessAuthSwitch.vue';
+import BusinessEntryAside from './BusinessEntryAside.vue';
 import { AGREEMENT_VERSION, HOME, SIGNIN } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
@@ -137,9 +139,7 @@ async function submit() {
   }
 }
 const crumbs = [
-  isBusiness
-    ? { label: t('nav.forBusinesses'), to: '/business' }
-    : { label: t('nav.discover'), to: '/discover' },
+  { label: t('nav.discover'), to: '/discover' },
   { label: isBusiness ? t('footer.business.register') : t('nav.signup') },
 ];
 </script>
@@ -151,6 +151,8 @@ const crumbs = [
     :title="k('title')"
     :subtitle="k('subtitle')"
   >
+    <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
+    <template v-if="isBusiness" #badge><BusinessAuthSwitch active="register" /></template>
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
