@@ -26,14 +26,18 @@ import type {
 import { LIMITS } from '../domain/model';
 import { canManageCampaigns, canOperateCampaigns, canReadCampaigns } from '../domain/permissions';
 import {
+  defaultFields,
   effectiveStatus,
   failedChecks,
+  normalizeFields,
   normalizePrizes,
+  normalizeSettings,
   runningStatusFor,
   slugify,
+  templateProblem,
   withEffectiveStatus,
 } from '../domain/rules';
-import type { CampaignRepository, QuestionCounter, TemplateLookup, WriteResult } from './ports';
+import type { CampaignRepository, TemplateLookup, WriteResult } from './ports';
 
 type Need = 'read' | 'operate' | 'manage';
 const CHECKS: Record<Need, (role: string) => boolean> = {
@@ -54,8 +58,6 @@ export class CampaignsService {
     private readonly now: () => Date = () => new Date(),
     /** Random part of a new page address; replaceable so tests are deterministic. */
     private readonly suffix: () => string = () => randomBytes(3).toString('hex'),
-    /** Only needed for quiz campaigns; without it the questions check is not made. */
-    private readonly questions?: QuestionCounter,
   ) {}
 
   private scope(actor: Actor | null, need: Need): TenantContext {
@@ -108,11 +110,14 @@ export class CampaignsService {
   async create(actor: Actor | null, input: CreateCampaignInput): Promise<CampaignDetail> {
     const ctx = this.scope(actor, 'manage');
     const templateId = input.templateId ?? null;
-    await this.requireTemplate(ctx, templateId);
+    const template = await this.requireTemplate(ctx, templateId);
     const row = await this.repo.create(ctx, {
       title: input.title,
       templateId,
       createdById: actor!.userId,
+      // A new campaign starts with what its type says to begin with (for example the email field).
+      fields: template ? normalizeFields(defaultFields(template)) : [],
+      settings: normalizeSettings(template, null),
     });
     return this.detail(ctx, row);
   }
@@ -128,7 +133,10 @@ export class CampaignsService {
     if (startAt && endAt && endAt <= startAt) {
       throw new CampaignInvalidError('The end must be after the start', { field: 'endAt' });
     }
-    await this.requireTemplate(ctx, input.templateId);
+    const template = await this.requireTemplate(ctx, input.templateId);
+    const fields = normalizeFields(input.fields);
+    const problem = templateProblem(fields, template);
+    if (problem) throw new CampaignInvalidError(problem, { field: 'fields' });
     const result = await this.repo.saveDraft(ctx, id, input.expectedVersion, {
       title: input.title,
       summary: input.summary.trim(),
@@ -136,6 +144,8 @@ export class CampaignsService {
       startAt,
       endAt,
       prizes: normalizePrizes(input.prizes),
+      fields,
+      settings: normalizeSettings(template, input.settings.quiz),
     });
     return this.detail(
       ctx,
@@ -158,10 +168,6 @@ export class CampaignsService {
     const template = await this.templateOf(ctx, current.templateId);
     const now = this.now();
     const startAt = current.startAt ? new Date(current.startAt) : null;
-    const questionCount =
-      template?.archetype === 'quiz' && this.questions
-        ? await this.questions.count(ctx, id)
-        : undefined;
     const failed = failedChecks(
       {
         title: current.title,
@@ -169,7 +175,7 @@ export class CampaignsService {
         startAt,
         endAt: current.endAt ? new Date(current.endAt) : null,
         prizes: current.prizes,
-        ...(questionCount !== undefined ? { questionCount } : {}),
+        fields: current.fields,
       },
       now,
     );
@@ -278,11 +284,16 @@ export class CampaignsService {
     return (await this.refs(ctx, [id])).get(id) ?? null;
   }
 
-  /** A campaign can only point at a template of its own business that still exists. */
-  private async requireTemplate(ctx: TenantContext, id: string | null): Promise<void> {
-    if (id && !(await this.templateOf(ctx, id))) {
+  /** A campaign can only use a built-in type that exists. */
+  private async requireTemplate(
+    ctx: TenantContext,
+    id: string | null,
+  ): Promise<TemplateRef | null> {
+    if (!id) return null;
+    const found = await this.templateOf(ctx, id);
+    if (!found)
       throw new CampaignInvalidError('That template is not available', { field: 'templateId' });
-    }
+    return found;
   }
 
   /** `wrongState` is what the caller's action means when the campaign is not in the state it needs. */

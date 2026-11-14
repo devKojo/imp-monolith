@@ -1,12 +1,11 @@
 // Public surface of the quiz module. Other modules import ONLY from here.
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IdentityModule } from '@/modules/identity';
-import type { TenantContext } from '@/shared/database';
 import { QuizService } from './application/quiz.service';
-import { publicQuizRouter, quizAuthoringRouter, quizParticipationRouter } from './http/quiz.routes';
+import { publicQuizRouter, quizParticipationRouter } from './http/quiz.routes';
 import { PrismaQuizRepository } from './infrastructure/prisma-quiz.repository';
 
-export type { QuizInfo, AttemptView, QuizDefinition } from './domain/model';
+export type { QuizInfo, AttemptView } from './domain/model';
 
 export type QuizConfig = {
   /** app_runtime client; every query is scoped through withTenant / withPublic. */
@@ -15,12 +14,8 @@ export type QuizConfig = {
 };
 
 export function createQuizModule(cfg: QuizConfig) {
-  const repo = new PrismaQuizRepository(cfg.db);
-  const service = new QuizService(repo);
+  const service = new QuizService(new PrismaQuizRepository(cfg.db));
   return {
-    /** Business users write the questions of a draft campaign. */
-    authoringBasePath: '/api/v1/quizzes',
-    authoringRouter: quizAuthoringRouter(service, cfg.identity.guards),
     /** Participants take the quiz. */
     participationBasePath: '/api/v1/quiz',
     participationRouter: quizParticipationRouter(service, cfg.identity.guards),
@@ -28,10 +23,6 @@ export function createQuizModule(cfg: QuizConfig) {
     publicBasePath: '/api/v1/public/quiz',
     publicRouter: publicQuizRouter(service),
     service,
-    /** For the campaigns module: how many questions a quiz campaign has (launch needs at least one). */
-    questions: {
-      count: (ctx: TenantContext, campaignId: string) => repo.questionCount(ctx, campaignId),
-    },
   };
 }
 

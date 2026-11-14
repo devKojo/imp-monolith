@@ -1,21 +1,9 @@
 /**
- * Quizzes: single-choice questions on a campaign, and a participant's attempt at them. The questions
- * (with their correct answers) belong to the business; a participant only ever receives the prompt
- * and the options.
+ * Quizzes: a participant's attempt at the questions of a quiz campaign. The questions (with their correct
+ * answers) and the settings are written on the campaign by the business; here a participant only ever
+ * receives the prompt and the options.
  */
-export const LIMITS = {
-  questionsMax: 50,
-  promptMax: 300,
-  optionMax: 120,
-  optionsMin: 2,
-  optionsMax: 6,
-  timeLimitMax: 240,
-  defaultPassPercent: 70,
-} as const;
-
-/** What the business writes for one question; `id` is assigned by the server. */
-export type QuestionInput = { prompt: string; options: string[]; correctIndex: number };
-export type Question = QuestionInput & { id: string };
+export type Question = { id: string; prompt: string; options: string[]; correctIndex: number };
 
 export type QuizSettings = {
   /** Minutes for the whole attempt; null means untimed. */
@@ -72,10 +60,5 @@ export type QuizInfo = {
   passPercent: number;
 };
 
-/** The campaign facts the authoring side needs: is it a draft, and is it a quiz. */
-export type CampaignFacts = { status: string; archetype: string | null };
-
-/** The signed-in business user acting on a campaign's quiz, resolved by the session. */
-export type Actor = { userId: string; tenantId: string; role: string };
 /** The signed-in participant. */
 export type Participant = { userId: string; accountType: string };

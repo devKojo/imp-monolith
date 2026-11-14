@@ -1,22 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { createTenantContext, type TenantContext } from '@/shared/database';
-import { canManageCampaigns, canReadCampaigns } from '@/modules/campaigns';
-import type { SaveQuizInput } from '../contracts/quiz.schemas';
 import {
   AttemptClosedError,
   InvalidAnswerError,
-  NoActiveBusinessError,
   NoAttemptError,
-  NotAQuizError,
   ParticipantOnlyError,
   QuizEmptyError,
-  QuizInvalidError,
-  QuizLockedError,
   QuizNotFoundError,
-  QuizPermissionError,
 } from '../domain/errors';
 import type {
-  Actor,
   AttemptRow,
   AttemptView,
   Participant,
@@ -24,71 +16,19 @@ import type {
   QuizInfo,
   RunnableQuiz,
 } from '../domain/model';
-import {
-  attemptDeadline,
-  firstProblem,
-  isExpired,
-  normalizeQuestions,
-  scoreAttempt,
-} from '../domain/rules';
+import { attemptDeadline, isExpired, scoreAttempt } from '../domain/rules';
 import type { QuizRepository } from './ports';
 
-type Need = 'read' | 'manage';
-const CHECKS: Record<Need, (role: string) => boolean> = {
-  read: canReadCampaigns,
-  manage: canManageCampaigns,
-};
-
 /**
- * Quiz workflows. The business side authors the questions while the campaign is a draft. The
- * participant side starts one attempt, saves answers as they go and is scored by the server: the
- * correct answers never leave it, and the clock that counts is the one stored with the attempt.
+ * Quiz workflows for a participant: start one attempt, save answers as they go, and be scored by the
+ * server. The questions and settings are written on the campaign; the correct answers never leave the
+ * server, and the clock that counts is the one stored with the attempt.
  */
 export class QuizService {
   constructor(
     private readonly repo: QuizRepository,
     private readonly now: () => Date = () => new Date(),
   ) {}
-
-  // --- The business: write the questions ---------------------------------------------------
-
-  private businessScope(actor: Actor | null, need: Need): TenantContext {
-    if (!actor) throw new NoActiveBusinessError();
-    if (!CHECKS[need](actor.role)) throw new QuizPermissionError();
-    return createTenantContext({
-      tenantId: actor.tenantId,
-      actorId: actor.userId,
-      requestId: randomUUID(),
-    });
-  }
-
-  async definition(actor: Actor | null, campaignId: string): Promise<QuizDefinition> {
-    const ctx = this.businessScope(actor, 'read');
-    if (!(await this.repo.campaignFacts(ctx, campaignId))) throw new QuizNotFoundError();
-    return this.repo.definition(ctx, campaignId);
-  }
-
-  async save(
-    actor: Actor | null,
-    campaignId: string,
-    input: SaveQuizInput,
-  ): Promise<QuizDefinition> {
-    const ctx = this.businessScope(actor, 'manage');
-    const facts = await this.repo.campaignFacts(ctx, campaignId);
-    if (!facts) throw new QuizNotFoundError();
-    if (facts.status !== 'DRAFT') throw new QuizLockedError();
-    if (facts.archetype !== 'quiz') throw new NotAQuizError();
-
-    const questions = normalizeQuestions(input.questions);
-    const problem = firstProblem(questions);
-    if (problem) throw new QuizInvalidError(problem.message, { index: problem.index });
-
-    await this.repo.replace(ctx, campaignId, {
-      settings: { timeLimitMinutes: input.timeLimitMinutes, passPercent: input.passPercent },
-      questions,
-    });
-    return this.repo.definition(ctx, campaignId);
-  }
 
   // --- The participant: take the quiz ------------------------------------------------------
 

@@ -1,45 +1,34 @@
 // Public surface of the templates module. Other modules import ONLY from here.
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IdentityModule } from '@/modules/identity';
-import type { TenantContext } from '@/shared/database';
-import type { TemplateUsage } from './application/ports';
 import { TemplatesService } from './application/templates.service';
 import { templatesRouter } from './http/templates.routes';
 import { PrismaTemplateRepository } from './infrastructure/prisma-template.repository';
 
 export type {
+  AllowedField,
   Archetype,
+  CampaignTemplate,
+  FieldGroup,
   FieldKind,
-  TemplateDetail,
-  TemplateStatus,
-  TemplateSummary,
 } from './domain/model';
-export type { TemplateUsage } from './application/ports';
-export { canManageTemplates, canReadTemplates } from './domain/permissions';
+export { ARCHETYPES, FIELD_KINDS, groupOf } from './domain/model';
 
 export type TemplatesConfig = {
-  /** app_runtime client; every query is scoped through withTenant. */
+  /** app_runtime client; the template tables are global and read-only for it. */
   db: PrismaClient;
   identity: Pick<IdentityModule, 'guards'>;
-  /** Whether a template is in use by something running (campaigns); blocks unpublish and delete. */
-  usage?: TemplateUsage;
 };
 
 export function createTemplatesModule(cfg: TemplatesConfig) {
-  const service = new TemplatesService(new PrismaTemplateRepository(cfg.db), cfg.usage);
+  const service = new TemplatesService(new PrismaTemplateRepository(cfg.db));
   return {
     basePath: '/api/v1/templates',
     router: templatesRouter(service, cfg.identity.guards),
     service,
-    /** For the campaigns module: the templates a campaign uses, without their fields. */
+    /** For the campaigns module: the built-in types a campaign may use, with what they allow. */
     lookup: {
-      many: async (ctx: TenantContext, ids: readonly string[]) =>
-        (await service.summariesFor(ctx, ids)).map((t) => ({
-          id: t.id,
-          name: t.name,
-          archetype: t.archetype,
-          status: t.status,
-        })),
+      many: (_ctx: unknown, ids: readonly string[]) => service.many(ids),
     },
   };
 }

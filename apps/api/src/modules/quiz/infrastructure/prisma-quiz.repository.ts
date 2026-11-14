@@ -1,22 +1,9 @@
 import type { PrismaClient } from '@/generated/prisma/client';
-import {
-  withPublic,
-  withTenant,
-  writeAudit,
-  type TenantContext,
-  type TenantTx,
-} from '@/shared/database';
+import { withPublic, withTenant, type TenantContext } from '@/shared/database';
 import type { QuizRepository } from '../application/ports';
-import type {
-  AttemptResult,
-  AttemptRow,
-  CampaignFacts,
-  QuestionInput,
-  QuizDefinition,
-  QuizSettings,
-  RunnableQuiz,
-} from '../domain/model';
-import { LIMITS } from '../domain/model';
+import type { AttemptResult, AttemptRow, QuizDefinition, RunnableQuiz } from '../domain/model';
+
+const DEFAULT_PASS_PERCENT = 70;
 
 type AttemptWithAnswers = {
   id: string;
@@ -41,86 +28,46 @@ const toAttempt = (r: AttemptWithAnswers): AttemptRow => ({
 });
 
 /**
- * Quizzes in PostgreSQL. Every call is one `withTenant` transaction (row-level security applies) except
- * `locate`, which reads the same running campaigns the public listing shows through `withPublic`.
+ * Quiz attempts in PostgreSQL. Every call is one `withTenant` transaction (row-level security applies)
+ * except `locate`, which reads the same running campaigns the public listing shows through `withPublic`.
+ * The questions are the campaign's quiz-question fields and the settings are on the campaign itself.
  */
 export class PrismaQuizRepository implements QuizRepository {
   constructor(private readonly db: PrismaClient) {}
 
-  campaignFacts(ctx: TenantContext, campaignId: string): Promise<CampaignFacts | null> {
-    return withTenant(this.db, ctx, async (tx) => {
-      const row = await tx.campaign.findFirst({
-        where: { id: campaignId, tenantId: ctx.tenantId, deletedAt: null },
-        select: { status: true, template: { select: { archetype: true } } },
-      });
-      return row
-        ? { status: row.status, archetype: row.template?.archetype.toLowerCase() ?? null }
-        : null;
-    });
-  }
-
   definition(ctx: TenantContext, campaignId: string): Promise<QuizDefinition> {
     return withTenant(this.db, ctx, async (tx) => {
-      const [settings, questions] = await Promise.all([
-        tx.quiz.findFirst({ where: { tenantId: ctx.tenantId, campaignId } }),
-        tx.quizQuestion.findMany({
-          where: { tenantId: ctx.tenantId, campaignId },
+      const [campaign, questions] = await Promise.all([
+        tx.campaign.findFirst({
+          where: { id: campaignId, tenantId: ctx.tenantId, deletedAt: null },
+          select: { settings: true },
+        }),
+        tx.campaignField.findMany({
+          where: { tenantId: ctx.tenantId, campaignId, kind: 'QUIZ_QUESTION' },
           orderBy: { position: 'asc' },
         }),
       ]);
+      const quiz = (
+        campaign?.settings as {
+          quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown };
+        } | null
+      )?.quiz;
       return {
         settings: {
-          timeLimitMinutes: settings?.timeLimitMinutes ?? null,
-          passPercent: settings?.passPercent ?? LIMITS.defaultPassPercent,
+          timeLimitMinutes:
+            typeof quiz?.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
+          passPercent:
+            typeof quiz?.passPercent === 'number' ? quiz.passPercent : DEFAULT_PASS_PERCENT,
         },
         questions: questions.map((q) => ({
           id: q.id,
-          prompt: q.prompt,
+          prompt: q.label,
           options: q.options,
-          correctIndex: q.correctIndex,
+          // A question without a marked answer cannot be launched; -1 can never match a choice.
+          correctIndex: q.correctIndex ?? -1,
         })),
       };
     });
-  }
-
-  replace(
-    ctx: TenantContext,
-    campaignId: string,
-    content: { settings: QuizSettings; questions: QuestionInput[] },
-  ): Promise<void> {
-    return withTenant(this.db, ctx, async (tx: TenantTx) => {
-      await tx.quiz.upsert({
-        where: { tenantId_campaignId: { tenantId: ctx.tenantId, campaignId } },
-        create: { tenantId: ctx.tenantId, campaignId, ...content.settings },
-        update: content.settings,
-      });
-      await tx.quizQuestion.deleteMany({ where: { tenantId: ctx.tenantId, campaignId } });
-      await tx.quizQuestion.createMany({
-        data: content.questions.map((q, position) => ({
-          tenantId: ctx.tenantId,
-          campaignId,
-          position,
-          prompt: q.prompt,
-          options: q.options,
-          correctIndex: q.correctIndex,
-        })),
-      });
-      // Counts only: no question text in the audit trail (R-PRV-06).
-      await writeAudit(tx, {
-        tenantId: ctx.tenantId,
-        actorId: ctx.actorId ?? null,
-        action: 'quiz.updated',
-        targetType: 'campaign',
-        targetId: campaignId,
-        metadata: { questions: content.questions.length },
-      });
-    });
-  }
-
-  questionCount(ctx: TenantContext, campaignId: string): Promise<number> {
-    return withTenant(this.db, ctx, (tx) =>
-      tx.quizQuestion.count({ where: { tenantId: ctx.tenantId, campaignId } }),
-    );
   }
 
   locate(slug: string, now: Date): Promise<RunnableQuiz | null> {

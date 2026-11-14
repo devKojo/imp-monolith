@@ -1,8 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CampaignsService } from '../application/campaigns.service';
-import type { Actor, TemplateRef } from '../domain/model';
+import type { Actor } from '../domain/model';
 import { FakeTemplateLookup, InMemoryCampaignRepository } from './fakes';
+import {
+  detailsDraft,
+  draftField,
+  giveawayTemplate,
+  quizQuestion,
+  quizSettings,
+  quizTemplate,
+  surveyTemplate,
+} from './fixtures';
 
 const NOW = new Date('2026-11-14T12:00:00Z');
 const hours = (n: number) => new Date(NOW.getTime() + n * 3_600_000).toISOString();
@@ -17,18 +26,15 @@ let repo: InMemoryCampaignRepository;
 let service: CampaignsService;
 let now = NOW;
 let n = 0;
-const published: TemplateRef = {
-  id: randomUUID(),
-  name: 'Entry',
-  archetype: 'giveaway',
-  status: 'PUBLISHED',
-};
+const published = giveawayTemplate;
 
 beforeEach(() => {
   now = NOW;
   n = 0;
   templates = new FakeTemplateLookup();
   templates.add(published);
+  templates.add(quizTemplate);
+  templates.add(surveyTemplate);
   repo = new InMemoryCampaignRepository();
   service = new CampaignsService(
     repo,
@@ -45,6 +51,8 @@ const body = (over: Record<string, unknown> = {}) => ({
   startAt: null as string | null,
   endAt: hours(48) as string | null,
   prizes: [prize],
+  fields: detailsDraft(),
+  settings: { quiz: null as null | typeof quizSettings.quiz },
   ...over,
 });
 const draft = async (over: Record<string, unknown> = {}) => {
@@ -99,7 +107,7 @@ describe('drafting', () => {
     expect((await service.create(owner, { title: 'A' })).template).toBeNull();
     expect(
       (await service.create(owner, { title: 'B', templateId: published.id })).template,
-    ).toMatchObject({ name: 'Entry' });
+    ).toMatchObject({ name: 'Giveaway' });
     await expect(
       service.create(owner, { title: 'C', templateId: randomUUID() }),
     ).rejects.toMatchObject({ status: 422, code: 'CAMPAIGN_INVALID' });
@@ -142,6 +150,111 @@ describe('drafting', () => {
   });
 });
 
+describe('fields', () => {
+  it('starts a new campaign with what its type begins with', async () => {
+    const c = await service.create(owner, { title: 'G', templateId: published.id });
+    expect(c.fields.map((f) => [f.kind, f.key, f.label, f.required])).toEqual([
+      ['email', 'email', 'Email address', true],
+      ['consent', 'consent', 'I agree to the rules and the privacy notice', true],
+    ]);
+    const quiz = await service.create(owner, { title: 'Q', templateId: quizTemplate.id });
+    expect(quiz.settings).toEqual({ quiz: { timeLimitMinutes: null, passPercent: 70 } });
+    expect((await service.create(owner, { title: 'None' })).fields).toEqual([]);
+  });
+
+  it('keeps only what the type allows, and no more of a kind than it allows', async () => {
+    const c = await service.create(owner, { title: 'x', templateId: published.id });
+    const save = (
+      fields: ReturnType<typeof draftField>[],
+      templateId: string | null = published.id,
+    ) =>
+      service.update(owner, c.id, { expectedVersion: c.version, ...body({ fields, templateId }) });
+    await expect(save([quizQuestion()])).rejects.toMatchObject({
+      status: 422,
+      code: 'CAMPAIGN_INVALID',
+    });
+    await expect(save([draftField('email'), draftField('email')])).rejects.toMatchObject({
+      status: 422,
+    });
+    await expect(save([draftField('email')], null)).rejects.toMatchObject({ status: 422 });
+    await expect(save([draftField('choice')], surveyTemplate.id)).resolves.toMatchObject({
+      fields: [{ kind: 'choice' }],
+    });
+  });
+
+  it('names fields, trims text, and keeps a correct answer only on a quiz question', async () => {
+    const c = await service.create(owner, { title: 'x' });
+    const saved = await service.update(owner, c.id, {
+      expectedVersion: c.version,
+      ...body({
+        templateId: quizTemplate.id,
+        settings: quizSettings,
+        prizes: [],
+        fields: [
+          draftField('email', {
+            label: ' Email ',
+            required: true,
+            options: ['junk'],
+            correctIndex: 1,
+          }),
+          quizQuestion({
+            label: ' Q1 ',
+            options: [' A ', ' B '],
+            correctIndex: 1,
+            required: false,
+          }),
+          quizQuestion({ label: 'Q2', options: ['A', 'B'], correctIndex: 7 }),
+        ],
+      }),
+    });
+    expect(saved.fields.map((f) => f.key)).toEqual(['email', 'quiz_question', 'quiz_question_2']);
+    expect(saved.fields[0]).toMatchObject({ label: 'Email', options: [], correctIndex: null });
+    expect(saved.fields[1]).toMatchObject({
+      label: 'Q1',
+      options: ['A', 'B'],
+      correctIndex: 1,
+      required: true,
+    });
+    expect(saved.fields[2]!.correctIndex).toBeNull(); // out of range is dropped, so launch will ask for it
+  });
+
+  it('keeps quiz settings only for a quiz', async () => {
+    const c = await service.create(owner, { title: 'x' });
+    const asGiveaway = await service.update(owner, c.id, {
+      expectedVersion: c.version,
+      ...body({ settings: quizSettings }),
+    });
+    expect(asGiveaway.settings).toEqual({});
+    const asQuiz = await service.update(owner, c.id, {
+      expectedVersion: asGiveaway.version,
+      ...body({
+        templateId: quizTemplate.id,
+        prizes: [],
+        fields: [],
+        settings: { quiz: { timeLimitMinutes: 15, passPercent: 80 } },
+      }),
+    });
+    expect(asQuiz.settings).toEqual({ quiz: { timeLimitMinutes: 15, passPercent: 80 } });
+  });
+
+  it('copies fields and settings when duplicating', async () => {
+    const c = await service.create(owner, { title: 'x' });
+    const saved = await service.update(owner, c.id, {
+      expectedVersion: c.version,
+      ...body({
+        templateId: quizTemplate.id,
+        prizes: [],
+        settings: quizSettings,
+        fields: [...detailsDraft(), quizQuestion()],
+      }),
+    });
+    const copy = await service.duplicate(owner, saved.id);
+    expect(copy.fields.map((f) => f.key)).toEqual(saved.fields.map((f) => f.key));
+    expect(copy.fields.map((f) => f.id)).not.toEqual(saved.fields.map((f) => f.id));
+    expect(copy.settings).toEqual(saved.settings);
+  });
+});
+
 describe('launching', () => {
   it('goes live now and fixes the public address from the title', async () => {
     const c = await launched();
@@ -159,25 +272,51 @@ describe('launching', () => {
   });
 
   it('refuses with the failed checks named, and changes nothing', async () => {
-    const c = await draft({ title: 'x', templateId: null, endAt: null, prizes: [] });
+    const c = await draft({ title: 'x', templateId: null, endAt: null, prizes: [], fields: [] });
     await expect(service.launch(owner, c.id, c.version)).rejects.toMatchObject({
       status: 422,
       code: 'PREFLIGHT_FAILED',
-      details: { failed: ['template', 'schedule'] },
+      details: { failed: ['template', 'schedule', 'details'] },
     });
     expect(await service.get(owner, c.id)).toMatchObject({ status: 'DRAFT', slug: null });
   });
 
-  it('refuses a template that is not published, and prizes a giveaway needs', async () => {
-    const unpublished = templates.add({ ...published, id: randomUUID(), status: 'DRAFT' });
-    const a = await draft({ templateId: unpublished.id });
-    await expect(service.launch(owner, a.id, a.version)).rejects.toMatchObject({
-      details: { failed: ['template'] },
-    });
-    const b = await draft({ prizes: [] });
-    await expect(service.launch(owner, b.id, b.version)).rejects.toMatchObject({
+  it('refuses prizes a giveaway needs, and details a participant must give', async () => {
+    const noPrizes = await draft({ prizes: [] });
+    await expect(service.launch(owner, noPrizes.id, noPrizes.version)).rejects.toMatchObject({
       details: { failed: ['prizes'] },
     });
+    const noDetails = await draft({ fields: [] });
+    await expect(service.launch(owner, noDetails.id, noDetails.version)).rejects.toMatchObject({
+      details: { failed: ['details'] },
+    });
+    const noConsent = await draft({
+      fields: [draftField('email', { label: 'Email', required: true })],
+    });
+    await expect(service.launch(owner, noConsent.id, noConsent.version)).rejects.toMatchObject({
+      details: { failed: ['details'] },
+    });
+  });
+
+  it('refuses a quiz with no questions, or a question that is not finished', async () => {
+    const quiz = { templateId: quizTemplate.id, settings: quizSettings, prizes: [] };
+    const empty = await draft(quiz);
+    await expect(service.launch(owner, empty.id, empty.version)).rejects.toMatchObject({
+      details: { failed: ['content'] },
+    });
+    for (const broken of [
+      quizQuestion({ correctIndex: null }),
+      quizQuestion({ label: ' ' }),
+      quizQuestion({ options: ['Accra', 'accra'] }),
+      quizQuestion({ options: ['Accra'] }),
+    ]) {
+      const c = await draft({ ...quiz, fields: [...detailsDraft(), broken] });
+      await expect(service.launch(owner, c.id, c.version)).rejects.toMatchObject({
+        details: { failed: ['content'] },
+      });
+    }
+    const ok = await draft({ ...quiz, fields: [...detailsDraft(), quizQuestion()] });
+    expect((await service.launch(owner, ok.id, ok.version)).status).toBe('LIVE');
   });
 
   it('refuses an end that has already passed', async () => {

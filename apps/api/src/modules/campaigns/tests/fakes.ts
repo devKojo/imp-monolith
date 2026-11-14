@@ -7,6 +7,7 @@ import type {
   TemplateLookup,
   WriteResult,
 } from '../application/ports';
+import type { CampaignSettings, FieldInput } from '../domain/fields';
 import type { CampaignStatus, StoredCampaign, StoredSummary, TemplateRef } from '../domain/model';
 
 type Stored = StoredCampaign & { tenantId: string; deleted: boolean };
@@ -33,7 +34,16 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       .filter((r) => r.tenantId === ctx.tenantId && !r.deleted)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map((r) => {
-        const { prizes, summary: _s, launchedAt: _l, tenantId: _t, deleted: _d, ...rest } = r;
+        const {
+          prizes,
+          fields: _f,
+          settings: _set,
+          summary: _s,
+          launchedAt: _l,
+          tenantId: _t,
+          deleted: _d,
+          ...rest
+        } = r;
         return { ...rest, prizeCount: prizes.length };
       });
   }
@@ -45,7 +55,13 @@ export class InMemoryCampaignRepository implements CampaignRepository {
 
   async create(
     ctx: TenantContext,
-    input: { title: string; templateId: string | null; createdById: string },
+    input: {
+      title: string;
+      templateId: string | null;
+      createdById: string;
+      fields: FieldInput[];
+      settings: CampaignSettings;
+    },
   ) {
     const row: Stored = {
       id: randomUUID(),
@@ -59,6 +75,8 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       startAt: null,
       endAt: null,
       prizes: [],
+      fields: input.fields.map((f) => ({ ...f, id: randomUUID() })),
+      settings: input.settings,
       version: 1,
       updatedAt: new Date().toISOString(),
       launchedAt: null,
@@ -83,6 +101,8 @@ export class InMemoryCampaignRepository implements CampaignRepository {
     row.startAt = content.startAt ? content.startAt.toISOString() : null;
     row.endAt = content.endAt ? content.endAt.toISOString() : null;
     row.prizes = content.prizes.map((p) => ({ ...p, id: randomUUID() }));
+    row.fields = content.fields.map((f) => ({ ...f, id: randomUUID() }));
+    row.settings = content.settings;
     this.touch(row);
     return { kind: 'ok', campaign: this.strip(row) };
   }
@@ -137,6 +157,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       updatedAt: new Date().toISOString(),
     };
     copy.prizes = copy.prizes.map((p) => ({ ...p, id: randomUUID() }));
+    copy.fields = copy.fields.map((f) => ({ ...f, id: randomUUID() }));
     this.rows.push(copy);
     return this.strip(copy);
   }
