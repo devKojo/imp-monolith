@@ -21,6 +21,8 @@ const EXPECTED_INDEXES = [
   'password_resets_token_hash_key',
   'outbox_pending_idx',
   'outbox_dispatched_idx',
+  'templates_tenant_id_id_key',
+  'template_fields_tenant_id_template_id_key_key',
   'memberships_tenant_id_id_key',
   'outbox_events_aggregate_id_aggregate_version_key',
 ];
@@ -48,6 +50,8 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['password_resets', 'reset_select'],
   ['password_resets', 'reset_insert'],
   ['password_resets', 'reset_update'],
+  ['templates', 'tenant_isolation'],
+  ['template_fields', 'tenant_isolation'],
 ];
 // [role, table, privilege, expected]
 const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
@@ -72,6 +76,11 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_system', 'email_verifications', 'SELECT', false],
   ['app_system', 'password_resets', 'SELECT', false],
   ['app_runtime', 'users', 'DELETE', false],
+  ['app_runtime', 'templates', 'DELETE', false],
+  ['app_runtime', 'templates', 'UPDATE', true],
+  ['app_runtime', 'template_fields', 'DELETE', true],
+  ['app_system', 'templates', 'SELECT', false],
+  ['app_system', 'template_fields', 'SELECT', false],
 ];
 
 const client = new pg.Client({ connectionString: url });

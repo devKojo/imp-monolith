@@ -33,6 +33,31 @@ enum MembershipRole {
   MODERATOR
 }
 
+enum TemplateArchetype {
+  GIVEAWAY
+  QUIZ
+  SURVEY
+  INSTANT
+}
+
+enum TemplateStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum TemplateFieldKind {
+  FULL_NAME
+  EMAIL
+  PHONE
+  ADDRESS
+  WALLET
+  CHOICE
+  LIKERT
+  UPLOAD
+  TEXT
+  CONSENT
+}
+
 /// @owner business
 /// A Business is a tenant: its id is the tenantId used by RLS on every other tenant table.
 model Business {
@@ -43,6 +68,7 @@ model Business {
   updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
   memberships Membership[]
+  templates   Template[]
 
   @@map("businesses")
 }
@@ -189,4 +215,53 @@ model PasswordReset {
 
   @@index([userId])
   @@map("password_resets")
+}
+
+/// @owner templates
+/// Reusable entry-form blueprint for campaigns. Tenant-scoped (RLS). Soft-deleted via deletedAt
+/// (R-DAT-09). A published template is read-only until it is unpublished.
+model Template {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  name        String
+  archetype   TemplateArchetype
+  status      TemplateStatus    @default(DRAFT)
+  /// Optimistic concurrency: bumped on every change; writers send the version they read.
+  version     Int               @default(1)
+  createdById String            @map("created_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  publishedAt DateTime?         @map("published_at") @db.Timestamptz
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
+
+  business Business        @relation(fields: [tenantId], references: [id])
+  fields   TemplateField[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+  @@map("templates")
+}
+
+/// @owner templates
+/// One field of a template's entry form, in `position` order. Replaced as a set when the template
+/// is saved, so `position` is not unique-constrained (no transient conflicts while reordering).
+model TemplateField {
+  id         String            @id @default(uuid(7)) @db.Uuid
+  tenantId   String            @map("tenant_id") @db.Uuid
+  templateId String            @map("template_id") @db.Uuid
+  position   Int
+  kind       TemplateFieldKind
+  /// Machine name in the entry schema (snake_case), unique within the template.
+  key        String
+  label      String
+  helper     String            @default("")
+  required   Boolean           @default(false)
+  options    String[]          @default([])
+
+  template Template @relation(fields: [tenantId, templateId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, templateId, key])
+  @@index([tenantId, templateId, position])
+  @@map("template_fields")
 }
