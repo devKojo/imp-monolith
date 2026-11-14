@@ -12,17 +12,35 @@ import {
   updatePrize,
   winnersLabelKey,
 } from './logic';
-import type { Prize, TemplateRef } from './types';
+import type { CampaignField, Prize, TemplateRef } from './types';
 
 const NOW = new Date('2026-11-14T12:00:00Z');
 const hours = (n: number) => new Date(NOW.getTime() + n * 3_600_000).toISOString();
 const template = (over: Partial<TemplateRef> = {}): TemplateRef => ({
   id: 't1',
-  name: 'Entry',
+  slug: 'giveaway',
+  name: 'Giveaway',
   archetype: 'giveaway',
-  status: 'PUBLISHED',
+  description: '',
+  minContentFields: 0,
+  requiresPrizes: true,
+  fields: [],
   ...over,
 });
+const quiz = (): TemplateRef =>
+  template({ archetype: 'quiz', slug: 'quiz', requiresPrizes: false, minContentFields: 1 });
+const field = (kind: CampaignField['kind'], over: Partial<CampaignField> = {}): CampaignField => ({
+  id: `${kind}-${Math.random()}`,
+  kind,
+  key: kind,
+  label: kind,
+  helper: '',
+  required: false,
+  options: kind === 'quiz_question' || kind === 'choice' ? ['A', 'B'] : [],
+  correctIndex: null,
+  ...over,
+});
+const details = () => [field('email', { required: true }), field('consent', { required: true })];
 const prize = (id: string, name = 'Prize'): Prize => ({
   id,
   name,
@@ -36,6 +54,7 @@ const campaign = (over: Record<string, unknown> = {}) => ({
   startAt: null as string | null,
   endAt: hours(48) as string | null,
   prizes: [prize('p1')],
+  fields: details(),
   ...over,
 });
 const passes = (over: Record<string, unknown> = {}) =>
@@ -75,10 +94,9 @@ describe('launch checks', () => {
     expect(isLaunchable(campaign(), NOW)).toBe(true);
   });
 
-  it('needs a title and a published template', () => {
+  it('needs a title and a template', () => {
     expect(passes({ title: '  ' }).title).toBe(false);
     expect(passes({ template: null }).template).toBe(false);
-    expect(passes({ template: template({ status: 'DRAFT' }) }).template).toBe(false);
   });
 
   it('needs an end in the future, after any start', () => {
@@ -91,10 +109,8 @@ describe('launch checks', () => {
   it('requires prizes for giveaways and instant wins only, but rejects unfinished ones', () => {
     expect(passes({ prizes: [] }).prizes).toBe(false);
     expect(passes({ template: template({ archetype: 'instant' }), prizes: [] }).prizes).toBe(false);
-    expect(passes({ template: template({ archetype: 'quiz' }), prizes: [] }).prizes).toBe(true);
-    expect(
-      passes({ template: template({ archetype: 'quiz' }), prizes: [prize('p', ' ')] }).prizes,
-    ).toBe(false);
+    expect(passes({ template: quiz(), prizes: [] }).prizes).toBe(true);
+    expect(passes({ template: quiz(), prizes: [prize('p', ' ')] }).prizes).toBe(false);
     expect(passes({ prizes: [{ ...prize('p'), winners: 0 }] }).prizes).toBe(false);
   });
 });
@@ -142,23 +158,41 @@ describe('date and time fields', () => {
   });
 });
 
-describe('quiz questions at launch', () => {
-  const quizPasses = (count?: number) =>
+describe('details and content at launch', () => {
+  const quizQuestion = (over: Partial<CampaignField> = {}) =>
+    field('quiz_question', { label: 'Q?', options: ['A', 'B'], correctIndex: 0, ...over });
+  const passesQuiz = (fields: CampaignField[]) =>
     Object.fromEntries(
-      preflight(
-        campaign({ template: template({ archetype: 'quiz' }), prizes: [] }),
-        NOW,
-        count,
-      ).map((c) => [c.id, c.pass]),
+      preflight(campaign({ template: quiz(), prizes: [], fields }), NOW).map((c) => [c.id, c.pass]),
     );
 
-  it('asks a quiz for at least one question', () => {
-    expect(quizPasses(0)).toMatchObject({ questions: false });
-    expect(quizPasses(3)).toMatchObject({ questions: true });
+  it('needs a way to reach the participant and a required consent', () => {
+    expect(passes().details).toBe(true);
+    expect(passes({ fields: [] }).details).toBe(false);
+    expect(passes({ fields: [field('email')] }).details).toBe(false);
+    expect(passes({ fields: [field('email', { required: true }), field('consent')] }).details).toBe(
+      false,
+    );
+    expect(
+      passes({ fields: [field('phone', { required: true }), field('consent', { required: true })] })
+        .details,
+    ).toBe(true);
   });
 
-  it('does not ask when the count is not known, or the campaign is not a quiz', () => {
-    expect(quizPasses()).not.toHaveProperty('questions');
-    expect(passes()).not.toHaveProperty('questions');
+  it('asks a quiz for at least one finished question', () => {
+    expect(passesQuiz(details()).content).toBe(false);
+    expect(passesQuiz([...details(), quizQuestion()]).content).toBe(true);
+    expect(passes().content).toBe(true); // a giveaway needs no questions
+  });
+
+  it('rejects an unfinished question, however many there are', () => {
+    for (const q of [
+      quizQuestion({ label: ' ' }),
+      quizQuestion({ correctIndex: null }),
+      quizQuestion({ options: ['A', ''] }),
+      quizQuestion({ options: ['A', 'a'] }),
+    ]) {
+      expect(passesQuiz([...details(), quizQuestion(), q]).content).toBe(false);
+    }
   });
 });

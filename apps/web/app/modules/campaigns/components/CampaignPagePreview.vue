@@ -2,10 +2,9 @@
 import { computed } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
-import ParticipantPreview from '../../templates/components/ParticipantPreview.vue';
-import type { TemplateBlock } from '../../templates/types';
 import { winnersLabelKey } from '../logic';
-import type { Prize } from '../types';
+import type { CampaignField, Prize } from '../types';
+import ParticipantPreview from './ParticipantPreview.vue';
 
 /**
  * What participants will see, built from the same fields: the closing time, the headline and text, the
@@ -20,7 +19,7 @@ const props = defineProps<{
   prizes: Prize[];
   /** Short label above the headline, for example the kind of campaign. */
   kicker: string;
-  blocks: TemplateBlock[];
+  blocks: CampaignField[];
   hasTemplate: boolean;
   zone: string;
   device: 'mobile' | 'desktop';

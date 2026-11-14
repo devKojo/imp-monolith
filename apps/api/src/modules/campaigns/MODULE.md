@@ -1,7 +1,9 @@
 # Campaigns
 
-What a business runs from a published template: the page text, the prize tiers and the schedule. The entry
-form comes from the template (see `modules/templates`). Part of Phase 2 groundwork.
+What a business runs from a built-in campaign type (its template): the page text, the prize tiers, the
+schedule, the fields (what participants are asked about themselves, and the questions) and the settings (a
+quiz's time limit and pass mark). The template only says which kinds of field a campaign of that type may use
+(see `modules/templates`); the content itself belongs to the campaign.
 
 ## Responsibilities
 
@@ -10,18 +12,20 @@ form comes from the template (see `modules/templates`). Part of Phase 2 groundwo
 - Decide, on the server, whether a campaign can launch (pre-flight checks) and give it its public address.
 - Run the lifecycle: launch, pause, resume, cancel; the schedule moves a campaign to live and completed.
 - Detect two people changing the same campaign at once (version check) and refuse the later write.
-- Tell the templates module whether a template is in use, so a running campaign keeps its entry form.
+- Keep a campaign's fields within what its template allows (kinds and how many), and start a new campaign with
+  the fields its type begins with (for example the email field).
 - Record every change in the audit trail.
 
 ## Data (tenant tables, RLS forced)
 
-| Table             | Notes                                                                                                                                                                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `campaigns`       | `tenant_id`, optional `template_id` (composite FK `(tenant_id, template_id)`, so only a template of the same business), `title`, `summary`, `slug` (unique across businesses, null until launch), `status`, `start_at`, `end_at`, `version`, `launched_at`, `deleted_at` (soft delete) |
-| `campaign_prizes` | Composite FK `(tenant_id, campaign_id)`; `position`, `name`, `value_label` (free text), `winners` (1 to 100000), `description`                                                                                                                                                         |
+| Table             | Notes                                                                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `campaigns`       | `tenant_id`, optional `template_id` (a built-in type, global), `title`, `summary`, `slug` (unique across businesses, null until launch), `status`, `start_at`, `end_at`, `settings` (JSON, e.g. `{"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}`), `version`, `launched_at`, `deleted_at` |
+| `campaign_prizes` | Composite FK `(tenant_id, campaign_id)`; `position`, `name`, `value_label` (free text), `winners` (1 to 100000), `description`                                                                                                                                                                   |
+| `campaign_fields` | Composite FK `(tenant_id, campaign_id)`; `position`, `kind`, `key` (snake_case, unique in the campaign), `label`, `helper`, `required`, `options`, `correct_index` (only a quiz question; checked in the database)                                                                               |
 
 - Same fail-closed `tenant_isolation` policy as every tenant table. `app_runtime` can `SELECT/INSERT/UPDATE`
-  campaigns (no `DELETE`: deletion is `deleted_at`) and also `DELETE` prizes (replaced as a set on save).
+  campaigns (no `DELETE`: deletion is `deleted_at`) and also `DELETE` prizes and fields (replaced as a set on save).
 - Database checks mirror the application rules: title and summary length, version >= 1, end after start,
   slug format, and "a campaign that is not a draft has a slug and an end time".
 - Prize values are text shown as written. The platform does not hold or move money.
@@ -41,18 +45,18 @@ business) gets `403 NO_ACTIVE_BUSINESS`.
 
 Writes need the session cookie, the `X-CSRF-Token` header and a permitted Origin (same as `/auth`).
 
-| Route                 | Notes                                                                                                                                                                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /`               | `{ items: CampaignSummary[] }`, newest first, with the template. Query: `status=` (the effective status), `q=` (title contains)                                                                                               |
-| `GET /:id`            | `CampaignDetail` with `prizes` in order; `404` if missing, deleted or another business's                                                                                                                                      |
-| `POST /`              | `{ title, templateId? }` -> `201` draft at `version: 1`; `422 CAMPAIGN_INVALID` if the template is not available                                                                                                              |
-| `PUT /:id`            | `{ expectedVersion, title, summary, templateId, startAt, endAt, prizes[] }` replaces a draft; `412 VERSION_CONFLICT` if stale; `409 CAMPAIGN_LOCKED` if not a draft; `422 CAMPAIGN_INVALID` if the end is not after the start |
-| `POST /:id/launch`    | `{ expectedVersion }`; runs the checks; `422 PREFLIGHT_FAILED` with `error.details.failed`; goes `LIVE`, or `SCHEDULED` if the start is ahead                                                                                 |
-| `POST /:id/pause`     | `{ expectedVersion }` from scheduled or live -> `PAUSED`; `409 CAMPAIGN_STATE` otherwise (including one that has ended)                                                                                                       |
-| `POST /:id/resume`    | `{ expectedVersion }` from paused -> `LIVE` or `SCHEDULED` by the start time                                                                                                                                                  |
-| `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (final)                                                                                                                                                   |
-| `POST /:id/duplicate` | `{ title? }` -> `201` new draft (own ids, no schedule, no address), default title "`<title> (copy)`"                                                                                                                          |
-| `DELETE /:id`         | Soft delete of a draft -> `204`; `409 CAMPAIGN_LOCKED` otherwise                                                                                                                                                              |
+| Route                 | Notes                                                                                                                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /`               | `{ items: CampaignSummary[] }`, newest first, with the template. Query: `status=` (the effective status), `q=` (title contains)                                                                                                                   |
+| `GET /:id`            | `CampaignDetail` with `prizes` in order; `404` if missing, deleted or another business's                                                                                                                                                          |
+| `POST /`              | `{ title, templateId? }` -> `201` draft at `version: 1`; `422 CAMPAIGN_INVALID` if the template is not available; a new campaign starts with the type's default fields and settings                                                               |
+| `PUT /:id`            | `{ expectedVersion, title, summary, templateId, startAt, endAt, prizes[], fields[], settings }` replaces a draft; `412 VERSION_CONFLICT` if stale; `409 CAMPAIGN_LOCKED` if not a draft; `422 CAMPAIGN_INVALID` if the end is not after the start |
+| `POST /:id/launch`    | `{ expectedVersion }`; runs the checks; `422 PREFLIGHT_FAILED` with `error.details.failed`; goes `LIVE`, or `SCHEDULED` if the start is ahead                                                                                                     |
+| `POST /:id/pause`     | `{ expectedVersion }` from scheduled or live -> `PAUSED`; `409 CAMPAIGN_STATE` otherwise (including one that has ended)                                                                                                                           |
+| `POST /:id/resume`    | `{ expectedVersion }` from paused -> `LIVE` or `SCHEDULED` by the start time                                                                                                                                                                      |
+| `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (final)                                                                                                                                                                       |
+| `POST /:id/duplicate` | `{ title? }` -> `201` new draft (own ids, no schedule, no address), default title "`<title> (copy)`"                                                                                                                                              |
+| `DELETE /:id`         | Soft delete of a draft -> `204`; `409 CAMPAIGN_LOCKED` otherwise                                                                                                                                                                                  |
 
 Unknown request keys are rejected (`400`). Ids are validated as UUIDs; dates must be ISO instants with an offset.
 
@@ -75,10 +79,13 @@ persist these moves; until then, `status` filters in the list use the effective 
 ### Launch checks (server decides)
 
 1. A title.
-2. A published template (not a draft, not deleted).
+2. A campaign type (template).
 3. An end time in the future, after the start if there is one.
-4. Prizes: at least one for a giveaway or instant-win template (each with a name and one or more winners);
-   optional for quizzes and surveys, but any prize that exists must be complete.
+4. Prizes: at least one if the type requires prizes (giveaway, instant win), and every prize complete.
+5. Details: a way to reach the participant (an email or phone field) and a required consent.
+6. Content: at least as many questions as the type needs (a quiz or survey needs one), and every field complete
+   (a label; a choice or quiz question has two or more different answers; a quiz question has its correct
+   answer marked).
 
 The web app shows the same list while editing to guide people; only the server's result decides.
 
@@ -88,14 +95,17 @@ The web app shows the same list while editing to guide people; only the server's
 is taken, and never changes (R-TEN-07). It is unique across all businesses because the public page is
 `/c/{slug}`.
 
-## Templates and campaigns
+## Templates and fields
 
-- A campaign can only use a template of its own business (composite foreign key; the service also checks).
-- A template that a running campaign uses (scheduled, live or paused, not yet past its end) cannot be
-  unpublished or deleted: the templates module asks this module's `PrismaCampaignUsage` through a port and
-  answers `409 TEMPLATE_IN_USE`. Cancel or finish the campaign first.
-- If a template is later deleted or made unavailable, a draft campaign shows no template and fails the
-  template check until one is chosen.
+- A campaign uses one of the built-in types. They are the same for every business, so any business may use any of
+  them; there is no per-business template.
+- Saving a draft checks the fields against the type: only allowed kinds, no more of a kind than the type allows
+  (for example one email field), at most 60 fields and 50 questions, and at most 6 answers on a quiz question.
+  Anything else is `422 CAMPAIGN_INVALID`.
+- **A draft may be unfinished.** Saving does not require complete questions; launching does (check 6). Machine
+  names (`email`, `quiz_question_2`) are made by the server on every save, and fields get new ids each save.
+- Quiz settings are only kept for a quiz; for other types `settings` is stored empty.
+- Fields and settings are copied when a campaign is duplicated.
 
 ## Concurrency
 
@@ -113,7 +123,7 @@ Running campaigns of every business, soonest to close first, for the `/discover`
 `type`, `cursor` (opaque keyset). Cacheable (`public, s-maxage=30, stale-while-revalidate=300`), no cookies.
 
 - **How it reads across businesses.** `withPublic` sets the transaction-local `app.public_read = 'on'`, which opens
-  read-only `public_read` policies on `campaigns`, `campaign_prizes`, `templates` and `businesses`. They allow only
+  read-only `public_read` policies on `campaigns`, `campaign_prizes` and `businesses` (the built-in types are global and readable on their own). They allow only
   running, undeleted campaigns with a slug and a future end, and the rows those campaigns need. Nothing else
   (fields, users, sessions, audit, other statuses) is reachable, and the scope cannot write.
 - `GET /api/v1/public/campaigns/:slug` returns one campaign (the same public fields) for its page `/c/{slug}`; anything

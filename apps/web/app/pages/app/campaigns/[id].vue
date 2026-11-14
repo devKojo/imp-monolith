@@ -6,12 +6,10 @@ import { toApiError } from '../../../modules/auth/errors';
 import BusinessShell from '../../../modules/business/components/BusinessShell.vue';
 import CampaignChecks from '../../../modules/campaigns/components/CampaignChecks.vue';
 import CampaignPagePreview from '../../../modules/campaigns/components/CampaignPagePreview.vue';
+import ContentEditor from '../../../modules/campaigns/components/ContentEditor.vue';
 import PrizeEditor from '../../../modules/campaigns/components/PrizeEditor.vue';
-import QuizEditor from '../../../modules/quiz/components/QuizEditor.vue';
-import { emptyQuiz, firstProblem, fromDefinition } from '../../../modules/quiz/logic';
-import type { QuizDraft } from '../../../modules/quiz/types';
-import { useQuiz } from '../../../modules/quiz/useQuiz';
 import { campaignErrorKey } from '../../../modules/campaigns/errors';
+import { defaultSettingsFor, fitToTemplate } from '../../../modules/campaigns/fields';
 import {
   LIMITS,
   addPrize,
@@ -27,9 +25,14 @@ import {
   updatePrize,
   type DateParts,
 } from '../../../modules/campaigns/logic';
-import type { Campaign, Prize } from '../../../modules/campaigns/types';
+import type {
+  Campaign,
+  CampaignField,
+  CampaignSettings,
+  Prize,
+  TemplateRef,
+} from '../../../modules/campaigns/types';
 import { useCampaigns } from '../../../modules/campaigns/useCampaigns';
-import type { TemplateBlock, TemplateSummary } from '../../../modules/templates/types';
 import { useTemplates } from '../../../modules/templates/useTemplates';
 
 /**
@@ -45,31 +48,22 @@ definePageMeta({ middleware: 'auth', portal: 'business' });
 const route = useRoute();
 const id = String(route.params.id);
 const store = useCampaigns();
-const quizApi = useQuiz('business');
 const templatesApi = useTemplates();
 const toast = useToast();
 
 const state = ref<'loading' | 'ready' | 'notfound' | 'error'>('loading');
 const draft = ref<Campaign | null>(null);
 const savedJson = ref('');
-const campaignDirty = computed(
+const dirty = computed(
   () => draft.value !== null && JSON.stringify(draft.value) !== savedJson.value,
 );
-// The quiz questions of a quiz campaign are saved by their own endpoint, together with Save.
-const quiz = ref<QuizDraft>(emptyQuiz());
-const quizSavedJson = ref(JSON.stringify(emptyQuiz()));
-const quizLoaded = ref(false);
-const quizDirty = computed(
-  () => isQuiz.value && JSON.stringify(quiz.value) !== quizSavedJson.value,
-);
-const showQuizProblems = ref(false);
-const dirty = computed(() => campaignDirty.value || quizDirty.value);
+// Explanations of what is unfinished appear once the person has saved (or tried to launch).
+const showProblems = ref(false);
 const busy = ref(false);
 const problem = ref('');
 const conflict = ref(false);
 
-const available = ref<TemplateSummary[]>([]);
-const blocks = ref<TemplateBlock[]>([]);
+const available = ref<TemplateRef[]>([]);
 
 useHead({ title: computed(() => draft.value?.title || t('cmp.title')) });
 
@@ -81,21 +75,9 @@ const titleProblem = computed(() =>
   draft.value && draft.value.title.trim() === '' ? t('cmp.title.required') : undefined,
 );
 
-const isQuiz = computed(() => draft.value?.template?.archetype === 'quiz');
-const quizProblem = computed(() => (isQuiz.value ? firstProblem(quiz.value.questions) : null));
-// The launch check counts only questions that are complete.
-const questionCount = computed(() =>
-  isQuiz.value ? (quizProblem.value ? 0 : quiz.value.questions.length) : undefined,
-);
-
-const checks = computed(() =>
-  draft.value ? preflight(draft.value, new Date(), questionCount.value) : [],
-);
+const checks = computed(() => (draft.value ? preflight(draft.value, new Date()) : []));
 const launchable = computed(
-  () =>
-    draft.value !== null &&
-    isLaunchable(draft.value, new Date(), questionCount.value) &&
-    !titleProblem.value,
+  () => draft.value !== null && isLaunchable(draft.value, new Date()) && !titleProblem.value,
 );
 const runningStatus = computed(
   () => draft.value?.status === 'LIVE' || draft.value?.status === 'SCHEDULED',
@@ -144,29 +126,6 @@ const startNow = computed({
 const zones = computed(() => [...new Set([zone.value, 'UTC'])]);
 
 // ---- loading and the template choice
-async function loadBlocks(templateId: string | null) {
-  blocks.value = [];
-  if (!templateId) return;
-  try {
-    blocks.value = (await templatesApi.get(templateId)).blocks;
-  } catch {
-    blocks.value = []; // the preview just shows no form
-  }
-}
-
-async function loadQuiz() {
-  quizLoaded.value = false;
-  if (!isQuiz.value) return;
-  try {
-    const loaded = fromDefinition(await quizApi.definition(id), () => crypto.randomUUID());
-    quiz.value = loaded;
-    quizSavedJson.value = JSON.stringify(loaded);
-    quizLoaded.value = true;
-  } catch {
-    problem.value = t('quiz.error.generic');
-  }
-}
-
 async function load() {
   state.value = 'loading';
   problem.value = '';
@@ -174,14 +133,12 @@ async function load() {
   try {
     const [campaign, list] = await Promise.all([
       store.get(id),
-      templatesApi.list().catch(() => [] as TemplateSummary[]),
+      templatesApi.list().catch(() => [] as TemplateRef[]),
     ]);
     available.value = list;
     draft.value = clone(campaign);
     savedJson.value = JSON.stringify(campaign);
     syncParts();
-    await loadBlocks(campaign.templateId);
-    await loadQuiz();
     state.value = 'ready';
   } catch (e) {
     state.value = toApiError(e).status === 404 ? 'notfound' : 'error';
@@ -190,29 +147,43 @@ async function load() {
 onMounted(load);
 
 const templateOptions = computed(() => {
+  const rows = available.value.map((tpl) => ({ value: tpl.id, label: tpl.name }));
   const chosen = draft.value?.templateId ?? null;
-  const rows = available.value
-    .filter((tpl) => tpl.status === 'PUBLISHED' || tpl.id === chosen)
-    .map((tpl) => ({ value: tpl.id, label: tpl.name }));
   if (chosen && !rows.some((r) => r.value === chosen)) {
     rows.push({ value: chosen, label: t('cmp.template.unavailable') });
   }
   return rows;
 });
+const templateHint = computed(
+  () => draft.value?.template?.description || t('cmp.field.template.hint'),
+);
 
-async function chooseTemplate(templateId: string) {
+/**
+ * Moving to another type keeps the fields the new type allows, starts from the type's defaults when
+ * nothing is left, and brings the settings that type uses (the quiz time limit and pass mark).
+ */
+function chooseTemplate(templateId: string) {
   if (!draft.value) return;
   const found = available.value.find((tpl) => tpl.id === templateId) ?? null;
+  const uid = () => crypto.randomUUID();
   draft.value = {
     ...draft.value,
     templateId: found ? templateId : null,
-    template: found
-      ? { id: found.id, name: found.name, archetype: found.archetype, status: found.status }
-      : null,
+    template: found,
+    fields: found ? fitToTemplate(draft.value.fields, found, uid) : [],
+    settings:
+      found?.archetype === draft.value.template?.archetype
+        ? draft.value.settings
+        : defaultSettingsFor(found),
   };
-  await loadBlocks(found ? templateId : null);
-  if (isQuiz.value && !quizLoaded.value) await loadQuiz();
 }
+
+const setFields = (fields: CampaignField[]) => {
+  if (draft.value) draft.value = { ...draft.value, fields };
+};
+const setSettings = (settings: CampaignSettings) => {
+  if (draft.value) draft.value = { ...draft.value, settings };
+};
 
 // ---- prizes
 const setPrizes = (next: Prize[]) => {
@@ -229,7 +200,6 @@ function adopt(next: Campaign) {
   syncParts();
 }
 function failed(e: unknown) {
-  if (e instanceof Error && e.message === 'quiz') return; // the questions explain themselves
   const err = toApiError(e);
   if (err.code === 'VERSION_CONFLICT') conflict.value = true;
   else problem.value = t(campaignErrorKey(err));
@@ -253,19 +223,8 @@ async function attempt(action: () => Promise<void>): Promise<boolean> {
 const save = () =>
   attempt(async () => {
     if (titleProblem.value) throw new Error('title');
-    if (quizDirty.value && quizProblem.value) {
-      showQuizProblems.value = true;
-      throw new Error('quiz');
-    }
-    if (campaignDirty.value) adopt(await store.save(draft.value!));
-    if (quizDirty.value) {
-      const saved = fromDefinition(await quizApi.saveDefinition(id, quiz.value), () =>
-        crypto.randomUUID(),
-      );
-      quiz.value = saved;
-      quizSavedJson.value = JSON.stringify(saved);
-      showQuizProblems.value = false;
-    }
+    showProblems.value = true;
+    adopt(await store.save(draft.value!));
     toast.push(t('cmp.saved'));
   });
 async function launch() {
@@ -434,7 +393,7 @@ const crumbs = computed(() => [
               :label="t('cmp.field.template')"
               :options="templateOptions"
               :placeholder="t('cmp.template.choose')"
-              :hint="t('cmp.field.template.hint')"
+              :hint="templateHint"
               :disabled="readonly"
               @update:model-value="chooseTemplate"
             />
@@ -449,11 +408,14 @@ const crumbs = computed(() => [
             @remove="(prizeId) => setPrizes(removePrize(draft!.prizes, prizeId))"
           />
 
-          <QuizEditor
-            v-if="isQuiz"
-            v-model="quiz"
+          <ContentEditor
+            :template="draft.template"
+            :fields="draft.fields"
+            :settings="draft.settings"
             :readonly="readonly"
-            :show-problems="showQuizProblems"
+            :show-problems="showProblems"
+            @update:fields="setFields"
+            @update:settings="setSettings"
           />
 
           <UiCard as="section" aria-labelledby="schedule-title" class="schedule">
@@ -497,7 +459,7 @@ const crumbs = computed(() => [
               :end-at="draft.endAt"
               :prizes="draft.prizes"
               :kicker="kicker"
-              :blocks="blocks"
+              :blocks="draft.fields"
               :has-template="draft.template !== null"
               :zone="zone"
               :device="device === 'desktop' ? 'desktop' : 'mobile'"

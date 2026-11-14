@@ -1,7 +1,6 @@
 import type { Fetcher } from '../auth/api';
 import { toApiError } from '../auth/errors';
-import type { AttemptView, PublicCampaignPage, QuizDefinition, QuizDraft, QuizInfo } from './types';
-import { toSaveBody } from './logic';
+import type { AttemptView, PublicCampaignPage, QuizInfo } from './types';
 
 type Method = 'GET' | 'POST' | 'PUT';
 
@@ -28,11 +27,6 @@ export function createQuizApi(fetcher: Fetcher, root = '/api/v1') {
   }
 
   return {
-    // The business: write the questions.
-    definition: (campaignId: string) => call<QuizDefinition>('GET', `/quizzes/${campaignId}`),
-    saveDefinition: (campaignId: string, quiz: QuizDraft, csrf: string) =>
-      call<QuizDefinition>('PUT', `/quizzes/${campaignId}`, { body: toSaveBody(quiz), csrf }),
-
     // Visitors: the public page and the rules.
     campaign: (slug: string) => call<PublicCampaignPage>('GET', `/public/campaigns/${slug}`),
     info: (slug: string) => call<QuizInfo>('GET', `/public/quiz/${slug}`),

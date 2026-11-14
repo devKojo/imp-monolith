@@ -5,9 +5,20 @@ import { ApiError } from '../auth/errors';
 import { createCampaignsApi, toUpdateBody } from './api';
 import { campaignErrorKey } from './errors';
 import { canManageCampaigns, canOperateCampaigns } from './permissions';
-import type { Campaign } from './types';
+import type { Campaign, TemplateRef } from './types';
 
 type Call = { url: string; method: string; body?: unknown; headers?: Record<string, string> };
+
+const giveaway: TemplateRef = {
+  id: 't1',
+  slug: 'giveaway',
+  name: 'Giveaway',
+  archetype: 'giveaway',
+  description: '',
+  minContentFields: 0,
+  requiresPrizes: true,
+  fields: [],
+};
 
 const campaign: Campaign = {
   id: 'c1',
@@ -16,10 +27,23 @@ const campaign: Campaign = {
   slug: null,
   status: 'DRAFT',
   templateId: 't1',
-  template: { id: 't1', name: 'Entry', archetype: 'giveaway', status: 'PUBLISHED' },
+  template: giveaway,
   startAt: null,
   endAt: '2026-12-01T12:00:00.000Z',
   prizes: [{ id: 'client-id', name: 'Grand', valueLabel: '1,000', winners: 2, description: 'x' }],
+  fields: [
+    {
+      id: 'f1',
+      kind: 'email',
+      key: 'email',
+      label: 'Email',
+      helper: '',
+      required: true,
+      options: [],
+      correctIndex: null,
+    },
+  ],
+  settings: {},
   version: 4,
   updatedAt: '2026-11-14T10:00:00.000Z',
   launchedAt: null,
@@ -39,6 +63,26 @@ function client(reply: unknown = campaign, fails = false) {
 }
 
 describe('save body', () => {
+  it('sends fields without ids or machine names, and the quiz settings only when there are some', () => {
+    const body = toUpdateBody(campaign);
+    expect(body.fields).toEqual([
+      {
+        kind: 'email',
+        label: 'Email',
+        helper: '',
+        required: true,
+        options: [],
+        correctIndex: null,
+      },
+    ]);
+    expect(body.settings).toEqual({ quiz: null });
+    const quiz = toUpdateBody({
+      ...campaign,
+      settings: { quiz: { timeLimitMinutes: 10, passPercent: 80 } },
+    });
+    expect(quiz.settings).toEqual({ quiz: { timeLimitMinutes: 10, passPercent: 80 } });
+  });
+
   it('sends the version that was read, the trimmed title, and prizes without client ids', () => {
     const body = toUpdateBody(campaign);
     expect(body).toMatchObject({

@@ -16,6 +16,16 @@ export const toUpdateBody = (c: Campaign) => ({
     winners,
     description,
   })),
+  // Fields go without ids and machine names: the server numbers and names them.
+  fields: c.fields.map(({ kind, label, helper, required, options, correctIndex }) => ({
+    kind,
+    label,
+    helper,
+    required,
+    options,
+    correctIndex,
+  })),
+  settings: { quiz: c.settings.quiz ?? null },
 });
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
