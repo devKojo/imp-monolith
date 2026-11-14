@@ -37,7 +37,7 @@ defineProps<{ active: 'signin' | 'register' }>();
   background: var(--ui-color-surface-subtle);
   border-radius: var(--ui-radius-lg);
 }
-.switch :deep(.ui-button) {
+.switch :deep(.ui-button-wrap) {
   flex: 1;
 }
 </style>
