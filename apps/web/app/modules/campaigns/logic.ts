@@ -58,6 +58,8 @@ export const winnersLabelKey = (
 export function preflight(
   c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes'>,
   now: Date,
+  /** Valid quiz questions written so far; leave out when the campaign is not a quiz. */
+  questionCount?: number,
 ): PreflightCheck[] {
   const needsPrizes = c.template !== null && ['giveaway', 'instant'].includes(c.template.archetype);
   const prizesComplete = c.prizes.every((p) => p.name.trim() !== '' && p.winners >= 1);
@@ -68,13 +70,17 @@ export function preflight(
     { id: 'template', pass: c.template !== null && c.template.status === 'PUBLISHED' },
     { id: 'schedule', pass: end !== null && end > now && (start === null || start < end) },
     { id: 'prizes', pass: prizesComplete && (!needsPrizes || c.prizes.length > 0) },
+    ...(c.template?.archetype === 'quiz' && questionCount !== undefined
+      ? [{ id: 'questions' as const, pass: questionCount > 0 }]
+      : []),
   ];
 }
 
 export const isLaunchable = (
   c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes'>,
   now: Date,
-): boolean => preflight(c, now).every((p) => p.pass);
+  questionCount?: number,
+): boolean => preflight(c, now, questionCount).every((p) => p.pass);
 
 /** The wall-clock date and time of an instant in a zone, for the date and time fields. */
 export type DateParts = { date: string; time: string; zone: string };

@@ -7,6 +7,10 @@ import BusinessShell from '../../../modules/business/components/BusinessShell.vu
 import CampaignChecks from '../../../modules/campaigns/components/CampaignChecks.vue';
 import CampaignPagePreview from '../../../modules/campaigns/components/CampaignPagePreview.vue';
 import PrizeEditor from '../../../modules/campaigns/components/PrizeEditor.vue';
+import QuizEditor from '../../../modules/quiz/components/QuizEditor.vue';
+import { emptyQuiz, firstProblem, fromDefinition } from '../../../modules/quiz/logic';
+import type { QuizDraft } from '../../../modules/quiz/types';
+import { useQuiz } from '../../../modules/quiz/useQuiz';
 import { campaignErrorKey } from '../../../modules/campaigns/errors';
 import {
   LIMITS,
@@ -41,15 +45,25 @@ definePageMeta({ middleware: 'auth', portal: 'business' });
 const route = useRoute();
 const id = String(route.params.id);
 const store = useCampaigns();
+const quizApi = useQuiz('business');
 const templatesApi = useTemplates();
 const toast = useToast();
 
 const state = ref<'loading' | 'ready' | 'notfound' | 'error'>('loading');
 const draft = ref<Campaign | null>(null);
 const savedJson = ref('');
-const dirty = computed(
+const campaignDirty = computed(
   () => draft.value !== null && JSON.stringify(draft.value) !== savedJson.value,
 );
+// The quiz questions of a quiz campaign are saved by their own endpoint, together with Save.
+const quiz = ref<QuizDraft>(emptyQuiz());
+const quizSavedJson = ref(JSON.stringify(emptyQuiz()));
+const quizLoaded = ref(false);
+const quizDirty = computed(
+  () => isQuiz.value && JSON.stringify(quiz.value) !== quizSavedJson.value,
+);
+const showQuizProblems = ref(false);
+const dirty = computed(() => campaignDirty.value || quizDirty.value);
 const busy = ref(false);
 const problem = ref('');
 const conflict = ref(false);
@@ -67,9 +81,21 @@ const titleProblem = computed(() =>
   draft.value && draft.value.title.trim() === '' ? t('cmp.title.required') : undefined,
 );
 
-const checks = computed(() => (draft.value ? preflight(draft.value, new Date()) : []));
+const isQuiz = computed(() => draft.value?.template?.archetype === 'quiz');
+const quizProblem = computed(() => (isQuiz.value ? firstProblem(quiz.value.questions) : null));
+// The launch check counts only questions that are complete.
+const questionCount = computed(() =>
+  isQuiz.value ? (quizProblem.value ? 0 : quiz.value.questions.length) : undefined,
+);
+
+const checks = computed(() =>
+  draft.value ? preflight(draft.value, new Date(), questionCount.value) : [],
+);
 const launchable = computed(
-  () => draft.value !== null && isLaunchable(draft.value, new Date()) && !titleProblem.value,
+  () =>
+    draft.value !== null &&
+    isLaunchable(draft.value, new Date(), questionCount.value) &&
+    !titleProblem.value,
 );
 const runningStatus = computed(
   () => draft.value?.status === 'LIVE' || draft.value?.status === 'SCHEDULED',
@@ -128,6 +154,19 @@ async function loadBlocks(templateId: string | null) {
   }
 }
 
+async function loadQuiz() {
+  quizLoaded.value = false;
+  if (!isQuiz.value) return;
+  try {
+    const loaded = fromDefinition(await quizApi.definition(id), () => crypto.randomUUID());
+    quiz.value = loaded;
+    quizSavedJson.value = JSON.stringify(loaded);
+    quizLoaded.value = true;
+  } catch {
+    problem.value = t('quiz.error.generic');
+  }
+}
+
 async function load() {
   state.value = 'loading';
   problem.value = '';
@@ -142,6 +181,7 @@ async function load() {
     savedJson.value = JSON.stringify(campaign);
     syncParts();
     await loadBlocks(campaign.templateId);
+    await loadQuiz();
     state.value = 'ready';
   } catch (e) {
     state.value = toApiError(e).status === 404 ? 'notfound' : 'error';
@@ -171,6 +211,7 @@ async function chooseTemplate(templateId: string) {
       : null,
   };
   await loadBlocks(found ? templateId : null);
+  if (isQuiz.value && !quizLoaded.value) await loadQuiz();
 }
 
 // ---- prizes
@@ -188,6 +229,7 @@ function adopt(next: Campaign) {
   syncParts();
 }
 function failed(e: unknown) {
+  if (e instanceof Error && e.message === 'quiz') return; // the questions explain themselves
   const err = toApiError(e);
   if (err.code === 'VERSION_CONFLICT') conflict.value = true;
   else problem.value = t(campaignErrorKey(err));
@@ -211,7 +253,19 @@ async function attempt(action: () => Promise<void>): Promise<boolean> {
 const save = () =>
   attempt(async () => {
     if (titleProblem.value) throw new Error('title');
-    adopt(await store.save(draft.value!));
+    if (quizDirty.value && quizProblem.value) {
+      showQuizProblems.value = true;
+      throw new Error('quiz');
+    }
+    if (campaignDirty.value) adopt(await store.save(draft.value!));
+    if (quizDirty.value) {
+      const saved = fromDefinition(await quizApi.saveDefinition(id, quiz.value), () =>
+        crypto.randomUUID(),
+      );
+      quiz.value = saved;
+      quizSavedJson.value = JSON.stringify(saved);
+      showQuizProblems.value = false;
+    }
     toast.push(t('cmp.saved'));
   });
 async function launch() {
@@ -393,6 +447,13 @@ const crumbs = computed(() => [
             @update="(prizeId, patch) => setPrizes(updatePrize(draft!.prizes, prizeId, patch))"
             @move="(prizeId, direction) => setPrizes(movePrize(draft!.prizes, prizeId, direction))"
             @remove="(prizeId) => setPrizes(removePrize(draft!.prizes, prizeId))"
+          />
+
+          <QuizEditor
+            v-if="isQuiz"
+            v-model="quiz"
+            :readonly="readonly"
+            :show-problems="showQuizProblems"
           />
 
           <UiCard as="section" aria-labelledby="schedule-title" class="schedule">

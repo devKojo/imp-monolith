@@ -116,6 +116,8 @@ Running campaigns of every business, soonest to close first, for the `/discover`
   read-only `public_read` policies on `campaigns`, `campaign_prizes`, `templates` and `businesses`. They allow only
   running, undeleted campaigns with a slug and a future end, and the rows those campaigns need. Nothing else
   (fields, users, sessions, audit, other statuses) is reachable, and the scope cannot write.
+- `GET /api/v1/public/campaigns/:slug` returns one campaign (the same public fields) for its page `/c/{slug}`; anything
+  not visible is the same 404.
 - **Visible** means LIVE, or SCHEDULED and already started, not deleted, not ended, business not suspended.
 - **Deviation:** businesses still PENDING are listed, because sign-up does not yet include an approval step.
   Suspended ones are not.
@@ -124,8 +126,8 @@ Running campaigns of every business, soonest to close first, for the `/discover`
 
 ## Not built yet
 
-- **The public campaign page** (`/c/{slug}`) and participation (entering, one-time codes, draws). Entering needs
-  the participation module. The listing links to `/c/{slug}`, which has no page yet.
+- **Participation for other kinds of campaign.** Quizzes are covered by the `quiz` module; giveaways, polls,
+  surveys and instant wins cannot be entered yet. The page `/c/{slug}` exists, and offers entry for quizzes only.
 - **Events.** Launch, pause and cancel should emit outbox events (identifiers only, R-EVT-12) once the outbox
   publisher exists.
 - **Contracts** are hand-written here and in the web app; replace with the generated client (R-STK-04). The

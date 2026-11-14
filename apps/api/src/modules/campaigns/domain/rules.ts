@@ -73,6 +73,8 @@ export type PreflightInput = {
   startAt: Date | null;
   endAt: Date | null;
   prizes: readonly PrizeInput[];
+  /** Questions written so far, for a quiz campaign; left out when it is not known or not a quiz. */
+  questionCount?: number;
 };
 
 /**
@@ -93,6 +95,9 @@ export function preflight(input: PreflightInput, now: Date): PreflightCheck[] {
         (input.startAt === null || input.startAt < input.endAt),
     },
     { id: 'prizes', pass: prizesComplete && (!needsPrizes || input.prizes.length > 0) },
+    ...(input.template?.archetype === 'quiz' && input.questionCount !== undefined
+      ? [{ id: 'questions' as const, pass: input.questionCount > 0 }]
+      : []),
   ];
 }
 

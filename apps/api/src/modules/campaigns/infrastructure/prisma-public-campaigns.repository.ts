@@ -21,6 +21,7 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
       { OR: [{ status: 'LIVE' }, { status: 'SCHEDULED', startAt: { lte: query.now } }] },
       { business: { status: { in: ['PENDING', 'ACTIVE'] } } },
     ];
+    if (query.slug) and.push({ slug: query.slug });
     if (query.archetypes) {
       and.push({
         template: {

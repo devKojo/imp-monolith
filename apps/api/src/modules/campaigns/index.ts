@@ -2,7 +2,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IdentityModule } from '@/modules/identity';
 import { CampaignsService } from './application/campaigns.service';
-import type { TemplateLookup } from './application/ports';
+import type { QuestionCounter, TemplateLookup } from './application/ports';
 import { PublicDiscoveryService } from './application/public-discovery.service';
 import { campaignsRouter } from './http/campaigns.routes';
 import { publicCampaignsRouter } from './http/public.routes';
@@ -12,7 +12,7 @@ import { PrismaPublicCampaignRepository } from './infrastructure/prisma-public-c
 export { PrismaCampaignUsage } from './infrastructure/prisma-campaign-usage';
 export type { CampaignDetail, CampaignStatus, CampaignSummary } from './domain/model';
 export type { PublicCampaign, PublicType } from './domain/public';
-export type { TemplateLookup } from './application/ports';
+export type { QuestionCounter, TemplateLookup } from './application/ports';
 export { canManageCampaigns, canOperateCampaigns, canReadCampaigns } from './domain/permissions';
 
 export type CampaignsConfig = {
@@ -21,10 +21,18 @@ export type CampaignsConfig = {
   identity: Pick<IdentityModule, 'guards'>;
   /** The templates a campaign uses, from the templates module. */
   templates: TemplateLookup;
+  /** The quiz questions of a campaign, from the quiz module; a quiz needs one to launch. */
+  questions?: QuestionCounter;
 };
 
 export function createCampaignsModule(cfg: CampaignsConfig) {
-  const service = new CampaignsService(new PrismaCampaignRepository(cfg.db), cfg.templates);
+  const service = new CampaignsService(
+    new PrismaCampaignRepository(cfg.db),
+    cfg.templates,
+    undefined,
+    undefined,
+    cfg.questions,
+  );
   return {
     basePath: '/api/v1/campaigns',
     router: campaignsRouter(service, cfg.identity.guards),

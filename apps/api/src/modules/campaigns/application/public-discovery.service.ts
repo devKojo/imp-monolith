@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/shared/errors';
 import {
   PAGE_SIZE,
   archetypesFor,
@@ -13,6 +14,8 @@ import {
 /** What the repository is asked for. `archetypes` empty means "no template kind matches". */
 export type PublicQuery = {
   q?: string;
+  /** One campaign by its public address. */
+  slug?: string;
   archetypes?: string[];
   after?: Cursor;
   limit: number;
@@ -57,5 +60,12 @@ export class PublicDiscoveryService {
       nextCursor:
         rows.length > PAGE_SIZE && last ? encodeCursor({ endAt: last.endAt, id: last.id }) : null,
     };
+  }
+
+  /** One running campaign by its address. Anything not public is the same "not found". */
+  async get(slug: string): Promise<PublicCampaign> {
+    const [row] = await this.repo.find({ slug, limit: 1, now: this.now() });
+    if (!row) throw new NotFoundError('Campaign not found');
+    return toPublic(row);
   }
 }

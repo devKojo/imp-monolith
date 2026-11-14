@@ -46,5 +46,5 @@ export type CampaignSummary = Omit<Campaign, 'summary' | 'prizes' | 'launchedAt'
   prizeCount: number;
 };
 
-export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes';
+export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes' | 'questions';
 export type PreflightCheck = { id: PreflightId; pass: boolean };
