@@ -132,13 +132,12 @@ const livePill = computed(() =>
     </template>
 
     <section class="hero" aria-labelledby="discover-title">
-      <div class="hero__glow" aria-hidden="true" />
       <div class="hero__inner">
         <p v-if="livePill" class="pill ui-text-label-sm">
           <span class="pill__dot" aria-hidden="true" />{{ livePill }}
         </p>
         <h1 id="discover-title" class="hero__title ui-text-h1">{{ t('discover.title') }}</h1>
-        <p class="hero__lead ui-text-body-s">{{ t('discover.subtitle') }}</p>
+        <p class="hero__lead ui-text-caption">{{ t('discover.subtitle') }}</p>
         <div class="hero__search">
           <UiSearchField
             v-model="text"
@@ -160,7 +159,6 @@ const livePill = computed(() =>
         <div class="results__head">
           <h2 id="results-title" class="ui-text-h2">
             {{ t('discover.results.title') }}
-            <UiBadge tone="info">{{ t('discover.results.badge') }}</UiBadge>
           </h2>
           <p class="results__trust ui-text-label-sm">
             <UiIcon name="shield-check" :size="16" />{{ t('discover.results.trust') }}
@@ -240,28 +238,10 @@ const livePill = computed(() =>
   }
 }
 
-/* Hero: soft vertical wash with a blurred brand glow behind the headline. */
+/* Hero: flat, no gradient or glow. */
 .hero {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    to bottom,
-    var(--ui-color-surface-subtle),
-    var(--ui-color-surface-page) 85%
-  );
-}
-.hero__glow {
-  position: absolute;
-  inset-block-start: calc(var(--ui-space-12) * -2);
-  inset-inline-start: 50%;
-  inline-size: calc(var(--ui-space-12) * 15);
-  block-size: calc(var(--ui-space-12) * 7);
-  background: var(--ui-color-action-primary);
-  border-radius: var(--ui-radius-pill);
-  opacity: 0.08;
-  filter: blur(80px);
-  transform: translateX(-50%);
-  pointer-events: none;
 }
 .hero__inner {
   position: relative;
@@ -282,24 +262,12 @@ const livePill = computed(() =>
   color: var(--ui-color-selected-text);
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-radius-pill);
-  box-shadow: var(--ui-elevation-1);
 }
 .pill__dot {
   inline-size: var(--ui-space-2);
   block-size: var(--ui-space-2);
   background: currentcolor;
   border-radius: var(--ui-radius-pill);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse {
-  50% {
-    opacity: 0.35;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pill__dot {
-    animation: none;
-  }
 }
 .hero__title {
   max-inline-size: calc(var(--ui-space-12) * 15);

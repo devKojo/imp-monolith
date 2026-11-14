@@ -484,9 +484,9 @@ export const registry: ComponentEntry[] = [
     name: 'UiAuthShell',
     category: 'Navigation',
     summary:
-      'Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column.',
+      'Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column, or a full-bleed split entry layout.',
     specRefs: ['UI-PUB-01', 'UI-A11Y-06'],
-    states: ['narrow', 'wide with aside', 'with footer strip'],
+    states: ['narrow', 'wide with aside', 'with footer strip', 'split (full-bleed panel + card)'],
     a11y: 'Skip link, one main landmark, h1 is the card title; no per-user data so it can be server-rendered.',
     origin: 'signin, signup and business-registration (centred card layouts)',
   },

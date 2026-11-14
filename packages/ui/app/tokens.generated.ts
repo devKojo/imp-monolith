@@ -30,7 +30,10 @@ export const tokens = {
     "danger-action-active": "#7A1B14",
     "surface-hover": "#F1F3FF",
     "surface-pressed": "#F2F4F7",
-    "surface-page": "#F9F9FF"
+    "surface-page": "#F9F9FF",
+    "surface-inverse": "#141B2C",
+    "text-inverse": "#FFFFFF",
+    "text-inverse-muted": "#DBE2F9"
   },
   "chartSeries": [
     {
@@ -177,7 +180,7 @@ export const tokens = {
   }
 } as const;
 
-export type SemanticColorToken = 'text-primary' | 'text-secondary' | 'text-hint' | 'surface' | 'surface-subtle' | 'border' | 'border-strong' | 'action-primary' | 'action-primary-text' | 'focus-ring' | 'link' | 'selected-bg' | 'selected-text' | 'info-bg' | 'info-text' | 'success-bg' | 'success-text' | 'warning-bg' | 'warning-text' | 'danger-bg' | 'danger-text' | 'overlay' | 'action-primary-hover' | 'action-primary-active' | 'danger-action' | 'danger-action-hover' | 'danger-action-active' | 'surface-hover' | 'surface-pressed' | 'surface-page';
+export type SemanticColorToken = 'text-primary' | 'text-secondary' | 'text-hint' | 'surface' | 'surface-subtle' | 'border' | 'border-strong' | 'action-primary' | 'action-primary-text' | 'focus-ring' | 'link' | 'selected-bg' | 'selected-text' | 'info-bg' | 'info-text' | 'success-bg' | 'success-text' | 'warning-bg' | 'warning-text' | 'danger-bg' | 'danger-text' | 'overlay' | 'action-primary-hover' | 'action-primary-active' | 'danger-action' | 'danger-action-hover' | 'danger-action-active' | 'surface-hover' | 'surface-pressed' | 'surface-page' | 'surface-inverse' | 'text-inverse' | 'text-inverse-muted';
 export type SpaceToken = '1' | '2' | '3' | '4' | '5' | '6' | '8' | '10' | '12';
 export type RadiusToken = 'sm' | 'md' | 'lg' | 'xl' | 'pill';
 export type FontStyleToken = 'display' | 'display-mobile' | 'h1' | 'h2' | 'h3' | 'body-l' | 'body' | 'body-s' | 'caption' | 'label' | 'label-sm' | 'hero';

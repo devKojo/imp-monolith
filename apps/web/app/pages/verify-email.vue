@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthPage from '../modules/auth/components/AuthPage.vue';
 import { computed, onMounted, ref } from 'vue';
 import { t } from '../i18n';
 import { useAuth } from '../modules/auth/composables/useAuth';
@@ -37,7 +38,8 @@ const title = computed(() =>
 </script>
 
 <template>
-  <UiAuthShell
+  <AuthPage
+    variant="general"
     :breadcrumbs="[{ label: t('nav.discover'), to: '/discover' }, { label: title }]"
     :title="title"
   >
@@ -54,5 +56,5 @@ const title = computed(() =>
       <UiButton to="/signin" block>{{ t('verify.signin') }}</UiButton>
       <UiButton to="/signup" block variant="secondary">{{ t('verify.signup') }}</UiButton>
     </template>
-  </UiAuthShell>
+  </AuthPage>
 </template>

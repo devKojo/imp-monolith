@@ -50,5 +50,7 @@ export default defineNuxtConfig({
     devProxy: { '/api/': { target: apiProxyTarget, changeOrigin: true } },
   },
   devServer: { port: 3001 }, // API uses 3000
-  devtools: { enabled: true },
+  // Off by default: the devtools add modules and trigger dependency re-optimisation that reloads the
+  // page mid-session. Turn on with NUXT_DEVTOOLS=1.
+  devtools: { enabled: process.env.NUXT_DEVTOOLS === '1' },
 });

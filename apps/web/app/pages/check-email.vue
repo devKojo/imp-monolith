@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthPage from '../modules/auth/components/AuthPage.vue';
 import { computed, ref } from 'vue';
 import { t } from '../i18n';
 import { toApiError } from '../modules/auth/errors';
@@ -54,7 +55,8 @@ async function resend() {
 </script>
 
 <template>
-  <UiAuthShell
+  <AuthPage
+    variant="general"
     :breadcrumbs="[{ label: t('nav.discover'), to: '/discover' }, { label: t('checkEmail.title') }]"
     :title="t('checkEmail.title')"
   >
@@ -105,14 +107,13 @@ async function resend() {
     <UiButton :to="SIGNIN[draft.portal]" block icon-trailing="arrow-right" variant="tertiary">
       {{ t('checkEmail.signin') }}
     </UiButton>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>
 .notice {
   margin: 0;
   color: var(--ui-color-success-text);
-  text-align: center;
 }
 .notice[data-tone='error'] {
   color: var(--ui-color-danger-text);

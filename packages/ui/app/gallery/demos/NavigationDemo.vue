@@ -192,6 +192,20 @@ const authPassword = ref('');
         <template #below>Your session ends after 30 minutes of inactivity.</template>
       </UiAuthShell>
     </div>
+    <div class="demo-frame">
+      <UiAuthShell
+        layout="split"
+        brand-name="Acme Ltd"
+        title="Sign in to your business"
+        subtitle="Use the email and password for your business account."
+      >
+        <template #aside>
+          <p class="demo-split-panel">Supporting panel (split layout)</p>
+        </template>
+        <UiTextInput v-model="authEmail" label="Email address" type="email" icon="mail" />
+        <UiButton block icon-trailing="arrow-right">Sign in</UiButton>
+      </UiAuthShell>
+    </div>
   </GalleryBlock>
 
   <GalleryBlock name="UiConsoleShell">
@@ -230,6 +244,10 @@ const authPassword = ref('');
 </template>
 
 <style scoped>
+.demo-split-panel {
+  margin: 0;
+  padding: var(--ui-space-8);
+}
 .demo-narrow {
   max-inline-size: calc(var(--ui-space-12) * 6);
 }

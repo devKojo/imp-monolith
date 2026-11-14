@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import type { ConsentValue } from '@imp/ui/app/components/UiConsentGroup.vue';
 import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import BusinessAuthSwitch from './BusinessAuthSwitch.vue';
-import BusinessEntryAside from './BusinessEntryAside.vue';
+import AuthPage from './AuthPage.vue';
 import { AGREEMENT_VERSION, HOME, SIGNIN } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
 import {
@@ -15,7 +13,6 @@ import {
   emailProblem,
   nameProblem,
   passwordProblem,
-  passwordRules,
   type FieldErrors,
 } from '../validation';
 import type { Portal } from '../types';
@@ -40,7 +37,7 @@ const businessName = ref('');
 const name = ref('');
 const email = ref('');
 const password = ref('');
-const consent = ref<ConsentValue>({ accepted: false, optional: {} });
+const accepted = ref(false);
 type Field = 'businessName' | 'name' | 'email' | 'password' | 'agreement';
 const errors = ref<FieldErrors<Field>>({});
 const failure = ref<AuthFailure | null>(null);
@@ -50,10 +47,9 @@ useClearOnInput(errors, {
   name,
   email,
   password,
-  agreement: computed(() => consent.value.accepted),
+  agreement: accepted,
 });
 
-const rules = computed(() => passwordRules(password.value, email.value));
 const fieldIds: Record<Field, string> = {
   businessName: 'register-business',
   name: 'register-name',
@@ -89,7 +85,7 @@ async function submit() {
     name: nameProblem(name.value),
     email: emailProblem(email.value),
     password: passwordProblem(password.value, email.value),
-    agreement: consent.value.accepted ? undefined : t('register.agreementError'),
+    agreement: accepted.value ? undefined : t('register.agreementError'),
   });
   if (Object.keys(errors.value).length > 0 || countdown.active.value) return;
 
@@ -145,14 +141,7 @@ const crumbs = [
 </script>
 
 <template>
-  <UiAuthShell
-    :size="isBusiness ? 'wide' : 'narrow'"
-    :breadcrumbs="crumbs"
-    :title="k('title')"
-    :subtitle="k('subtitle')"
-  >
-    <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
-    <template v-if="isBusiness" #badge><BusinessAuthSwitch active="register" /></template>
+  <AuthPage :variant="portal" :breadcrumbs="crumbs" :title="k('title')" :subtitle="k('subtitle')">
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
@@ -170,17 +159,16 @@ const crumbs = [
         autocomplete="organization"
         required
         :label="t('register.business.name')"
-        :hint="t('register.business.nameHint')"
         :error="errors.businessName"
       />
-      <div :class="isBusiness ? 'row' : 'stack'">
+      <div class="stack">
         <UiTextInput
           id="register-name"
           v-model="name"
           icon="user"
           autocomplete="name"
           required
-          :label="isBusiness ? t('register.business.adminName') : t('register.participant.name')"
+          :label="t('register.participant.name')"
           :error="errors.name"
         />
         <UiTextInput
@@ -204,16 +192,18 @@ const crumbs = [
         :label="t('register.password')"
         :hint="t('register.passwordHint')"
         :error="errors.password"
-        :rules="rules"
       />
 
-      <UiConsentGroup
-        v-model="consent"
-        terms-id="agreement-check"
-        :legend="t('register.agreementLegend')"
+      <UiCheckbox
+        id="agreement-check"
+        v-model="accepted"
+        class="agree"
+        :label="`${t('register.agreementPrefix')} ${k('agreement')}`"
         :error="errors.agreement"
-        :terms="{ label: k('agreement'), version: AGREEMENT_VERSION, href: '/terms' }"
-      />
+      >
+        {{ t('register.agreementPrefix') }}
+        <UiLink to="/terms" external>{{ k('agreement') }}</UiLink>
+      </UiCheckbox>
 
       <UiButton
         type="submit"
@@ -234,10 +224,15 @@ const crumbs = [
         k('signin')
       }}</UiLink>
     </template>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>
+/* Support text is extra small. */
+.agree :deep(.ui-checkbox__label) {
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
+}
 .form {
   display: flex;
   flex-direction: column;
@@ -247,15 +242,5 @@ const crumbs = [
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-4);
-}
-.row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ui-space-4);
-}
-@media (min-width: 640px) {
-  .row {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 </style>

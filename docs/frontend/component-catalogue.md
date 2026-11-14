@@ -92,7 +92,7 @@
 | `UiSkipLink` | Skip-to-content link, first focusable element on every page. | - | `UiAuthShell`, `UiConsoleShell`, `UiDashboardShell`, `UiPortalShell`, `UiPublicShell` | UI-A11Y-06 |
 | `UiDashboardShell` | Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark. | `UiSidebarNav`, `UiSkipLink`, `UiTopBar` | - | UI-DSH-01, UI-FND-05 |
 | `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
-| `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column. | `UiBreadcrumbs`, `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
+| `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column, or a full-bleed split entry layout. | `UiBreadcrumbs`, `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
 | `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
 | `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
 

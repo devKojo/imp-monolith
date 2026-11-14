@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import AuthPage from '../modules/auth/components/AuthPage.vue';
+import { ref } from 'vue';
 import { t } from '../i18n';
 import { useAuthApi } from '../modules/auth/composables/useAuth';
 import { useSignupDraft } from '../modules/auth/composables/useSignupDraft';
 import { SIGNIN } from '../modules/auth/constants';
 import { toApiError } from '../modules/auth/errors';
-import { passwordProblem, passwordRules } from '../modules/auth/validation';
+import { passwordProblem } from '../modules/auth/validation';
 
 /**
  * Step two of password reset: the page behind the emailed link. The token is only read from the
@@ -27,7 +28,6 @@ const loading = ref(false);
 const invalid = ref(!token);
 const rateLimited = ref(false);
 const failed = ref(false);
-const rules = computed(() => passwordRules(password.value, ''));
 
 async function submit() {
   failed.value = false;
@@ -62,7 +62,8 @@ async function submit() {
 </script>
 
 <template>
-  <UiAuthShell
+  <AuthPage
+    variant="general"
     :breadcrumbs="[
       { label: t('nav.discover'), to: '/discover' },
       { label: t('nav.signin'), to: '/signin' },
@@ -86,7 +87,6 @@ async function submit() {
         :label="t('reset.password')"
         :hint="t('register.passwordHint')"
         :error="error"
-        :rules="rules"
       />
       <UiButton
         type="submit"
@@ -103,7 +103,7 @@ async function submit() {
       </p>
       <p v-if="failed" class="problem ui-text-body-s" role="alert">{{ t('forgot.failed') }}</p>
     </form>
-  </UiAuthShell>
+  </AuthPage>
 </template>
 
 <style scoped>

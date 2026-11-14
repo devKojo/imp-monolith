@@ -297,6 +297,20 @@ describe('UiAuthShell', () => {
   });
 });
 
+describe('UiAuthShell split layout', () => {
+  it('renders the aside beside the card and keeps one h1 and one main landmark', () => {
+    const w = mount(UiAuthShell, {
+      props: { brandName: 'A', title: 'Sign in', layout: 'split' },
+      slots: { default: 'x', aside: '<p>panel</p>', badge: '<div>switch</div>' },
+    });
+    expect(w.find('aside').text()).toContain('panel');
+    expect(w.text()).toContain('switch');
+    expect(w.findAll('h1')).toHaveLength(1);
+    expect(w.findAll('main')).toHaveLength(1);
+    expect(w.attributes('data-layout')).toBe('split');
+  });
+});
+
 describe('UiPublicShell additions', () => {
   it('renders primary navigation and header actions when provided', () => {
     const w = mount(UiPublicShell, {
