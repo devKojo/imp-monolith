@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
+  LIMITS,
+  addOption,
+  removeOption,
+  setOption,
   createBlock,
   currentStage,
   duplicateBlock,
@@ -116,5 +120,24 @@ describe('stages', () => {
     expect(ok.checks).toBe('complete');
     expect(currentStage(ok)).toBe('publish');
     expect(stageStatuses(t(build('email', 'consent'), 'PUBLISHED')).publish).toBe('complete');
+  });
+});
+
+describe('answers of a multiple-choice field', () => {
+  it('adds one empty answer at a time, up to the limit', () => {
+    expect(addOption(['a', 'b'])).toEqual(['a', 'b', '']);
+    const full = Array.from({ length: LIMITS.options }, (_, i) => String(i));
+    expect(addOption(full)).toEqual(full);
+  });
+
+  it('edits and removes one answer without touching the others or the input', () => {
+    const answers = ['a', 'b', 'c'];
+    expect(setOption(answers, 1, 'x')).toEqual(['a', 'x', 'c']);
+    expect(removeOption(answers, 0)).toEqual(['b', 'c']);
+    expect(answers).toEqual(['a', 'b', 'c']);
+  });
+
+  it('keeps at least two answers', () => {
+    expect(removeOption(['a', 'b'], 0)).toEqual(['a', 'b']);
   });
 });

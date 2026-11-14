@@ -40,14 +40,16 @@ const statusText = (s?: StepStatus) => uiText(`stepper.status.${s ?? 'notStarted
     class="ui-stepper"
     :aria-label="uiText('stepper.step', { n: index + 1, total: steps.length })"
   >
-    <p class="ui-stepper__count ui-text-body-s">
-      {{ uiText('stepper.step', { n: index + 1, total: steps.length }) }}
-    </p>
-    <UiProgress
-      :value="pct"
-      :label="uiText('stepper.step', { n: index + 1, total: steps.length })"
-    />
-    <ol v-if="mode === 'builder'" class="ui-stepper__list">
+    <template v-if="mode === 'flow'">
+      <p class="ui-stepper__count ui-text-body-s">
+        {{ uiText('stepper.step', { n: index + 1, total: steps.length }) }}
+      </p>
+      <UiProgress
+        :value="pct"
+        :label="uiText('stepper.step', { n: index + 1, total: steps.length })"
+      />
+    </template>
+    <ol v-else class="ui-stepper__list">
       <li v-for="(s, i) in steps" :key="s.id">
         <button
           type="button"
@@ -57,9 +59,9 @@ const statusText = (s?: StepStatus) => uiText(`stepper.status.${s ?? 'notStarted
         >
           <span class="ui-stepper__num">{{ i + 1 }}</span>
           <span class="ui-stepper__label">{{ s.label }}</span>
-          <span class="ui-stepper__status ui-text-body-s" :data-status="s.status ?? 'notStarted'">
+          <span class="ui-stepper__status" :data-status="s.status ?? 'notStarted'">
             <UiIcon :name="statusIcon[s.status ?? 'notStarted']" :size="14" />
-            {{ statusText(s.status) }}
+            <span class="ui-sr-only">{{ statusText(s.status) }}</span>
           </span>
         </button>
       </li>
@@ -80,25 +82,23 @@ const statusText = (s?: StepStatus) => uiText(`stepper.status.${s ?? 'notStarted
 }
 .ui-stepper__list {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--ui-space-1);
-  margin: var(--ui-space-2) 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .ui-stepper__item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0 var(--ui-space-2);
-  inline-size: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
   min-block-size: var(--ui-control-target, var(--ui-target-dashboard));
-  padding: var(--ui-space-2) var(--ui-space-3);
+  padding: var(--ui-space-1) var(--ui-space-3);
   background: transparent;
-  color: var(--ui-color-text-primary);
-  border: 1px solid transparent;
-  border-radius: var(--ui-radius-md);
+  color: var(--ui-color-text-secondary);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-pill, 999px);
   font: inherit;
-  text-align: start;
   cursor: pointer;
 }
 .ui-stepper__item[aria-current='step'] {
@@ -107,15 +107,14 @@ const statusText = (s?: StepStatus) => uiText(`stepper.status.${s ?? 'notStarted
   border-color: var(--ui-color-action-primary);
 }
 .ui-stepper__num {
-  grid-row: span 2;
-  align-self: center;
   font-weight: 700;
+}
+.ui-stepper__label {
+  font-weight: 500;
 }
 .ui-stepper__status {
   display: inline-flex;
   align-items: center;
-  gap: var(--ui-space-1);
-  grid-column: 2;
   color: var(--ui-color-text-secondary);
 }
 .ui-stepper__status[data-status='issues'] {

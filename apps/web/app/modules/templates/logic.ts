@@ -18,7 +18,7 @@ export const LIMITS = {
   label: 120,
   helper: 240,
   option: 120,
-  options: 10,
+  options: 20,
   fields: 30,
 } as const;
 
@@ -87,6 +87,15 @@ export const updateBlock = (
   id: string,
   patch: Partial<Omit<TemplateBlock, 'id' | 'kind' | 'key'>>,
 ): TemplateBlock[] => blocks.map((b) => (b.id === id ? { ...b, ...patch } : b));
+
+/** The answers of a multiple-choice field are edited one by one; these keep that list tidy. */
+export const MIN_OPTIONS = 2;
+export const addOption = (options: readonly string[]): string[] =>
+  options.length >= LIMITS.options ? [...options] : [...options, ''];
+export const setOption = (options: readonly string[], index: number, value: string): string[] =>
+  options.map((o, i) => (i === index ? value : o));
+export const removeOption = (options: readonly string[], index: number): string[] =>
+  options.length <= MIN_OPTIONS ? [...options] : options.filter((_, i) => i !== index);
 
 /**
  * Checks a template must pass before it can be published. Only things that can really be computed
