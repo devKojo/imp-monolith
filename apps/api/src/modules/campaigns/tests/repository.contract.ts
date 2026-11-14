@@ -3,6 +3,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createTenantContext, type TenantContext } from '@/shared/database';
 import { ConflictError } from '@/shared/errors';
 import type { CampaignRepository, DraftContent } from '../application/ports';
+import { normalizeFields } from '../domain/rules';
+import { detailsDraft, draftField, quizQuestion } from './fixtures';
 
 export const content = (over: Partial<DraftContent> = {}): DraftContent => ({
   title: 'Launch giveaway',
@@ -11,6 +13,8 @@ export const content = (over: Partial<DraftContent> = {}): DraftContent => ({
   startAt: null,
   endAt: new Date(Date.now() + 7 * 86_400_000),
   prizes: [{ name: 'Grand prize', valueLabel: '1,000', winners: 1, description: 'The big one' }],
+  fields: [],
+  settings: {},
   ...over,
 });
 
@@ -42,7 +46,7 @@ export function repositoryContract(
     });
 
     const make = (title = `C-${randomUUID().slice(0, 6)}`) =>
-      w.repo.create(a, { title, templateId: null, createdById: w.userA });
+      w.repo.create(a, { title, templateId: null, createdById: w.userA, fields: [], settings: {} });
     const slug = () => `launch-${randomUUID().slice(0, 8)}`;
 
     it('creates an empty draft at version 1, with or without a template', async () => {
@@ -58,7 +62,10 @@ export function repositoryContract(
         title: 'T',
         templateId: w.templateA,
         createdById: w.userA,
+        fields: normalizeFields(detailsDraft()),
+        settings: {},
       });
+      expect(withTemplate.fields.map((f) => f.kind)).toEqual(['email', 'consent']);
       expect(withTemplate.templateId).toBe(w.templateA);
     });
 
@@ -173,6 +180,53 @@ export function repositoryContract(
       expect(cancelled.kind === 'ok' && cancelled.campaign.status).toBe('CANCELLED');
     });
 
+    it('stores fields in order, with their options and correct answer, and replaces them as a set', async () => {
+      const c = await make('Fields');
+      const fields = normalizeFields([
+        ...detailsDraft(),
+        quizQuestion({ label: 'First?', options: ['A', 'B', 'C'], correctIndex: 2 }),
+        quizQuestion({ label: 'Second?', options: ['X', 'Y'], correctIndex: 0 }),
+      ]);
+      const saved = await w.repo.saveDraft(
+        a,
+        c.id,
+        1,
+        content({
+          fields,
+          settings: { quiz: { timeLimitMinutes: 12, passPercent: 80 } },
+        }),
+      );
+      expect(saved.kind).toBe('ok');
+      if (saved.kind !== 'ok') return;
+      expect(saved.campaign.fields.map((f) => [f.kind, f.key, f.label])).toEqual([
+        ['email', 'email', 'Email address'],
+        ['consent', 'consent', 'I agree'],
+        ['quiz_question', 'quiz_question', 'First?'],
+        ['quiz_question', 'quiz_question_2', 'Second?'],
+      ]);
+      expect(saved.campaign.fields[2]).toMatchObject({ options: ['A', 'B', 'C'], correctIndex: 2 });
+      expect(saved.campaign.fields[0]).toMatchObject({ options: [], correctIndex: null });
+      expect(saved.campaign.settings).toEqual({ quiz: { timeLimitMinutes: 12, passPercent: 80 } });
+      expect(saved.campaign.fields.every((f) => f.id.length > 0)).toBe(true);
+
+      const again = await w.repo.saveDraft(
+        a,
+        c.id,
+        2,
+        content({
+          fields: normalizeFields([draftField('email', { label: 'Only', required: true })]),
+        }),
+      );
+      expect(again.kind === 'ok' && again.campaign.fields.map((f) => f.label)).toEqual(['Only']);
+      expect(again.kind === 'ok' && again.campaign.settings).toEqual({});
+    });
+
+    it('does not show one business the fields of another', async () => {
+      const c = await make('Private fields');
+      await w.repo.saveDraft(a, c.id, 1, content({ fields: normalizeFields(detailsDraft()) }));
+      expect(await w.repo.get(b, c.id)).toBeNull();
+    });
+
     it('duplicates as a draft with its own ids, without schedule or address', async () => {
       const c = await make('Original');
       await w.repo.saveDraft(
@@ -183,6 +237,7 @@ export function repositoryContract(
           title: 'Original',
           templateId: w.templateA,
           startAt: new Date(Date.now() + 86_400_000),
+          fields: normalizeFields(detailsDraft()),
         }),
       );
       await w.repo.launch(a, c.id, 2, { status: 'SCHEDULED', slug: slug() });
@@ -200,9 +255,11 @@ export function repositoryContract(
         templateId: w.templateA,
       });
       expect(copy?.prizes.map((p) => p.name)).toEqual(['Grand prize']);
+      expect(copy?.fields.map((f) => f.kind)).toEqual(['email', 'consent']);
       const source = await w.repo.get(a, c.id);
       expect(source?.status).toBe('SCHEDULED');
       expect(source?.prizes[0]?.id).not.toBe(copy?.prizes[0]?.id);
+      expect(source?.fields[0]?.id).not.toBe(copy?.fields[0]?.id);
     });
 
     it('soft-deletes a draft so it disappears from reads and lists', async () => {

@@ -14,6 +14,7 @@ import {
   withPublic,
   withTenant,
 } from '@/shared/database';
+import { SEEDED } from './fixtures';
 import { PublicDiscoveryService } from '../application/public-discovery.service';
 import { PrismaPublicCampaignRepository } from '../infrastructure/prisma-public-campaigns.repository';
 
@@ -45,15 +46,11 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     businesses.push(row.id);
     return row.id;
   }
+  /** The built-in type for a kind of campaign: global, so the business does not matter. */
   const template = async (
-    tenantId: string,
+    _tenantId: string,
     archetype: 'GIVEAWAY' | 'QUIZ' | 'SURVEY' | 'INSTANT',
-  ) =>
-    (
-      await platform.template.create({
-        data: { tenantId, name: 'T', archetype, createdById: randomUUID() },
-      })
-    ).id;
+  ) => SEEDED[archetype.toLowerCase() as keyof typeof SEEDED];
 
   async function campaign(
     key: string,
@@ -130,7 +127,6 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
   afterAll(async () => {
     await platform.campaignPrize.deleteMany({ where: { tenantId: { in: businesses } } });
     await platform.campaign.deleteMany({ where: { tenantId: { in: businesses } } });
-    await platform.template.deleteMany({ where: { tenantId: { in: businesses } } });
     await platform.business.deleteMany({ where: { id: { in: businesses } } });
     await Promise.all([db.$disconnect(), platform.$disconnect()]);
   });
@@ -247,7 +243,7 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
       paused: await tx.campaign.count({
         where: { status: 'PAUSED', tenantId: { in: businesses } },
       }),
-      fields: await tx.templateField.count(),
+      fields: await tx.campaignField.count(),
       memberships: await tx.membership.count(),
       users: await tx.user.count(),
       sessions: await tx.session.count(),

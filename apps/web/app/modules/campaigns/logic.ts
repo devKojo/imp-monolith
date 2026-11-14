@@ -1,4 +1,5 @@
 import { zonedToInstant } from '@imp/ui/app/utils/datetime';
+import { fieldProblem, fieldsOf } from './fields';
 import type { Campaign, PreflightCheck, Prize } from './types';
 
 /** Pure helpers for the campaign builder: every function returns new data and never mutates. */
@@ -56,31 +57,34 @@ export const winnersLabelKey = (
  * The server runs them again and has the last word.
  */
 export function preflight(
-  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes'>,
+  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields'>,
   now: Date,
-  /** Valid quiz questions written so far; leave out when the campaign is not a quiz. */
-  questionCount?: number,
 ): PreflightCheck[] {
-  const needsPrizes = c.template !== null && ['giveaway', 'instant'].includes(c.template.archetype);
+  const needsPrizes = c.template?.requiresPrizes ?? false;
   const prizesComplete = c.prizes.every((p) => p.name.trim() !== '' && p.winners >= 1);
   const start = c.startAt ? new Date(c.startAt) : null;
   const end = c.endAt ? new Date(c.endAt) : null;
+  const contact = c.fields.some((f) => f.kind === 'email' || f.kind === 'phone');
+  const consent = c.fields.some((f) => f.kind === 'consent' && f.required);
   return [
     { id: 'title', pass: c.title.trim() !== '' },
-    { id: 'template', pass: c.template !== null && c.template.status === 'PUBLISHED' },
+    { id: 'template', pass: c.template !== null },
     { id: 'schedule', pass: end !== null && end > now && (start === null || start < end) },
     { id: 'prizes', pass: prizesComplete && (!needsPrizes || c.prizes.length > 0) },
-    ...(c.template?.archetype === 'quiz' && questionCount !== undefined
-      ? [{ id: 'questions' as const, pass: questionCount > 0 }]
-      : []),
+    { id: 'details', pass: contact && consent },
+    {
+      id: 'content',
+      pass:
+        fieldsOf(c.fields, 'content').length >= (c.template?.minContentFields ?? 0) &&
+        c.fields.every((f) => fieldProblem(f) === null),
+    },
   ];
 }
 
 export const isLaunchable = (
-  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes'>,
+  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields'>,
   now: Date,
-  questionCount?: number,
-): boolean => preflight(c, now, questionCount).every((p) => p.pass);
+): boolean => preflight(c, now).every((p) => p.pass);
 
 /** The wall-clock date and time of an instant in a zone, for the date and time fields. */
 export type DateParts = { date: string; time: string; zone: string };

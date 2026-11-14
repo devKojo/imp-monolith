@@ -7,10 +7,11 @@ import { errorHandler, notFound } from '@/shared/http';
 import { CampaignsService } from '../application/campaigns.service';
 import { campaignsRouter } from '../http/campaigns.routes';
 import { FakeTemplateLookup, InMemoryCampaignRepository } from './fakes';
+import { giveawayTemplate } from './fixtures';
 
 const CSRF = 'csrf-token';
 const tenantId = randomUUID();
-const templateId = randomUUID();
+const templateId = giveawayTemplate.id;
 
 /** Stand-in for the identity guards: the role comes from a test header, "none" is signed out. */
 const guards: RequestHandler[] = [
@@ -30,7 +31,7 @@ const guards: RequestHandler[] = [
 
 function build() {
   const templates = new FakeTemplateLookup();
-  templates.add({ id: templateId, name: 'Entry', archetype: 'giveaway', status: 'PUBLISHED' });
+  templates.add(giveawayTemplate);
   const app = express();
   app.use(express.json());
   app.use(
@@ -59,6 +60,18 @@ const content = (over: Record<string, unknown> = {}) => ({
   startAt: null,
   endAt: new Date(Date.now() + 2 * 86_400_000).toISOString(),
   prizes: [{ name: 'Grand prize', valueLabel: '1,000', winners: 1, description: '' }],
+  fields: [
+    { kind: 'email', label: 'Email', helper: '', required: true, options: [], correctIndex: null },
+    {
+      kind: 'consent',
+      label: 'I agree',
+      helper: '',
+      required: true,
+      options: [],
+      correctIndex: null,
+    },
+  ],
+  settings: { quiz: null },
   ...over,
 });
 
@@ -92,7 +105,7 @@ describe('campaigns HTTP', () => {
     expect(saved.body).toMatchObject({
       version: 2,
       summary: 'Win big',
-      template: { name: 'Entry' },
+      template: { name: 'Giveaway' },
     });
 
     const launched = await owner.write('post', `/${id}/launch`, { expectedVersion: 2 });
@@ -128,7 +141,7 @@ describe('campaigns HTTP', () => {
     expect(res.status).toBe(422);
     expect(res.body.error).toMatchObject({
       code: 'PREFLIGHT_FAILED',
-      details: { failed: ['template', 'schedule'] },
+      details: { failed: ['template', 'schedule', 'details'] },
     });
   });
 
@@ -197,5 +210,34 @@ describe('campaigns HTTP', () => {
       (await operator.write('post', `/${body.id}/pause`, { expectedVersion: live.body.version }))
         .status,
     ).toBe(200);
+  });
+
+  it('saves fields and returns them with the template that allows them', async () => {
+    const app = build();
+    const created = (await api(app).write('post', '', { title: 'x', templateId })).body;
+    expect(created.fields.map((f: { kind: string }) => f.kind)).toEqual(['email', 'consent']);
+    const saved = await api(app).write('put', `/${created.id}`, {
+      expectedVersion: created.version,
+      ...content({ templateId }),
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.fields.map((f: { key: string }) => f.key)).toEqual(['email', 'consent']);
+    expect(saved.body.template.fields.map((f: { kind: string }) => f.kind)).toContain('address');
+  });
+
+  it('rejects fields that are not valid, or not allowed for the type', async () => {
+    const app = build();
+    const created = (await api(app).write('post', '', { title: 'x', templateId })).body;
+    const put = (fields: unknown) =>
+      api(app).write('put', `/${created.id}`, {
+        expectedVersion: created.version,
+        ...content({ fields }),
+      });
+    const field = { label: 'L', helper: '', required: false, options: [], correctIndex: null };
+    expect((await put([{ ...field, kind: 'hologram' }])).status).toBe(400);
+    expect((await put([{ ...field, kind: 'email', extra: 1 }])).status).toBe(400);
+    const notAllowed = await put([{ ...field, kind: 'quiz_question' }]);
+    expect(notAllowed.status).toBe(422);
+    expect(notAllowed.body.error.code).toBe('CAMPAIGN_INVALID');
   });
 });

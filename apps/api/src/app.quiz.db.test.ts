@@ -1,5 +1,5 @@
 /**
- * End to end for quizzes: a business writes the questions of a quiz campaign and launches it, and a
+ * End to end for taking a quiz: a business writes the questions on a quiz campaign and launches it, and a
  * participant takes it. The real app, the real identity guards (session cookie, CSRF, Origin), the real
  * routes and real PostgreSQL with the real roles and RLS. Sessions are created directly in the test
  * database, so no email or password flow is involved. Skipped unless the same TEST_DATABASE_URL_RUNTIME
@@ -11,7 +11,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app';
 import { InMemoryEventBus } from './infrastructure/messaging/in-memory-event-bus';
-import { PrismaCampaignUsage, createCampaignsModule } from './modules/campaigns';
+import { createCampaignsModule } from './modules/campaigns';
+import { SEEDED } from './modules/campaigns/tests/fixtures';
 import { createIdentityModule } from './modules/identity';
 import { csrfTokenFor, generateToken, hashToken } from './modules/identity/domain/tokens';
 import { createQuizModule } from './modules/quiz';
@@ -96,14 +97,9 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
     people.kofi = await participant('kofi');
 
     const identity = createIdentityModule({ db, allowedOrigins: [ORIGIN], sessionSecret: SECRET });
-    const templates = createTemplatesModule({ db, identity, usage: new PrismaCampaignUsage(db) });
+    const templates = createTemplatesModule({ db, identity });
     const quiz = createQuizModule({ db, identity });
-    const campaigns = createCampaignsModule({
-      db,
-      identity,
-      templates: templates.lookup,
-      questions: quiz.questions,
-    });
+    const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
     app = await createApp({ bus: new InMemoryEventBus(), identity, templates, campaigns, quiz });
   });
 
@@ -111,12 +107,9 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
     const tenants = [tenantA, tenantB];
     await platform.quizAnswer.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.quizAttempt.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.quizQuestion.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.quiz.deleteMany({ where: { tenantId: { in: tenants } } });
+    await platform.campaignField.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaignPrize.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaign.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.templateField.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.template.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.session.deleteMany({ where: { userId: { in: userIds } } });
     await platform.membership.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.user.deleteMany({ where: { id: { in: userIds } } });
@@ -136,132 +129,107 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
       .set('X-CSRF-Token', p.csrf)
       .send(body);
 
-  const questions = [
-    { prompt: 'Capital of Ghana?', options: ['Accra', 'Kumasi', 'Tamale'], correctIndex: 0 },
-    { prompt: '2 + 2?', options: ['3', '4'], correctIndex: 1 },
-    { prompt: 'Largest planet?', options: ['Mars', 'Jupiter', 'Venus', 'Earth'], correctIndex: 1 },
-  ];
-  const quizBody = (over: Record<string, unknown> = {}) => ({
-    timeLimitMinutes: null,
-    passPercent: 60,
-    questions,
+  const field = (kind: string, label: string, over: Record<string, unknown> = {}) => ({
+    kind,
+    label,
+    helper: '',
+    required: false,
+    options: [],
+    correctIndex: null,
     ...over,
   });
+  const questions = [
+    field('quiz_question', 'Capital of Ghana?', {
+      options: ['Accra', 'Kumasi', 'Tamale'],
+      correctIndex: 0,
+    }),
+    field('quiz_question', '2 + 2?', { options: ['3', '4'], correctIndex: 1 }),
+    field('quiz_question', 'Largest planet?', {
+      options: ['Mars', 'Jupiter', 'Venus', 'Earth'],
+      correctIndex: 1,
+    }),
+  ];
 
-  /** A published quiz template, and a draft campaign that uses it, made through the real API. */
+  /** A draft quiz campaign made through the real API, with its type's starting fields. */
   async function draftQuizCampaign(title: string) {
-    const o = people.owner;
-    const t = (await write(o, 'post', 'templates', { name: 'Quiz entry', archetype: 'quiz' })).body;
-    await write(o, 'put', `templates/${t.id}`, {
-      expectedVersion: 1,
-      name: 'Quiz entry',
-      archetype: 'quiz',
-      fields: [
-        { kind: 'email', key: 'email', label: 'Email', helper: '', required: true, options: [] },
-        {
-          kind: 'consent',
-          key: 'consent',
-          label: 'I agree',
-          helper: '',
-          required: true,
-          options: [],
-        },
-      ],
-    });
-    await write(o, 'post', `templates/${t.id}/publish`, { expectedVersion: 2 });
-    const c = (await write(o, 'post', 'campaigns', { title, templateId: t.id })).body;
-    const saved = await write(o, 'put', `campaigns/${c.id}`, {
-      expectedVersion: 1,
+    const created = await write(people.owner, 'post', 'campaigns', {
       title,
+      templateId: SEEDED.quiz,
+    });
+    expect(created.status).toBe(201);
+    return { id: created.body.id as string, version: created.body.version as number };
+  }
+
+  /** Writes the questions and settings on the campaign, as the builder does. */
+  async function saveQuiz(
+    c: { id: string; version: number },
+    over: { timeLimitMinutes?: number | null; passPercent?: number; questions?: unknown[] } = {},
+  ) {
+    const res = await write(people.owner, 'put', `campaigns/${c.id}`, {
+      expectedVersion: c.version,
+      title: 'Quiz',
       summary: 'Test yourself',
-      templateId: t.id,
+      templateId: SEEDED.quiz,
       startAt: null,
       endAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
       prizes: [],
+      fields: [
+        field('email', 'Email', { required: true }),
+        field('consent', 'I agree', { required: true }),
+        ...(over.questions ?? questions),
+      ],
+      settings: {
+        quiz: {
+          timeLimitMinutes: over.timeLimitMinutes ?? null,
+          passPercent: over.passPercent ?? 60,
+        },
+      },
     });
-    expect(saved.status).toBe(200);
-    return { id: c.id as string, version: saved.body.version as number };
+    expect(res.status).toBe(200);
+    return { id: c.id, version: res.body.version as number };
   }
 
-  async function launched(title: string) {
-    const c = await draftQuizCampaign(title);
-    expect((await write(people.owner, 'put', `quizzes/${c.id}`, quizBody())).status).toBe(200);
-    const launch = await write(people.owner, 'post', `campaigns/${c.id}/launch`, {
-      expectedVersion: c.version,
+  async function launched(title: string, over: Parameters<typeof saveQuiz>[1] = {}) {
+    const saved = await saveQuiz(await draftQuizCampaign(title), over);
+    const launch = await write(people.owner, 'post', `campaigns/${saved.id}/launch`, {
+      expectedVersion: saved.version,
     });
     expect(launch.status).toBe(200);
-    return { id: c.id, slug: launch.body.slug as string };
+    return { id: saved.id, slug: launch.body.slug as string };
   }
 
   it('will not launch a quiz that has no questions, and launches it once it has some', async () => {
-    const c = await draftQuizCampaign('Empty quiz');
-    const refused = await write(people.owner, 'post', `campaigns/${c.id}/launch`, {
-      expectedVersion: c.version,
+    const draft = await draftQuizCampaign('Empty quiz');
+    const saved = await saveQuiz(draft, { questions: [] });
+    const refused = await write(people.owner, 'post', `campaigns/${saved.id}/launch`, {
+      expectedVersion: saved.version,
     });
     expect(refused.status).toBe(422);
-    expect(refused.body.error.details.failed).toEqual(['questions']);
-
-    expect((await write(people.owner, 'put', `quizzes/${c.id}`, quizBody())).status).toBe(200);
-    const ok = await write(people.owner, 'post', `campaigns/${c.id}/launch`, {
-      expectedVersion: c.version,
-    });
-    expect(ok.status).toBe(200);
-  });
-
-  it('rejects questions that cannot be answered, and locks them once launched', async () => {
-    const c = await draftQuizCampaign('Authoring rules');
-    const bad = await write(
-      people.owner,
-      'put',
-      `quizzes/${c.id}`,
-      quizBody({ questions: [{ prompt: 'Pick', options: ['a', 'a'], correctIndex: 0 }] }),
-    );
-    expect(bad.status).toBe(422);
-    expect(bad.body.error).toMatchObject({ code: 'QUIZ_INVALID', details: { index: 0 } });
+    expect(refused.body.error.details.failed).toEqual(['content']);
+    const again = await saveQuiz(saved);
     expect(
       (
-        await write(
-          people.owner,
-          'put',
-          `quizzes/${c.id}`,
-          quizBody({ questions: [{ prompt: 'Pick', options: ['a', 'b'], correctIndex: 5 }] }),
-        )
+        await write(people.owner, 'post', `campaigns/${again.id}/launch`, {
+          expectedVersion: again.version,
+        })
       ).status,
-    ).toBe(422);
-
-    const saved = await write(people.owner, 'put', `quizzes/${c.id}`, quizBody());
-    expect(saved.body.questions.map((q: { prompt: string }) => q.prompt)).toEqual(
-      questions.map((q) => q.prompt),
-    );
-    expect(saved.body.settings).toEqual({ timeLimitMinutes: null, passPercent: 60 });
-
-    await write(people.owner, 'post', `campaigns/${c.id}/launch`, { expectedVersion: c.version });
-    expect((await write(people.owner, 'put', `quizzes/${c.id}`, quizBody())).status).toBe(409);
-  });
-
-  it('keeps another business out of the questions', async () => {
-    const c = await draftQuizCampaign('Private questions');
-    await write(people.owner, 'put', `quizzes/${c.id}`, quizBody());
-    expect((await read(people.outsider, `quizzes/${c.id}`)).status).toBe(404);
-    expect((await write(people.outsider, 'put', `quizzes/${c.id}`, quizBody())).status).toBe(404);
-    expect((await read(people.ama, `quizzes/${c.id}`)).status).toBe(403);
-    expect((await read(null, `quizzes/${c.id}`)).status).toBe(401);
+    ).toBe(200);
   });
 
   it('shows visitors the rules without any question, and nothing for a campaign that is not running', async () => {
-    const c = await draftQuizCampaign('Not yet running');
-    await write(people.owner, 'put', `quizzes/${c.id}`, quizBody());
-    const { slug } = await launched('Public rules');
+    const draft = await saveQuiz(await draftQuizCampaign('Not yet running'));
+    expect(draft.id).toBeTruthy();
+    const { slug } = await launched('Public rules', { timeLimitMinutes: 10, passPercent: 80 });
     const info = await read(null, `public/quiz/${slug}`);
     expect(info.status).toBe(200);
     expect(info.headers['cache-control']).toBe('public, s-maxage=30, stale-while-revalidate=300');
     expect(info.headers['set-cookie']).toBeUndefined();
     expect(info.body).toMatchObject({
-      title: 'Public rules',
+      title: 'Quiz',
       businessName: `E2E-QA-${tag}`,
       questionCount: 3,
-      timeLimitMinutes: null,
-      passPercent: 60,
+      timeLimitMinutes: 10,
+      passPercent: 80,
     });
     expect(JSON.stringify(info.body)).not.toContain('Capital of Ghana');
     expect((await read(null, `public/quiz/no-such-quiz-aaaaaa`)).status).toBe(404);
@@ -269,7 +237,7 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
     // The campaign page's own facts come from the public campaign endpoint.
     const page = await read(null, `public/campaigns/${slug}`);
     expect(page.status).toBe(200);
-    expect(page.body).toMatchObject({ slug, title: 'Public rules', type: 'quiz' });
+    expect(page.body).toMatchObject({ slug, type: 'quiz' });
     expect((await read(null, `public/campaigns/not-yet-running-aaaaaa`)).status).toBe(404);
   });
 
@@ -279,7 +247,12 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
 
     const started = await write(ama, 'post', `quiz/${slug}/attempt`);
     expect(started.status).toBe(200);
-    expect(started.body.questions).toHaveLength(3);
+    // The questions are the ones written on the campaign, in order.
+    expect(started.body.questions.map((q: { prompt: string }) => q.prompt)).toEqual([
+      'Capital of Ghana?',
+      '2 + 2?',
+      'Largest planet?',
+    ]);
     expect(JSON.stringify(started.body)).not.toMatch(/correct/i);
     expect(started.body).toMatchObject({ answers: {}, result: null, expiresAt: null });
 
@@ -324,26 +297,22 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
   it('is for participant accounts with a session, and only for running quizzes', async () => {
     const { slug } = await launched('Who can enter');
     expect((await write(people.owner, 'post', `quiz/${slug}/attempt`)).status).toBe(403);
+    expect((await write(people.outsider, 'post', `quiz/${slug}/attempt`)).status).toBe(403);
     expect((await read(null, `quiz/${slug}/attempt`)).status).toBe(401);
     expect((await read(people.kofi, `quiz/${slug}/attempt`)).body.error.code).toBe('NO_ATTEMPT');
     expect((await write(people.kofi, 'post', `quiz/not-a-real-quiz-abc123/attempt`)).status).toBe(
       404,
     );
 
-    const c = await draftQuizCampaign('Never launched');
-    await write(people.owner, 'put', `quizzes/${c.id}`, quizBody());
+    const draft = await saveQuiz(await draftQuizCampaign('Never launched'));
+    expect(draft.id).toBeTruthy();
     expect((await write(people.kofi, 'post', `quiz/never-launched-aaaaaa/attempt`)).status).toBe(
       404,
     );
   });
 
   it('closes a timed attempt when its time is up and scores what was answered', async () => {
-    const c = await draftQuizCampaign('Against the clock');
-    await write(people.owner, 'put', `quizzes/${c.id}`, quizBody({ timeLimitMinutes: 5 }));
-    const launch = await write(people.owner, 'post', `campaigns/${c.id}/launch`, {
-      expectedVersion: c.version,
-    });
-    const slug = launch.body.slug as string;
+    const { slug } = await launched('Against the clock', { timeLimitMinutes: 5 });
 
     const ama = people.ama;
     const started = (await write(ama, 'post', `quiz/${slug}/attempt`)).body;

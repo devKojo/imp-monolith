@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { t } from '../../../i18n';
-import type { TemplateBlock } from '../types';
+import type { CampaignField } from '../types';
 
 /**
  * What a participant will be asked, built from the same fields. The form is inert: it is a picture
@@ -8,16 +8,16 @@ import type { TemplateBlock } from '../types';
  */
 defineProps<{
   name: string;
-  blocks: TemplateBlock[];
+  blocks: CampaignField[];
   device: 'mobile' | 'desktop';
   /** A taller window, for the full-size view. The content always scrolls inside the frame. */
   tall?: boolean;
 }>();
 
 const likert = ['1', '2', '3', '4', '5'];
-const inputType = (kind: TemplateBlock['kind']) =>
+const inputType = (kind: CampaignField['kind']) =>
   kind === 'email' ? 'email' : kind === 'phone' ? 'tel' : 'text';
-const choices = (b: TemplateBlock) =>
+const choices = (b: CampaignField) =>
   b.options.filter((o) => o.trim() !== '').map((o, i) => ({ value: String(i), label: o }));
 </script>
 
@@ -46,7 +46,7 @@ const choices = (b: TemplateBlock) =>
             :description="b.helper || undefined"
           />
           <UiChoiceGroup
-            v-else-if="b.kind === 'choice'"
+            v-else-if="b.kind === 'choice' || b.kind === 'quiz_question'"
             model-value=""
             variant="list"
             :legend="b.label"

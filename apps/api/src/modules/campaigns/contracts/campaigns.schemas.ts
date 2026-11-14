@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from '@/shared/uuid';
+import { FIELD_KINDS, FIELD_LIMITS } from '../domain/fields';
 import { LIMITS } from '../domain/model';
 
 /** Request shapes (R-API-02: validate every input at the edge; unknown keys are rejected). */
@@ -12,6 +13,29 @@ export const prizeSchema = z
     valueLabel: z.string().max(LIMITS.valueMax),
     winners: z.number().int().min(1).max(LIMITS.winnersMax),
     description: z.string().max(LIMITS.descriptionMax),
+  })
+  .strict();
+
+export const fieldSchema = z
+  .object({
+    kind: z.enum(FIELD_KINDS),
+    label: z.string().max(FIELD_LIMITS.promptMax),
+    helper: z.string().max(FIELD_LIMITS.helperMax),
+    required: z.boolean(),
+    options: z.array(z.string().max(FIELD_LIMITS.optionMax)).max(FIELD_LIMITS.optionsMax),
+    correctIndex: z.number().int().min(0).max(FIELD_LIMITS.optionsMax).nullable(),
+  })
+  .strict();
+
+export const settingsSchema = z
+  .object({
+    quiz: z
+      .object({
+        timeLimitMinutes: z.number().int().min(1).max(FIELD_LIMITS.timeLimitMax).nullable(),
+        passPercent: z.number().int().min(1).max(100),
+      })
+      .strict()
+      .nullable(),
   })
   .strict();
 
@@ -31,6 +55,8 @@ export const updateCampaignSchema = z
     startAt: instant.nullable(),
     endAt: instant.nullable(),
     prizes: z.array(prizeSchema).max(LIMITS.prizesMax),
+    fields: z.array(fieldSchema).max(FIELD_LIMITS.fieldsMax),
+    settings: settingsSchema,
   })
   .strict();
 

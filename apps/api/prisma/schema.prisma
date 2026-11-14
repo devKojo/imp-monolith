@@ -40,12 +40,7 @@ enum TemplateArchetype {
   INSTANT
 }
 
-enum TemplateStatus {
-  DRAFT
-  PUBLISHED
-}
-
-enum TemplateFieldKind {
+enum CampaignFieldKind {
   FULL_NAME
   EMAIL
   PHONE
@@ -57,6 +52,7 @@ enum TemplateFieldKind {
   TEXT
   LONG_TEXT
   CONSENT
+  QUIZ_QUESTION
 }
 
 enum CampaignStatus {
@@ -78,7 +74,6 @@ model Business {
   updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz
 
   memberships Membership[]
-  templates   Template[]
   campaigns   Campaign[]
 
   @@map("businesses")
@@ -229,56 +224,6 @@ model PasswordReset {
   @@map("password_resets")
 }
 
-/// @owner templates
-/// Reusable entry-form blueprint for campaigns. Tenant-scoped (RLS). Soft-deleted via deletedAt
-/// (R-DAT-09). A published template is read-only until it is unpublished.
-model Template {
-  id          String            @id @default(uuid(7)) @db.Uuid
-  tenantId    String            @map("tenant_id") @db.Uuid
-  name        String
-  archetype   TemplateArchetype
-  status      TemplateStatus    @default(DRAFT)
-  /// Optimistic concurrency: bumped on every change; writers send the version they read.
-  version     Int               @default(1)
-  createdById String            @map("created_by_id") @db.Uuid
-  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz
-  publishedAt DateTime?         @map("published_at") @db.Timestamptz
-  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
-
-  business  Business        @relation(fields: [tenantId], references: [id])
-  fields    TemplateField[]
-  campaigns Campaign[]
-
-  @@unique([tenantId, id])
-  @@index([tenantId, status])
-  @@index([tenantId, updatedAt])
-  @@map("templates")
-}
-
-/// @owner templates
-/// One field of a template's entry form, in `position` order. Replaced as a set when the template
-/// is saved, so `position` is not unique-constrained (no transient conflicts while reordering).
-model TemplateField {
-  id         String            @id @default(uuid(7)) @db.Uuid
-  tenantId   String            @map("tenant_id") @db.Uuid
-  templateId String            @map("template_id") @db.Uuid
-  position   Int
-  kind       TemplateFieldKind
-  /// Machine name in the entry schema (snake_case), unique within the template.
-  key        String
-  label      String
-  helper     String            @default("")
-  required   Boolean           @default(false)
-  options    String[]          @default([])
-
-  template Template @relation(fields: [tenantId, templateId], references: [tenantId, id], onDelete: Cascade)
-
-  @@unique([tenantId, templateId, key])
-  @@index([tenantId, templateId, position])
-  @@map("template_fields")
-}
-
 /// @owner campaigns
 /// A campaign a business runs from a published template: what the public page says, who can win what,
 /// and when it runs. Tenant-scoped (RLS). Soft-deleted via deletedAt (R-DAT-09). Only a DRAFT is
@@ -286,7 +231,7 @@ model TemplateField {
 model Campaign {
   id          String         @id @default(uuid(7)) @db.Uuid
   tenantId    String         @map("tenant_id") @db.Uuid
-  /// The entry form. Optional while drafting; a published template is required to launch.
+  /// The built-in campaign type. Optional while drafting; required to launch.
   templateId  String?        @map("template_id") @db.Uuid
   title       String
   summary     String         @default("")
@@ -302,19 +247,90 @@ model Campaign {
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   launchedAt  DateTime?      @map("launched_at") @db.Timestamptz
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+  /// Settings the campaign type uses, e.g. {"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}.
+  settings    Json           @default("{}")
 
-  business  Business        @relation(fields: [tenantId], references: [id])
-  template  Template?       @relation(fields: [tenantId, templateId], references: [tenantId, id])
-  prizes    CampaignPrize[]
-  quiz      Quiz?
-  questions QuizQuestion[]
-  attempts  QuizAttempt[]
+  business Business          @relation(fields: [tenantId], references: [id])
+  template CampaignTemplate? @relation(fields: [templateId], references: [id])
+  prizes   CampaignPrize[]
+  fields   CampaignField[]
+  attempts QuizAttempt[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
   @@index([tenantId, updatedAt])
   @@index([tenantId, templateId])
   @@map("campaigns")
+}
+
+/// @owner templates
+/// A built-in campaign type (quiz, survey, giveaway, instant win). Global and read-only for businesses:
+/// seeded, and later managed by platform admins. It says what a campaign of that type may contain.
+model CampaignTemplate {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  slug             String            @unique
+  name             String
+  archetype        TemplateArchetype
+  description      String            @default("")
+  /// A campaign needs at least this many content fields (questions) to launch.
+  minContentFields Int               @default(0) @map("min_content_fields")
+  /// A campaign of this type must say what is being given away.
+  requiresPrizes   Boolean           @default(false) @map("requires_prizes")
+  position         Int               @default(0)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  fields    CampaignTemplateField[]
+  campaigns Campaign[]
+
+  @@map("campaign_templates")
+}
+
+/// @owner templates
+/// One field kind a template allows, with how many a campaign may have and what a new campaign starts with.
+model CampaignTemplateField {
+  id              String            @id @default(uuid(7)) @db.Uuid
+  templateId      String            @map("template_id") @db.Uuid
+  kind            CampaignFieldKind
+  position        Int               @default(0)
+  /// Null means no limit.
+  maxCount        Int?              @map("max_count")
+  /// How many of this kind a new campaign of this type starts with.
+  defaultCount    Int               @default(0) @map("default_count")
+  defaultLabel    String            @default("") @map("default_label")
+  defaultRequired Boolean           @default(false) @map("default_required")
+
+  template CampaignTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, kind])
+  @@map("campaign_template_fields")
+}
+
+/// @owner campaigns
+/// One field of a campaign, in `position` order: what the participant is asked (their details) or the
+/// content of the campaign (quiz questions, survey questions). Replaced as a set when the draft is saved.
+/// `correctIndex` is only for a quiz question and never leaves the server while the quiz runs.
+model CampaignField {
+  id           String            @id @default(uuid(7)) @db.Uuid
+  tenantId     String            @map("tenant_id") @db.Uuid
+  campaignId   String            @map("campaign_id") @db.Uuid
+  position     Int
+  kind         CampaignFieldKind
+  /// Machine name (snake_case), unique within the campaign.
+  key          String
+  label        String
+  helper       String            @default("")
+  required     Boolean           @default(false)
+  /// Answers of a choice or quiz question; empty for other kinds.
+  options      String[]          @default([])
+  correctIndex Int?              @map("correct_index")
+
+  campaign Campaign     @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  answers  QuizAnswer[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, campaignId, key])
+  @@index([tenantId, campaignId, position])
+  @@map("campaign_fields")
 }
 
 /// @owner campaigns
@@ -334,43 +350,6 @@ model CampaignPrize {
 
   @@index([tenantId, campaignId, position])
   @@map("campaign_prizes")
-}
-
-/// @owner quiz
-/// Settings of a quiz campaign: an optional time limit for the whole attempt and the pass mark.
-model Quiz {
-  id               String   @id @default(uuid(7)) @db.Uuid
-  tenantId         String   @map("tenant_id") @db.Uuid
-  campaignId       String   @map("campaign_id") @db.Uuid
-  /// Null means untimed.
-  timeLimitMinutes Int?     @map("time_limit_minutes")
-  passPercent      Int      @default(70) @map("pass_percent")
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
-
-  @@unique([tenantId, campaignId])
-  @@map("quizzes")
-}
-
-/// @owner quiz
-/// One single-choice question, in `position` order. Replaced as a set while the campaign is a draft.
-/// `correctIndex` never leaves the server while the quiz runs.
-model QuizQuestion {
-  id           String   @id @default(uuid(7)) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  campaignId   String   @map("campaign_id") @db.Uuid
-  position     Int
-  prompt       String
-  options      String[]
-  correctIndex Int      @map("correct_index")
-
-  campaign Campaign     @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
-  answers  QuizAnswer[]
-
-  @@unique([tenantId, id])
-  @@index([tenantId, campaignId, position])
-  @@map("quiz_questions")
 }
 
 /// @owner quiz
@@ -407,8 +386,8 @@ model QuizAnswer {
   choiceIndex Int      @map("choice_index")
   answeredAt  DateTime @default(now()) @map("answered_at") @db.Timestamptz
 
-  attempt  QuizAttempt  @relation(fields: [tenantId, attemptId], references: [tenantId, id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [tenantId, questionId], references: [tenantId, id], onDelete: Cascade)
+  attempt  QuizAttempt   @relation(fields: [tenantId, attemptId], references: [tenantId, id], onDelete: Cascade)
+  question CampaignField @relation(fields: [tenantId, questionId], references: [tenantId, id], onDelete: Cascade)
 
   @@unique([tenantId, attemptId, questionId])
   @@map("quiz_answers")

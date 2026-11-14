@@ -7,20 +7,6 @@ export class QuizNotFoundError extends NotFoundError {
   }
 }
 
-/** The signed-in business role may not do this to a quiz. */
-export class QuizPermissionError extends AppError {
-  constructor() {
-    super('Your role cannot do that to quizzes', 403, 'FORBIDDEN');
-  }
-}
-
-/** The account has no active business. */
-export class NoActiveBusinessError extends AppError {
-  constructor() {
-    super('No active business', 403, 'NO_ACTIVE_BUSINESS');
-  }
-}
-
 /** Taking a quiz needs a participant account; a business account cannot enter. */
 export class ParticipantOnlyError extends AppError {
   constructor() {
@@ -28,35 +14,10 @@ export class ParticipantOnlyError extends AppError {
   }
 }
 
-/** The questions of a launched campaign are fixed. */
-export class QuizLockedError extends AppError {
-  constructor() {
-    super('Only a draft campaign can have its questions changed', 409, 'CAMPAIGN_LOCKED');
-  }
-}
-
-/** The campaign does not use a quiz template. */
-export class NotAQuizError extends AppError {
-  constructor() {
-    super('This campaign does not use a quiz template', 409, 'NOT_A_QUIZ');
-  }
-}
-
 /** The quiz has no questions yet. */
 export class QuizEmptyError extends AppError {
   constructor() {
     super('This quiz has no questions yet', 409, 'QUIZ_EMPTY');
-  }
-}
-
-/** The questions are not valid (for example no correct answer marked). */
-export class QuizInvalidError extends AppError {
-  constructor(
-    message: string,
-    /** Which question (from 0) the problem is in. */
-    public readonly details: { index: number },
-  ) {
-    super(message, 422, 'QUIZ_INVALID');
   }
 }
 

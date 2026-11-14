@@ -13,7 +13,7 @@ import {
   withTenant,
 } from '@/shared/database';
 import { PrismaCampaignRepository } from '../infrastructure/prisma-campaign.repository';
-import { PrismaCampaignUsage } from '../infrastructure/prisma-campaign-usage';
+import { SEEDED, giveawayTemplate, quizTemplate, surveyTemplate } from './fixtures';
 import { repositoryContract, type ContractWorld } from './repository.contract';
 
 config({ path: ['.env', '../../.env'], quiet: true });
@@ -32,10 +32,6 @@ async function business(name: string) {
   tenants.push(b.id);
   return b.id;
 }
-const template = (tenantId: string) =>
-  platform.template.create({
-    data: { tenantId, name: 'T', archetype: 'GIVEAWAY', createdById: userId },
-  });
 
 if (enabled) {
   repositoryContract('PostgreSQL', async (): Promise<ContractWorld> => {
@@ -44,13 +40,12 @@ if (enabled) {
       data: { email: `cmp-${tag}@test.local`, name: 'C' },
     });
     userId = user.id;
-    const t = await template(a);
     return {
       repo: new PrismaCampaignRepository(db),
       tenantA: a,
       tenantB: b,
       userA: user.id,
-      templateA: t.id,
+      templateA: SEEDED.giveaway,
     };
   });
 }
@@ -58,7 +53,6 @@ if (enabled) {
 describe.skipIf(!enabled)('campaigns at the database level', () => {
   let tenantA = '';
   let tenantB = '';
-  let templateA = '';
   let campaignId = '';
   const ctx = (tenantId: string) => createTenantContext({ tenantId, requestId: randomUUID() });
   const row = (over: Record<string, unknown> = {}) => ({
@@ -71,7 +65,6 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
   beforeAll(async () => {
     tenantA = await business('RlsA');
     tenantB = await business('RlsB');
-    templateA = (await template(tenantA)).id;
     const c = await withTenant(db, ctx(tenantA), (tx) => tx.campaign.create({ data: row() }));
     campaignId = c.id;
     await withTenant(db, ctx(tenantA), (tx) =>
@@ -82,10 +75,9 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
   });
 
   afterAll(async () => {
+    await platform.campaignField.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaignPrize.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaign.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.templateField.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.template.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.business.deleteMany({ where: { id: { in: tenants } } });
     if (userId) await platform.user.deleteMany({ where: { id: userId } });
     await Promise.all([db.$disconnect(), platform.$disconnect()]);
@@ -123,13 +115,28 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     ).rejects.toThrow();
   });
 
-  it('only lets a campaign use a template of its own business (composite foreign key)', async () => {
+  it('only lets a campaign use a built-in type that exists, and children stay in their business', async () => {
     await expect(
-      platform.campaign.create({ data: row({ tenantId: tenantB, templateId: templateA }) }),
+      platform.campaign.create({ data: row({ templateId: randomUUID() }) }),
     ).rejects.toThrow();
+    await expect(
+      platform.campaign.create({ data: row({ templateId: SEEDED.quiz }) }),
+    ).resolves.toBeTruthy();
     await expect(
       platform.campaignPrize.create({
         data: { tenantId: tenantB, campaignId, position: 0, name: 'x', winners: 1 },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      platform.campaignField.create({
+        data: {
+          tenantId: tenantB,
+          campaignId,
+          position: 0,
+          kind: 'EMAIL',
+          key: 'email',
+          label: 'x',
+        },
       }),
     ).rejects.toThrow();
   });
@@ -152,30 +159,107 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     ).rejects.toThrow();
   });
 
-  it('answers whether a template is in use by a running campaign that has not ended', async () => {
-    const usage = new PrismaCampaignUsage(db);
-    expect(await usage.isInUse(ctx(tenantA), templateA)).toBe(false);
-    const make = (data: Record<string, unknown>) =>
-      platform.campaign.create({ data: row({ templateId: templateA, ...data }) as never });
-    const future = new Date(Date.now() + 86_400_000);
+  it('hides campaign fields from another business and from an unscoped query', async () => {
+    await withTenant(db, ctx(tenantA), (tx) =>
+      tx.campaignField.create({
+        data: {
+          tenantId: tenantA,
+          campaignId,
+          position: 0,
+          kind: 'EMAIL',
+          key: 'email',
+          label: 'Email',
+        },
+      }),
+    );
+    expect(await db.campaignField.count()).toBe(0);
+    const seen = await withTenant(db, ctx(tenantB), (tx) => tx.campaignField.findMany());
+    expect(seen).toEqual([]);
+    const planted = withTenant(db, ctx(tenantB), (tx) =>
+      tx.campaignField.create({
+        data: {
+          tenantId: tenantA,
+          campaignId,
+          position: 1,
+          kind: 'PHONE',
+          key: 'phone',
+          label: 'P',
+        },
+      }),
+    );
+    await expect(planted).rejects.toThrow();
+  });
 
-    const draft = await make({ title: 'draft' });
-    expect(await usage.isInUse(ctx(tenantA), templateA)).toBe(false);
-    const ended = await make({
-      title: 'ended',
-      status: 'LIVE',
-      slug: `e-${tag}`,
-      endAt: new Date(Date.now() - 1000),
+  it('enforces the field rules in the database too', async () => {
+    const make = (data: Record<string, unknown>) =>
+      withTenant(db, ctx(tenantA), (tx) =>
+        tx.campaignField.create({
+          data: {
+            tenantId: tenantA,
+            campaignId,
+            position: 5,
+            kind: 'QUIZ_QUESTION',
+            key: `k_${randomUUID().slice(0, 6)}`,
+            label: 'Q',
+            options: ['A', 'B'],
+            ...data,
+          } as never,
+        }),
+      );
+    await expect(make({ correctIndex: 1 })).resolves.toBeTruthy();
+    await expect(make({ correctIndex: 2 })).rejects.toThrow(); // past the options
+    await expect(make({ correctIndex: -1 })).rejects.toThrow();
+    await expect(make({ kind: 'CHOICE', correctIndex: 0 })).rejects.toThrow(); // only a quiz question
+    await expect(make({ key: 'Not Snake' })).rejects.toThrow();
+    await expect(
+      make({ options: Array.from({ length: 21 }, (_, i) => String(i)) }),
+    ).rejects.toThrow();
+    await expect(make({ key: 'email' })).rejects.toThrow(); // already used in this campaign
+  });
+
+  it('seeds the four built-in types exactly as the test fixtures say, and keeps them read-only', async () => {
+    const found = await db.campaignTemplate.findMany({
+      orderBy: { position: 'asc' },
+      include: { fields: { orderBy: { position: 'asc' } } },
     });
-    expect(await usage.isInUse(ctx(tenantA), templateA)).toBe(false);
-    const live = await make({ title: 'live', status: 'LIVE', slug: `l-${tag}`, endAt: future });
-    expect(await usage.isInUse(ctx(tenantA), templateA)).toBe(true);
-    expect(await usage.isInUse(ctx(tenantB), templateA)).toBe(false);
-    await platform.campaign.updateMany({
-      where: { id: { in: [ended.id, live.id] } },
-      data: { status: 'CANCELLED' },
+    const shape = (t: {
+      slug: string;
+      minContentFields: number;
+      requiresPrizes: boolean;
+      fields: Array<{
+        kind: string;
+        maxCount: number | null;
+        defaultCount: number;
+        defaultRequired: boolean;
+      }>;
+    }) => ({
+      slug: t.slug,
+      min: t.minContentFields,
+      prizes: t.requiresPrizes,
+      fields: t.fields.map((f) => [
+        f.kind.toLowerCase(),
+        f.maxCount,
+        f.defaultCount,
+        f.defaultRequired,
+      ]),
     });
-    expect(draft.status).toBe('DRAFT');
-    expect(await usage.isInUse(ctx(tenantA), templateA)).toBe(false);
+    const fixture = (t: typeof quizTemplate) => ({
+      slug: t.slug,
+      min: t.minContentFields,
+      prizes: t.requiresPrizes,
+      fields: t.fields.map((f) => [f.kind, f.maxCount, f.defaultCount, f.defaultRequired]),
+    });
+    const bySlug = Object.fromEntries(found.map((t) => [t.slug, shape(t)]));
+    expect(bySlug.quiz).toEqual(fixture(quizTemplate));
+    expect(bySlug.survey).toEqual(fixture(surveyTemplate));
+    expect(bySlug.giveaway).toEqual(fixture(giveawayTemplate));
+    expect(Object.keys(bySlug).sort()).toEqual(['giveaway', 'instant', 'quiz', 'survey']);
+
+    await expect(
+      db.campaignTemplate.create({
+        data: { slug: 'mine', name: 'Mine', archetype: 'QUIZ' },
+      }),
+    ).rejects.toThrow();
+    await expect(db.campaignTemplate.updateMany({ data: { name: 'Hijacked' } })).rejects.toThrow();
   });
 });

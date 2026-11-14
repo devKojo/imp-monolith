@@ -1,48 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  attemptDeadline,
-  firstProblem,
-  isExpired,
-  normalizeQuestions,
-  questionProblem,
-  scoreAttempt,
-} from '../domain/rules';
-
-const q = (over: Partial<{ prompt: string; options: string[]; correctIndex: number }> = {}) => ({
-  prompt: 'Pick one',
-  options: ['a', 'b', 'c'],
-  correctIndex: 1,
-  ...over,
-});
-
-describe('writing questions', () => {
-  it('trims what was typed', () => {
-    expect(normalizeQuestions([q({ prompt: '  Hi  ', options: [' a ', 'b '] })])).toEqual([
-      { prompt: 'Hi', options: ['a', 'b'], correctIndex: 1 },
-    ]);
-  });
-
-  it('accepts a question with 2 or more different answers and a correct one marked', () => {
-    expect(questionProblem(q())).toBeNull();
-    expect(questionProblem(q({ options: ['yes', 'no'], correctIndex: 0 }))).toBeNull();
-  });
-
-  it('says what is wrong, in words the author can act on', () => {
-    expect(questionProblem(q({ prompt: '' }))).toMatch(/text/);
-    expect(questionProblem(q({ options: ['only'] }))).toMatch(/at least 2/);
-    expect(questionProblem(q({ options: ['a', ''] }))).toMatch(/empty/);
-    expect(questionProblem(q({ options: ['Yes', 'yes'] }))).toMatch(/different/);
-    expect(questionProblem(q({ correctIndex: 3 }))).toMatch(/correct/);
-    expect(questionProblem(q({ correctIndex: -1 }))).toMatch(/correct/);
-  });
-
-  it('finds the first bad question and where it is', () => {
-    expect(firstProblem([q(), q({ prompt: '' }), q({ options: ['x'] })])).toMatchObject({
-      index: 1,
-    });
-    expect(firstProblem([q(), q()])).toBeNull();
-  });
-});
+import { attemptDeadline, isExpired, scoreAttempt } from '../domain/rules';
 
 describe('scoring', () => {
   const marked = [

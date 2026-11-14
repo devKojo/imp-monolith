@@ -1,4 +1,5 @@
 import type { TenantContext } from '@/shared/database';
+import type { CampaignSettings, FieldInput } from '../domain/fields';
 import type {
   CampaignStatus,
   PrizeInput,
@@ -25,6 +26,8 @@ export type DraftContent = {
   startAt: Date | null;
   endAt: Date | null;
   prizes: PrizeInput[];
+  fields: FieldInput[];
+  settings: CampaignSettings;
 };
 
 /** Storage for campaigns. Every method runs inside one tenant-scoped transaction (RLS). */
@@ -33,7 +36,13 @@ export interface CampaignRepository {
   get(ctx: TenantContext, id: string): Promise<StoredCampaign | null>;
   create(
     ctx: TenantContext,
-    input: { title: string; templateId: string | null; createdById: string },
+    input: {
+      title: string;
+      templateId: string | null;
+      createdById: string;
+      fields: FieldInput[];
+      settings: CampaignSettings;
+    },
   ): Promise<StoredCampaign>;
   /** Replaces the content of a DRAFT at `expectedVersion`; `wrong_state` if it is not a draft. */
   saveDraft(
@@ -66,12 +75,7 @@ export interface CampaignRepository {
   softDelete(ctx: TenantContext, id: string): Promise<'ok' | 'not_found' | 'locked'>;
 }
 
-/** Looks up the templates a campaign uses. Provided by the templates module at the composition root. */
+/** Looks up the built-in campaign types. Provided by the templates module at the composition root. */
 export interface TemplateLookup {
   many(ctx: TenantContext, ids: readonly string[]): Promise<TemplateRef[]>;
-}
-
-/** How many quiz questions a campaign has. Provided by the quiz module at the composition root. */
-export interface QuestionCounter {
-  count(ctx: TenantContext, campaignId: string): Promise<number>;
 }

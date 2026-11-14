@@ -1,5 +1,5 @@
 /**
- * End to end for campaigns and their link to templates: the real app, the real identity guards
+ * End to end for campaigns and the built-in campaign types: the real app, the real identity guards
  * (session cookie, CSRF, Origin), the real routes and real PostgreSQL with the real roles and RLS.
  * Sessions are created directly in the test database, so no email or password flow is involved.
  * Skipped unless the same TEST_DATABASE_URL_RUNTIME / _PLATFORM variables as the isolation suite are set.
@@ -10,7 +10,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app';
 import { InMemoryEventBus } from './infrastructure/messaging/in-memory-event-bus';
-import { PrismaCampaignUsage, createCampaignsModule } from './modules/campaigns';
+import { createCampaignsModule } from './modules/campaigns';
+import { SEEDED } from './modules/campaigns/tests/fixtures';
 import { createIdentityModule } from './modules/identity';
 import { csrfTokenFor, generateToken, hashToken } from './modules/identity/domain/tokens';
 import { createTemplatesModule } from './modules/templates';
@@ -32,30 +33,37 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
   type Person = { cookie: string; csrf: string };
   let tenantA = '';
   let tenantB = '';
-  const people: Record<'owner' | 'operator' | 'analyst' | 'outsider', Person> = {} as never;
+  const people: Record<'owner' | 'operator' | 'analyst' | 'outsider' | 'participant', Person> =
+    {} as never;
   const userIds: string[] = [];
   let app: Awaited<ReturnType<typeof createApp>>;
 
   async function person(
-    tenantId: string,
-    role: 'BUSINESS_OWNER' | 'CAMPAIGN_OPERATOR' | 'ANALYST',
+    tenantId: string | null,
+    role: 'BUSINESS_OWNER' | 'CAMPAIGN_OPERATOR' | 'ANALYST' | null,
     name: string,
   ): Promise<Person> {
     const user = await platform.user.create({
-      data: { email: `${name}-${tag}@test.local`, name, emailVerifiedAt: new Date() },
+      data: {
+        email: `${name}-${tag}@test.local`,
+        name,
+        emailVerifiedAt: new Date(),
+        ...(role ? {} : { accountType: 'PARTICIPANT' as const }),
+      },
     });
     userIds.push(user.id);
-    const membership = await platform.membership.create({
-      data: { tenantId, userId: user.id, role },
-    });
+    const membership =
+      tenantId && role
+        ? await platform.membership.create({ data: { tenantId, userId: user.id, role } })
+        : null;
     const token = generateToken();
     const tokenHash = hashToken(token);
     await platform.session.create({
       data: {
         tokenHash,
         userId: user.id,
-        activeTenantId: tenantId,
-        activeMembershipId: membership.id,
+        activeTenantId: membership ? tenantId : null,
+        activeMembershipId: membership?.id ?? null,
         expiresAt: new Date(Date.now() + 8 * 3600_000),
       },
     });
@@ -73,19 +81,19 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     people.operator = await person(tenantA, 'CAMPAIGN_OPERATOR', 'operator');
     people.analyst = await person(tenantA, 'ANALYST', 'analyst');
     people.outsider = await person(tenantB, 'BUSINESS_OWNER', 'outsider');
+    people.participant = await person(null, null, 'participant');
 
     const identity = createIdentityModule({ db, allowedOrigins: [ORIGIN], sessionSecret: SECRET });
-    const templates = createTemplatesModule({ db, identity, usage: new PrismaCampaignUsage(db) });
+    const templates = createTemplatesModule({ db, identity });
     const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
     app = await createApp({ bus: new InMemoryEventBus(), identity, templates, campaigns });
   });
 
   afterAll(async () => {
     const tenants = [tenantA, tenantB];
+    await platform.campaignField.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaignPrize.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.campaign.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.templateField.deleteMany({ where: { tenantId: { in: tenants } } });
-    await platform.template.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.session.deleteMany({ where: { userId: { in: userIds } } });
     await platform.membership.deleteMany({ where: { tenantId: { in: tenants } } });
     await platform.user.deleteMany({ where: { id: { in: userIds } } });
@@ -103,33 +111,20 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
       .set('X-CSRF-Token', p.csrf)
       .send(body);
 
-  /** A published template of business A, made through the real templates API. */
-  async function publishedTemplate(): Promise<string> {
-    const o = people.owner;
-    const t = (await write(o, 'post', 'templates', { name: 'Entry', archetype: 'giveaway' })).body;
-    await write(o, 'put', `templates/${t.id}`, {
-      expectedVersion: 1,
-      name: 'Entry',
-      archetype: 'giveaway',
-      fields: [
-        { kind: 'email', key: 'email', label: 'Email', helper: '', required: true, options: [] },
-        {
-          kind: 'consent',
-          key: 'consent',
-          label: 'I agree',
-          helper: '',
-          required: true,
-          options: [],
-        },
-      ],
-    });
-    expect(
-      (await write(o, 'post', `templates/${t.id}/publish`, { expectedVersion: 2 })).status,
-    ).toBe(200);
-    return t.id as string;
-  }
-
-  const content = (templateId: string | null, over: Record<string, unknown> = {}) => ({
+  const field = (kind: string, over: Record<string, unknown> = {}) => ({
+    kind,
+    label: kind,
+    helper: '',
+    required: false,
+    options: [],
+    correctIndex: null,
+    ...over,
+  });
+  const details = () => [
+    field('email', { label: 'Email', required: true }),
+    field('consent', { label: 'I agree', required: true }),
+  ];
+  const content = (templateId: string, over: Record<string, unknown> = {}) => ({
     title: 'Black Friday Giveaway',
     summary: 'Win big',
     templateId,
@@ -139,6 +134,8 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
       { name: 'Grand prize', valueLabel: 'GH₵ 5,000', winners: 1, description: 'The big one' },
       { name: 'Runner-up', valueLabel: 'GH₵ 500', winners: 10, description: '' },
     ],
+    fields: details(),
+    settings: { quiz: null },
     ...over,
   });
 
@@ -160,32 +157,77 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     expect(evil.status).toBe(403);
   });
 
-  it('runs the whole workflow, and the template is protected while a campaign uses it', async () => {
-    const owner = people.owner;
-    const templateId = await publishedTemplate();
+  describe('the built-in campaign types', () => {
+    it('lists the four types with what each allows, to anyone in a business', async () => {
+      for (const p of [people.owner, people.analyst, people.outsider]) {
+        const res = await read(p, 'templates');
+        expect(res.status).toBe(200);
+        expect(res.body.items.map((t: { slug: string }) => t.slug)).toEqual([
+          'quiz',
+          'survey',
+          'giveaway',
+          'instant',
+        ]);
+      }
+      const quiz = (await read(people.owner, 'templates')).body.items[0];
+      expect(quiz).toMatchObject({ id: SEEDED.quiz, archetype: 'quiz', minContentFields: 1 });
+      expect(quiz.fields.map((f: { kind: string }) => f.kind)).toContain('quiz_question');
+      expect((await read(people.owner, `templates/${SEEDED.giveaway}`)).body).toMatchObject({
+        requiresPrizes: true,
+      });
+      expect((await read(people.owner, `templates/${randomUUID()}`)).status).toBe(404);
+    });
 
-    const created = await write(owner, 'post', 'campaigns', { title: 'Black Friday Giveaway' });
+    it('is closed to visitors and participants, and cannot be written by a business', async () => {
+      expect((await request(app).get('/api/v1/templates')).status).toBe(401);
+      expect((await read(people.participant, 'templates')).status).toBe(403);
+      for (const attempt of [
+        () => write(people.owner, 'post', 'templates', { name: 'Mine', archetype: 'quiz' }),
+        () => write(people.owner, 'put', `templates/${SEEDED.quiz}`, { name: 'Hijacked' }),
+        () => write(people.owner, 'delete', `templates/${SEEDED.quiz}`),
+      ]) {
+        expect((await attempt()).status).toBe(404);
+      }
+      expect((await read(people.owner, `templates/${SEEDED.quiz}`)).body.name).toBe('Quiz');
+    });
+  });
+
+  it('runs the whole workflow, from a new campaign with its type to cancelled', async () => {
+    const owner = people.owner;
+    const created = await write(owner, 'post', 'campaigns', {
+      title: 'Black Friday Giveaway',
+      templateId: SEEDED.giveaway,
+    });
     expect(created.status).toBe(201);
     const id = created.body.id as string;
+    // A new campaign starts with what its type begins with.
+    expect(created.body.fields.map((f: { kind: string }) => f.kind)).toEqual(['email', 'consent']);
+    expect(created.body.template).toMatchObject({ id: SEEDED.giveaway, archetype: 'giveaway' });
 
     const saved = await write(owner, 'put', `campaigns/${id}`, {
       expectedVersion: 1,
-      ...content(templateId),
+      ...content(SEEDED.giveaway, {
+        fields: [...details(), field('phone', { label: 'Mobile number' })],
+      }),
     });
     expect(saved.status).toBe(200);
     expect(saved.body.prizes.map((p: { name: string }) => p.name)).toEqual([
       'Grand prize',
       'Runner-up',
     ]);
-    expect(saved.body.template).toMatchObject({
-      id: templateId,
-      status: 'PUBLISHED',
-      archetype: 'giveaway',
-    });
+    expect(saved.body.fields.map((f: { key: string }) => f.key)).toEqual([
+      'email',
+      'consent',
+      'phone',
+    ]);
 
     expect(
-      (await write(owner, 'put', `campaigns/${id}`, { expectedVersion: 1, ...content(templateId) }))
-        .status,
+      (
+        await write(owner, 'put', `campaigns/${id}`, {
+          expectedVersion: 1,
+          ...content(SEEDED.giveaway),
+        })
+      ).status,
     ).toBe(412);
 
     const launched = await write(owner, 'post', `campaigns/${id}/launch`, { expectedVersion: 2 });
@@ -193,33 +235,20 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     expect(launched.body.status).toBe('LIVE');
     expect(launched.body.slug).toMatch(/^black-friday-giveaway-[0-9a-f]{6}$/);
 
-    // A running campaign uses the template: it cannot be unpublished or deleted.
-    const tpl = (await read(owner, `templates/${templateId}`)).body;
-    const blocked = await write(owner, 'post', `templates/${templateId}/unpublish`, {
-      expectedVersion: tpl.version,
-    });
-    expect(blocked.status).toBe(409);
-    expect(blocked.body.error.code).toBe('TEMPLATE_IN_USE');
+    // Launched: the content is fixed.
+    expect(
+      (
+        await write(owner, 'put', `campaigns/${id}`, {
+          expectedVersion: 3,
+          ...content(SEEDED.giveaway),
+        })
+      ).body.error.code,
+    ).toBe('CAMPAIGN_LOCKED');
 
     const paused = await write(owner, 'post', `campaigns/${id}/pause`, { expectedVersion: 3 });
     expect(paused.body.status).toBe('PAUSED');
-    expect(
-      (
-        await write(owner, 'post', `templates/${templateId}/unpublish`, {
-          expectedVersion: tpl.version,
-        })
-      ).status,
-    ).toBe(409);
-
     const cancelled = await write(owner, 'post', `campaigns/${id}/cancel`, { expectedVersion: 4 });
     expect(cancelled.body.status).toBe('CANCELLED');
-    expect(
-      (
-        await write(owner, 'post', `templates/${templateId}/unpublish`, {
-          expectedVersion: tpl.version,
-        })
-      ).status,
-    ).toBe(200);
 
     const actions = (
       await platform.auditLog.findMany({ where: { tenantId: tenantA, targetId: id } })
@@ -233,14 +262,85 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     ]);
   });
 
+  it('writes a quiz on the campaign: the questions, the correct answers and the settings', async () => {
+    const owner = people.owner;
+    const created = await write(owner, 'post', 'campaigns', {
+      title: 'Tech quiz',
+      templateId: SEEDED.quiz,
+    });
+    const id = created.body.id as string;
+    expect(created.body.settings).toEqual({ quiz: { timeLimitMinutes: null, passPercent: 70 } });
+
+    const question = (label: string, options: string[], correctIndex: number | null) =>
+      field('quiz_question', { label, options, correctIndex, required: true });
+    const body = (fields: unknown[], over: Record<string, unknown> = {}) =>
+      content(SEEDED.quiz, {
+        title: 'Tech quiz',
+        prizes: [],
+        settings: { quiz: { timeLimitMinutes: 20, passPercent: 60 } },
+        fields,
+        ...over,
+      });
+
+    // A draft can be saved unfinished, but launching needs it finished.
+    const unfinished = await write(owner, 'put', `campaigns/${id}`, {
+      expectedVersion: 1,
+      ...body([...details(), question('Capital of Ghana?', ['Accra', 'Kumasi'], null)]),
+    });
+    expect(unfinished.status).toBe(200);
+    const refused = await write(owner, 'post', `campaigns/${id}/launch`, {
+      expectedVersion: unfinished.body.version,
+    });
+    expect(refused.status).toBe(422);
+    expect(refused.body.error.details.failed).toEqual(['content']);
+
+    const finished = await write(owner, 'put', `campaigns/${id}`, {
+      expectedVersion: unfinished.body.version,
+      ...body([
+        ...details(),
+        question('Capital of Ghana?', ['Accra', 'Kumasi'], 0),
+        question('2 + 2?', ['3', '4', '5'], 1),
+      ]),
+    });
+    expect(finished.status).toBe(200);
+    expect(finished.body.settings).toEqual({ quiz: { timeLimitMinutes: 20, passPercent: 60 } });
+    expect(
+      finished.body.fields
+        .filter((f: { kind: string }) => f.kind === 'quiz_question')
+        .map((f: { label: string; correctIndex: number }) => [f.label, f.correctIndex]),
+    ).toEqual([
+      ['Capital of Ghana?', 0],
+      ['2 + 2?', 1],
+    ]);
+
+    const launched = await write(owner, 'post', `campaigns/${id}/launch`, {
+      expectedVersion: finished.body.version,
+    });
+    expect(launched.status).toBe(200);
+
+    // The kinds of field a type allows are enforced.
+    const other = await write(owner, 'post', 'campaigns', {
+      title: 'Wrong fields',
+      templateId: SEEDED.giveaway,
+    });
+    const wrong = await write(owner, 'put', `campaigns/${other.body.id}`, {
+      expectedVersion: 1,
+      ...content(SEEDED.giveaway, { fields: [...details(), question('Q?', ['A', 'B'], 0)] }),
+    });
+    expect(wrong.status).toBe(422);
+    expect(wrong.body.error.code).toBe('CAMPAIGN_INVALID');
+  });
+
   it('shows a launched campaign on the public listing to a visitor, and takes it off when paused', async () => {
     const owner = people.owner;
-    const templateId = await publishedTemplate();
     const title = `Public ${tag}`;
-    const { body } = await write(owner, 'post', 'campaigns', { title });
+    const { body } = await write(owner, 'post', 'campaigns', {
+      title,
+      templateId: SEEDED.giveaway,
+    });
     await write(owner, 'put', `campaigns/${body.id}`, {
       expectedVersion: 1,
-      ...content(templateId, { title }),
+      ...content(SEEDED.giveaway, { title }),
     });
 
     // No cookie, no session: this is what a visitor's browser sends.
@@ -253,7 +353,6 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     expect(res.status).toBe(200);
     expect(res.headers['cache-control']).toBe('public, s-maxage=30, stale-while-revalidate=300');
     expect(res.headers['set-cookie']).toBeUndefined();
-    expect(res.body.nextCursor).toBeNull();
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0]).toMatchObject({
       id: body.id,
@@ -286,17 +385,19 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     const { body } = await write(owner, 'post', 'campaigns', { title: 'Bare' });
     const res = await write(owner, 'post', `campaigns/${body.id}/launch`, { expectedVersion: 1 });
     expect(res.status).toBe(422);
-    expect(res.body.error.details.failed).toEqual(['template', 'schedule']);
+    expect(res.body.error.details.failed).toEqual(['template', 'schedule', 'details']);
     expect((await read(owner, `campaigns/${body.id}`)).body.status).toBe('DRAFT');
   });
 
   it('lets an operator pause and resume but not launch, and an analyst only read', async () => {
     const owner = people.owner;
-    const templateId = await publishedTemplate();
-    const { body } = await write(owner, 'post', 'campaigns', { title: 'Ops' });
+    const { body } = await write(owner, 'post', 'campaigns', {
+      title: 'Ops',
+      templateId: SEEDED.giveaway,
+    });
     await write(owner, 'put', `campaigns/${body.id}`, {
       expectedVersion: 1,
-      ...content(templateId, { title: 'Ops' }),
+      ...content(SEEDED.giveaway, { title: 'Ops' }),
     });
 
     expect(
@@ -324,35 +425,32 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     ).toBe(403);
   });
 
-  it('keeps another business out, and will not use its template', async () => {
+  it('keeps another business out of a campaign and its fields', async () => {
     const owner = people.owner;
     const outsider = people.outsider;
-    const templateId = await publishedTemplate();
-    const { body } = await write(owner, 'post', 'campaigns', { title: 'Mine' });
-
+    const { body } = await write(owner, 'post', 'campaigns', {
+      title: 'Mine',
+      templateId: SEEDED.giveaway,
+    });
     expect((await read(outsider, `campaigns/${body.id}`)).status).toBe(404);
-    expect(
-      (await read(outsider, 'campaigns')).body.items.some((c: { id: string }) => c.id === body.id),
-    ).toBe(false);
     expect(
       (
         await write(outsider, 'put', `campaigns/${body.id}`, {
           expectedVersion: 1,
-          ...content(null),
+          ...content(SEEDED.giveaway),
         })
       ).status,
     ).toBe(404);
-    expect((await write(outsider, 'delete', `campaigns/${body.id}`)).status).toBe(404);
+    expect(
+      (await read(outsider, 'campaigns')).body.items.map((c: { id: string }) => c.id),
+    ).not.toContain(body.id);
 
-    const theirs = (await write(outsider, 'post', 'campaigns', { title: 'Theirs' })).body;
-    const steal = await write(outsider, 'put', `campaigns/${theirs.id}`, {
-      expectedVersion: 1,
-      ...content(templateId),
+    // The built-in types are shared, so another business can use them for its own campaign.
+    const theirs = await write(outsider, 'post', 'campaigns', {
+      title: 'Theirs',
+      templateId: SEEDED.giveaway,
     });
-    expect(steal.status).toBe(422);
-    expect(steal.body.error.code).toBe('CAMPAIGN_INVALID');
-    expect((await write(outsider, 'post', 'campaigns', { title: 'x', templateId })).status).toBe(
-      422,
-    );
+    expect(theirs.status).toBe(201);
+    expect(theirs.body.fields.map((f: { kind: string }) => f.kind)).toEqual(['email', 'consent']);
   });
 });

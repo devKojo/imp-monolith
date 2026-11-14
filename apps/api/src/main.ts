@@ -1,7 +1,7 @@
 import { createApp } from './app';
 import { env } from './config/env';
 import { SmtpMailer, createIdentityModule } from './modules/identity';
-import { PrismaCampaignUsage, createCampaignsModule } from './modules/campaigns';
+import { createCampaignsModule } from './modules/campaigns';
 import { createQuizModule } from './modules/quiz';
 import { createTemplatesModule } from './modules/templates';
 import { createTenantDb } from './shared/database';
@@ -28,17 +28,11 @@ const identity = createIdentityModule({
   allowedOrigins: env.APP_ORIGINS,
   sessionSecret: env.SESSION_SECRET,
 });
-// Templates refuse to be unpublished or deleted while a running campaign uses them; the campaigns
-// module answers that question, and gets its templates from the templates module (no cycle).
-const templates = createTemplatesModule({ db, identity, usage: new PrismaCampaignUsage(db) });
+// The built-in campaign types are global and read-only; campaigns look them up through the templates
+// module, and quizzes read the questions written on the campaign.
+const templates = createTemplatesModule({ db, identity });
 const quiz = createQuizModule({ db, identity });
-// A quiz campaign needs at least one question to launch; the quiz module answers how many it has.
-const campaigns = createCampaignsModule({
-  db,
-  identity,
-  templates: templates.lookup,
-  questions: quiz.questions,
-});
+const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
 const app = await createApp({ bus, identity, templates, campaigns, quiz });
 const server = app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
 

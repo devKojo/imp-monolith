@@ -29,7 +29,6 @@ export async function createApp(deps: {
   if (deps.campaigns) app.use(deps.campaigns.basePath, deps.campaigns.router);
   if (deps.campaigns) app.use(deps.campaigns.publicBasePath, deps.campaigns.publicRouter);
   if (deps.quiz) {
-    app.use(deps.quiz.authoringBasePath, deps.quiz.authoringRouter);
     app.use(deps.quiz.participationBasePath, deps.quiz.participationRouter);
     app.use(deps.quiz.publicBasePath, deps.quiz.publicRouter);
   }

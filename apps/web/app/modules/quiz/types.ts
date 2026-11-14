@@ -38,25 +38,3 @@ export type PublicCampaignPage = {
   type: string;
   endsAt: string;
 };
-
-/** A question as the business writes it. `uid` is only a stable key for the editor. */
-export type QuestionDraft = {
-  uid: string;
-  prompt: string;
-  options: string[];
-  /** Index of the correct answer; -1 until one is marked. */
-  correctIndex: number;
-};
-
-export type QuizDraft = {
-  /** Minutes for the whole attempt; null for no limit. */
-  timeLimitMinutes: number | null;
-  passPercent: number;
-  questions: QuestionDraft[];
-};
-
-/** What the API stores and returns for the business. */
-export type QuizDefinition = {
-  settings: { timeLimitMinutes: number | null; passPercent: number };
-  questions: Array<{ id: string; prompt: string; options: string[]; correctIndex: number }>;
-};

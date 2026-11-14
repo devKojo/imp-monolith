@@ -1,16 +1,25 @@
-import type { CampaignStatus as DbStatus, Prisma, PrismaClient } from '@/generated/prisma/client';
+import type {
+  CampaignFieldKind,
+  CampaignStatus as DbStatus,
+  Prisma,
+  PrismaClient,
+} from '@/generated/prisma/client';
 import { withTenant, writeAudit, type TenantContext, type TenantTx } from '@/shared/database';
 import type { CampaignRepository, DraftContent, WriteResult } from '../application/ports';
+import type { CampaignField, CampaignSettings, FieldInput, FieldKind } from '../domain/fields';
 import type { CampaignStatus, Prize, StoredCampaign, StoredSummary } from '../domain/model';
 
-const withPrizes = {
+const withContent = {
   prizes: { orderBy: { position: 'asc' } },
+  fields: { orderBy: { position: 'asc' } },
 } as const satisfies Prisma.CampaignInclude;
-type Row = Prisma.CampaignGetPayload<{ include: typeof withPrizes }>;
+type Row = Prisma.CampaignGetPayload<{ include: typeof withContent }>;
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-function summaryOf(r: Omit<Row, 'prizes'> & { _count: { prizes: number } }): StoredSummary {
+function summaryOf(
+  r: Omit<Row, 'prizes' | 'fields'> & { _count: { prizes: number } },
+): StoredSummary {
   return {
     id: r.id,
     title: r.title,
@@ -24,6 +33,30 @@ function summaryOf(r: Omit<Row, 'prizes'> & { _count: { prizes: number } }): Sto
     prizeCount: r._count.prizes,
   };
 }
+
+/** The settings column is JSON written by this module; read it defensively anyway. */
+function settingsOf(value: unknown): CampaignSettings {
+  const quiz = (value as { quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown } } | null)
+    ?.quiz;
+  if (!quiz || typeof quiz.passPercent !== 'number') return {};
+  return {
+    quiz: {
+      timeLimitMinutes: typeof quiz.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
+      passPercent: quiz.passPercent,
+    },
+  };
+}
+
+const fieldOf = (f: Row['fields'][number]): CampaignField => ({
+  id: f.id,
+  kind: f.kind.toLowerCase() as FieldKind,
+  key: f.key,
+  label: f.label,
+  helper: f.helper,
+  required: f.required,
+  options: f.options,
+  correctIndex: f.correctIndex,
+});
 
 function detailOf(r: Row): StoredCampaign {
   return {
@@ -42,6 +75,8 @@ function detailOf(r: Row): StoredCampaign {
       winners: p.winners,
       description: p.description,
     })),
+    fields: r.fields.map(fieldOf),
+    settings: settingsOf(r.settings),
     version: r.version,
     updatedAt: r.updatedAt.toISOString(),
     launchedAt: iso(r.launchedAt),
@@ -62,6 +97,21 @@ const prizeRows = (
     valueLabel: p.valueLabel,
     winners: p.winners,
     description: p.description,
+  }));
+
+/** Fields as rows, in the order given. The API's lowercase kind is the enum's uppercase form. */
+const fieldRows = (ctx: TenantContext, campaignId: string, fields: readonly FieldInput[]) =>
+  fields.map((f, position) => ({
+    tenantId: ctx.tenantId,
+    campaignId,
+    position,
+    kind: f.kind.toUpperCase() as CampaignFieldKind,
+    key: f.key,
+    label: f.label,
+    helper: f.helper,
+    required: f.required,
+    options: f.options,
+    correctIndex: f.correctIndex,
   }));
 
 /**
@@ -90,24 +140,37 @@ export class PrismaCampaignRepository implements CampaignRepository {
   private async read(tx: TenantTx, ctx: TenantContext, id: string): Promise<StoredCampaign | null> {
     const row = await tx.campaign.findFirst({
       where: { id, tenantId: ctx.tenantId, deletedAt: null },
-      include: withPrizes,
+      include: withContent,
     });
     return row ? detailOf(row) : null;
   }
 
   create(
     ctx: TenantContext,
-    input: { title: string; templateId: string | null; createdById: string },
+    input: {
+      title: string;
+      templateId: string | null;
+      createdById: string;
+      fields: FieldInput[];
+      settings: CampaignSettings;
+    },
   ): Promise<StoredCampaign> {
     return withTenant(this.db, ctx, async (tx) => {
-      const row = await tx.campaign.create({
+      const created = await tx.campaign.create({
         data: {
           tenantId: ctx.tenantId,
           title: input.title,
           templateId: input.templateId,
           createdById: input.createdById,
+          settings: input.settings,
         },
-        include: withPrizes,
+      });
+      if (input.fields.length > 0) {
+        await tx.campaignField.createMany({ data: fieldRows(ctx, created.id, input.fields) });
+      }
+      const row = await tx.campaign.findUniqueOrThrow({
+        where: { id: created.id },
+        include: withContent,
       });
       await this.audit(tx, ctx, 'campaign.created', row.id);
       return detailOf(row);
@@ -129,6 +192,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
           templateId: content.templateId,
           startAt: content.startAt,
           endAt: content.endAt,
+          settings: content.settings,
           version: { increment: 1 },
         },
       });
@@ -137,6 +201,10 @@ export class PrismaCampaignRepository implements CampaignRepository {
       await tx.campaignPrize.deleteMany({ where: { tenantId: ctx.tenantId, campaignId: id } });
       if (content.prizes.length > 0) {
         await tx.campaignPrize.createMany({ data: prizeRows(ctx, id, content.prizes) });
+      }
+      await tx.campaignField.deleteMany({ where: { tenantId: ctx.tenantId, campaignId: id } });
+      if (content.fields.length > 0) {
+        await tx.campaignField.createMany({ data: fieldRows(ctx, id, content.fields) });
       }
       return this.finish(tx, ctx, id, 'campaign.updated');
     });
@@ -188,7 +256,7 @@ export class PrismaCampaignRepository implements CampaignRepository {
     return withTenant(this.db, ctx, async (tx) => {
       const source = await tx.campaign.findFirst({
         where: { id, tenantId: ctx.tenantId, deletedAt: null },
-        include: withPrizes,
+        include: withContent,
       });
       if (!source) return null;
       const copy = await tx.campaign.create({
@@ -198,10 +266,17 @@ export class PrismaCampaignRepository implements CampaignRepository {
           summary: source.summary,
           templateId: source.templateId,
           createdById: input.createdById,
+          settings: settingsOf(source.settings),
         },
       });
       if (source.prizes.length > 0) {
         await tx.campaignPrize.createMany({ data: prizeRows(ctx, copy.id, source.prizes) });
+      }
+      if (source.fields.length > 0) {
+        // A copy gets its own ids; only the content is carried over.
+        await tx.campaignField.createMany({
+          data: fieldRows(ctx, copy.id, source.fields.map(fieldOf)),
+        });
       }
       await writeAudit(tx, {
         tenantId: ctx.tenantId,
