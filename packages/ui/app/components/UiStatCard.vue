@@ -64,8 +64,7 @@ withDefaults(
   padding: var(--ui-space-5) var(--ui-space-6);
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border);
-  border-radius: var(--ui-radius-xl);
-  box-shadow: var(--ui-elevation-1);
+  border-radius: var(--ui-radius-lg);
 }
 .ui-stat__top {
   display: flex;
@@ -91,8 +90,8 @@ withDefaults(
 .ui-stat__value {
   font-size: var(--ui-font-display-size);
   line-height: var(--ui-font-display-line);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .ui-stat__suffix {
   color: var(--ui-color-text-secondary);

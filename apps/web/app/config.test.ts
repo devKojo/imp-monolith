@@ -107,8 +107,4 @@ describe('app string catalogue', () => {
     // Signup says so on purpose (EMAIL_TAKEN); sign-in and password reset must not.
     expect(en['forgot.sent']).toMatch(/If \{email\}/);
   });
-
-  it('the dashboard session note matches the 30 minute idle timeout (R-IAM-01)', () => {
-    expect(en['signin.sessionNote']).toMatch(/30 minutes/);
-  });
 });

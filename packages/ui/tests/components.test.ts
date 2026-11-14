@@ -30,6 +30,11 @@ afterEach(() => {
 });
 
 describe('UiButton', () => {
+  it('has an extra small size', () => {
+    const w = mount(UiButton, { props: { size: 'xs' }, slots: { default: 'Go' } });
+    expect(w.get('button').attributes('data-size')).toBe('xs');
+  });
+
   it('shows a visible reason when disabled and links it with aria-describedby', () => {
     const w = mount(UiButton, {
       props: { disabled: true, disabledReason: 'Fix 2 issues first.' },

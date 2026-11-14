@@ -77,6 +77,7 @@ async function submit() {
         @update:model-value="error = undefined"
       />
       <UiButton
+        size="xs"
         type="submit"
         block
         :loading="sending"

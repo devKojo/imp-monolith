@@ -206,6 +206,7 @@ const crumbs = [
       </UiCheckbox>
 
       <UiButton
+        size="xs"
         type="submit"
         block
         icon-trailing="arrow-right"

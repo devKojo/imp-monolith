@@ -50,8 +50,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
   color: var(--ui-color-text-secondary);
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-radius-pill);
-  box-shadow: var(--ui-elevation-1);
   font: inherit;
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
   cursor: pointer;
 }
 .ui-chip:hover {

@@ -65,7 +65,6 @@ export const staticSiteText = {
   'reset.invalid.body': 'It may have expired or already been used. Request a new one.',
   'reset.invalid.cta': 'Request a new link',
   'signin.created': 'Account created. Sign in to continue.',
-  'signin.sessionNote': 'Sessions end after 30 minutes of inactivity.',
 
   // registration (one form, two portals: ADR-P001)
   'register.participant.title': 'Create your account',
@@ -143,8 +142,6 @@ export const staticSiteText = {
   'footer.copyright': '© {year} IMP. All rights reserved.',
 
   // side panel on sign-in, sign-up and recovery pages
-  'aside.chip.codes': 'Entries confirmed by one-time code',
-  'aside.chip.draws': 'Draws you can verify',
   'aside.business.badge': 'IMP business portal',
   'aside.business.title':
     'Manage campaigns, verifiable draws and participant growth in one portal.',
@@ -171,15 +168,11 @@ export const staticSiteText = {
 
   // discovery
   'discover.more': 'Show more campaigns',
-  'discover.shown': 'Showing {shown} of {total} campaigns',
   'discover.title': 'Discover live campaigns',
   'discover.subtitle': 'Quizzes, polls and giveaways from businesses.',
   'discover.search': 'Search campaigns',
   'discover.type': 'Campaign type',
-  'discover.live.one': '1 campaign live now',
-  'discover.live.other': '{n} campaigns live now',
   'discover.results.title': 'Live campaigns',
-  'discover.results.trust': 'Entries confirmed by one-time code',
   'discover.count.one': '1 campaign',
   'discover.count.other': '{n} campaigns',
   'discover.empty.title': 'No campaigns match',
@@ -256,8 +249,7 @@ export const staticSiteText = {
   'me.footer': 'IMP',
 
   // business console (sample data until campaign APIs exist)
-  'console.title': 'Campaign operations',
-  'console.subtitle': 'Performance and provable draw management',
+  'console.title': 'Overview',
   'console.nav.label': 'Console navigation',
   'console.nav.overview': 'Overview',
   'console.nav.campaigns': 'Campaigns',
@@ -271,21 +263,15 @@ export const staticSiteText = {
   'console.loggingOut': 'Signing out...',
   'console.business': 'Business',
   'console.switch': 'Switch business',
-  'console.sample.title': 'Sample data',
-  'console.sample.body':
-    'These figures are examples. Campaign, participant and draw tools are connected in later releases, so actions are switched off.',
+  'console.sample': 'Sample data until campaign APIs are live.',
   'console.stat.participants': 'Active participants',
-  'console.stat.vsLast': 'Compared with last period',
   'console.stat.campaigns': 'Active campaigns',
   'console.stat.live': '{n} live',
   'console.stat.ofTotal': 'of {n} total',
-  'console.stat.scheduled': '{n} scheduled',
   'console.stat.health': 'Draw health',
   'console.stat.verified': 'Verified',
-  'console.stat.integrity': 'Draw proof checks',
-  'console.stat.anomalies': '{n} anomalies',
   'console.draw.when': '{when}',
-  'console.draw.detail': 'Next provable selection · {winners} winners from {pool} verified entries',
+  'console.draw.detail': '{winners} winners · {pool} entries',
   'console.draw.preview': 'Preview pool',
   'console.draw.execute': 'Execute draw',
   'console.table.title': 'All campaigns',
