@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { env } from './config/env';
 import { SmtpMailer, createIdentityModule } from './modules/identity';
+import { createTemplatesModule } from './modules/templates';
 import { createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
 
@@ -25,7 +26,8 @@ const identity = createIdentityModule({
   allowedOrigins: env.APP_ORIGINS,
   sessionSecret: env.SESSION_SECRET,
 });
-const app = await createApp({ bus, identity });
+const templates = createTemplatesModule({ db, identity });
+const app = await createApp({ bus, identity, templates });
 const server = app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
 
 const shutdown = async () => {

@@ -1,49 +1,46 @@
-import { clone, copyTemplate, newTemplate } from './logic';
-import { sampleTemplates } from './sample';
+import { computed } from 'vue';
+import type { Fetcher } from '../auth/api';
+import { useAuth } from '../auth/composables/useAuth';
+import { SIGNIN } from '../auth/constants';
+import { toApiError } from '../auth/errors';
+import { createTemplatesApi } from './api';
+import { canManageTemplates } from './permissions';
 import type { Archetype, CampaignTemplate } from './types';
 
 /**
- * The template library. State lives in `useState` (per request on the server, one copy in the
- * browser), never in module scope. Today it holds the labelled samples and changes last for the
- * session; swap the bodies for API calls when the templates module exists.
+ * Templates for the signed-in business, from the API. Client-side only (the console is not
+ * server-rendered). The CSRF token comes from the session; a 401 means the session ended, so the
+ * person is sent to sign in instead of seeing a broken page.
  */
 export function useTemplates() {
-  const templates = useState<CampaignTemplate[]>('business-templates', sampleTemplates);
+  const auth = useAuth();
+  const api = createTemplatesApi(((url, opts) => $fetch(url, opts as never)) as Fetcher);
+  const csrf = () => auth.session.value?.csrfToken ?? '';
 
-  const get = (id: string): CampaignTemplate | undefined =>
-    templates.value.find((t) => t.id === id);
-
-  function save(template: CampaignTemplate): void {
-    const stored = { ...clone(template), updatedAt: new Date().toISOString() };
-    const exists = templates.value.some((t) => t.id === stored.id);
-    templates.value = exists
-      ? templates.value.map((t) => (t.id === stored.id ? stored : t))
-      : [stored, ...templates.value];
+  async function run<T>(call: () => Promise<T>): Promise<T> {
+    try {
+      return await call();
+    } catch (e) {
+      const err = toApiError(e);
+      if (err.status === 401) {
+        auth.session.value = null;
+        await navigateTo(SIGNIN.business);
+      }
+      throw err;
+    }
   }
 
-  function create(name: string, archetype: Archetype): CampaignTemplate {
-    const template = newTemplate(crypto.randomUUID(), name, archetype, new Date());
-    templates.value = [template, ...templates.value];
-    return template;
-  }
-
-  function duplicate(id: string, copyName: string): CampaignTemplate | undefined {
-    const source = get(id);
-    if (!source) return undefined;
-    const copy = copyTemplate(
-      source,
-      crypto.randomUUID(),
-      copyName,
-      () => crypto.randomUUID(),
-      new Date(),
-    );
-    templates.value = [copy, ...templates.value];
-    return copy;
-  }
-
-  function remove(id: string): void {
-    templates.value = templates.value.filter((t) => t.id !== id);
-  }
-
-  return { templates, get, save, create, duplicate, remove };
+  return {
+    /** Whether the active role may change templates (the server still decides). */
+    canManage: computed(() => canManageTemplates(auth.session.value?.active?.role)),
+    list: () => run(() => api.list()),
+    get: (id: string) => run(() => api.get(id)),
+    create: (name: string, archetype: Archetype) =>
+      run(() => api.create({ name, archetype }, csrf())),
+    save: (t: CampaignTemplate) => run(() => api.update(t, csrf())),
+    publish: (t: CampaignTemplate) => run(() => api.publish(t.id, t.version, csrf())),
+    unpublish: (t: CampaignTemplate) => run(() => api.unpublish(t.id, t.version, csrf())),
+    duplicate: (id: string) => run(() => api.duplicate(id, csrf())),
+    remove: (id: string) => run(() => api.remove(id, csrf())),
+  };
 }

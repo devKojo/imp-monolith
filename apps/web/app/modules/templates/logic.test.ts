@@ -1,13 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
-  copyTemplate,
   createBlock,
   currentStage,
   duplicateBlock,
   isPublishable,
   moveBlock,
-  newTemplate,
   preflight,
   removeBlock,
   stageStatuses,
@@ -97,7 +95,11 @@ describe('pre-flight checks', () => {
 
 describe('stages', () => {
   const t = (blocks: TemplateBlock[], status: 'DRAFT' | 'PUBLISHED' = 'DRAFT') => ({
-    ...newTemplate('t1', 'T', 'giveaway', new Date('2026-11-14T10:00:00Z')),
+    id: 't1',
+    name: 'T',
+    archetype: 'giveaway' as const,
+    version: 1,
+    updatedAt: '2026-11-14T10:00:00.000Z',
     blocks,
     status,
   });
@@ -114,22 +116,5 @@ describe('stages', () => {
     expect(ok.checks).toBe('complete');
     expect(currentStage(ok)).toBe('publish');
     expect(stageStatuses(t(build('email', 'consent'), 'PUBLISHED')).publish).toBe('complete');
-  });
-});
-
-describe('copying a template', () => {
-  it('makes a draft with new ids and leaves the source alone', () => {
-    const source = {
-      ...newTemplate('t1', 'Entry', 'quiz', new Date()),
-      blocks: build('email', 'consent'),
-      status: 'PUBLISHED' as const,
-    };
-    let i = 0;
-    const copy = copyTemplate(source, 't2', 'Entry (copy)', () => `n${(i += 1)}`, new Date());
-    expect(copy).toMatchObject({ id: 't2', name: 'Entry (copy)', status: 'DRAFT' });
-    expect(copy.blocks.map((b) => b.id)).toEqual(['n1', 'n2']);
-    expect(copy.blocks.map((b) => b.key)).toEqual(source.blocks.map((b) => b.key));
-    expect(source.status).toBe('PUBLISHED');
-    expect(source.blocks[0]!.id).not.toBe('n1');
   });
 });

@@ -19,7 +19,14 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof AppError) {
     const retryAfter = (err as { retryAfterSeconds?: unknown }).retryAfterSeconds;
     if (typeof retryAfter === 'number') res.setHeader('Retry-After', String(retryAfter));
-    res.status(err.status).json({ error: { code: err.code, message: err.message } });
+    const details = (err as { details?: unknown }).details;
+    res.status(err.status).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        ...(details !== undefined ? { details } : {}),
+      },
+    });
     return;
   }
   console.error(err);

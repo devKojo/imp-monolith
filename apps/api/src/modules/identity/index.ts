@@ -1,8 +1,10 @@
 // Public surface of the identity module. Other modules import ONLY from here.
 import { randomBytes } from 'node:crypto';
+import type { RequestHandler } from 'express';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { AuthService, type AuthContext } from './application/auth.service';
 import type { Mailer } from './application/ports';
+import { authenticate, originCheck } from './http/auth.middleware';
 import { authRouter } from './http/auth.routes';
 import { Argon2Hasher } from './infrastructure/argon2-hasher';
 import { ConsoleMailer } from './infrastructure/console-mailer';
@@ -42,6 +44,8 @@ export function createIdentityModule(cfg: IdentityConfig) {
     basePath: '/api/v1/auth',
     router: authRouter(auth, { allowedOrigins: cfg.allowedOrigins }),
     auth,
+    /** For other modules' routers: check the Origin, then resolve the session into `req.auth`. */
+    guards: [originCheck(cfg.allowedOrigins), authenticate(auth)] as RequestHandler[],
   };
 }
 

@@ -1,18 +1,52 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useToast } from '@imp/ui/app/composables/useToast';
 import { t, type AppTextKey } from '../../../i18n';
+import { toApiError } from '../../../modules/auth/errors';
 import BusinessShell from '../../../modules/business/components/BusinessShell.vue';
+import { templateErrorKey } from '../../../modules/templates/errors';
+import type { TemplateSummary } from '../../../modules/templates/types';
 import { useTemplates } from '../../../modules/templates/useTemplates';
 
 /**
- * Template library: every template the business has, with the actions that matter (open,
- * duplicate, delete) and a way to start a new one. Client-rendered and private like the rest of
- * the console. Templates are labelled samples until the templates API exists.
+ * Template library: every template of the active business, from the API, with the actions that
+ * matter (open, duplicate, delete) and a way to start a new one. Client-rendered and private like
+ * the rest of the console. What a role may do decides which actions are offered; the server decides
+ * what is allowed.
  */
 definePageMeta({ middleware: 'auth', portal: 'business' });
 useHead({ title: t('tpl.title') });
 
-const { templates, create, duplicate, remove } = useTemplates();
+const store = useTemplates();
+const { canManage } = store;
+const toast = useToast();
+
+const items = ref<TemplateSummary[]>([]);
+const loading = ref(true);
+const loadFailed = ref(false);
+const problem = ref('');
+
+async function load() {
+  loading.value = true;
+  loadFailed.value = false;
+  try {
+    items.value = await store.list();
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    loading.value = false;
+  }
+}
+onMounted(load);
+
+async function attempt(action: () => Promise<void>) {
+  problem.value = '';
+  try {
+    await action();
+  } catch (e) {
+    problem.value = t(templateErrorKey(toApiError(e)));
+  }
+}
 
 const query = ref('');
 const status = ref('all');
@@ -34,7 +68,7 @@ const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 const filtered = computed(() =>
-  templates.value.filter(
+  items.value.filter(
     (tpl) =>
       (status.value === 'all' || tpl.status.toLowerCase() === status.value) &&
       (!query.value || tpl.name.toLowerCase().includes(query.value.trim().toLowerCase())),
@@ -46,19 +80,30 @@ const rows = computed(() =>
     name: tpl.name,
     type: t(`tpl.archetype.${tpl.archetype}` as AppTextKey),
     status: tpl.status,
-    fields: tpl.blocks.length,
+    fields: tpl.fieldCount,
     updated: day(tpl.updatedAt),
   })),
 );
 const filtering = computed(() => query.value.trim() !== '' || status.value !== 'all');
 
-async function createNew() {
-  const created = create(t('tpl.newName'), 'giveaway');
-  await navigateTo(`/app/templates/${created.id}`);
-}
-function copy(id: string, name: string) {
-  duplicate(id, t('tpl.copyName', { name }));
-}
+const creating = ref(false);
+const createNew = () =>
+  attempt(async () => {
+    creating.value = true;
+    try {
+      const created = await store.create(t('tpl.newName'), 'giveaway');
+      await navigateTo(`/app/templates/${created.id}`);
+    } finally {
+      creating.value = false;
+    }
+  });
+
+const copy = (id: string) =>
+  attempt(async () => {
+    await store.duplicate(id);
+    await load();
+    toast.push(t('tpl.duplicated'));
+  });
 
 const toDelete = ref<{ id: string; name: string } | null>(null);
 const deleteOpen = computed({
@@ -67,10 +112,15 @@ const deleteOpen = computed({
     if (!open) toDelete.value = null;
   },
 });
-function confirmDelete() {
-  if (toDelete.value) remove(toDelete.value.id);
-  toDelete.value = null;
-}
+const confirmDelete = () =>
+  attempt(async () => {
+    if (!toDelete.value) return;
+    const { id } = toDelete.value;
+    toDelete.value = null;
+    await store.remove(id);
+    await load();
+    toast.push(t('tpl.deleted'));
+  });
 </script>
 
 <template>
@@ -78,24 +128,42 @@ function confirmDelete() {
     <template #search>
       <UiSearchField v-model="query" :label="t('tpl.search')" />
     </template>
-    <template #actions>
-      <UiButton size="xs" icon="plus" @click="createNew">{{ t('tpl.new') }}</UiButton>
+    <template v-if="canManage" #actions>
+      <UiButton
+        size="xs"
+        icon="plus"
+        :loading="creating"
+        :loading-label="t('tpl.creating')"
+        @click="createNew"
+      >
+        {{ t('tpl.new') }}
+      </UiButton>
     </template>
 
     <header class="page-head">
       <h1 class="ui-text-h1">{{ t('tpl.title') }}</h1>
-      <p class="ui-text-caption ui-text-hint">{{ t('tpl.sample') }}</p>
+      <p v-if="!canManage" class="ui-text-caption ui-text-hint">{{ t('tpl.readonly.role') }}</p>
     </header>
 
-    <section class="table-card" aria-labelledby="templates-title">
+    <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
+
+    <UiSystemState v-if="loadFailed" kind="generic" @action="load" />
+    <section v-else class="table-card" aria-labelledby="templates-title">
       <div class="table-card__head">
         <h2 id="templates-title" class="ui-text-h3">
           {{ t('tpl.title') }}
-          <span class="ui-text-hint ui-text-body-s">({{ templates.length }})</span>
+          <span class="ui-text-hint ui-text-body-s">({{ items.length }})</span>
         </h2>
         <UiSegmentedControl v-model="status" :label="t('tpl.filter')" :options="statusOptions" />
       </div>
-      <UiDataTable flush :name="t('tpl.title')" :columns="columns" :rows="rows" row-key="id">
+      <UiDataTable
+        flush
+        :name="t('tpl.title')"
+        :columns="columns"
+        :rows="rows"
+        :loading="loading"
+        row-key="id"
+      >
         <template #cell-name="{ row }">
           <UiLink :to="`/app/templates/${String(row.id)}`">{{ row.name }}</UiLink>
         </template>
@@ -105,12 +173,13 @@ function confirmDelete() {
         <template #cell-actions="{ row }">
           <span class="actions">
             <UiButton :to="`/app/templates/${String(row.id)}`" variant="tertiary" size="xs">
-              {{ t('tpl.edit') }}
+              {{ canManage && row.status === 'DRAFT' ? t('tpl.edit') : t('tpl.view') }}
             </UiButton>
-            <UiButton variant="tertiary" size="xs" @click="copy(String(row.id), String(row.name))">
+            <UiButton v-if="canManage" variant="tertiary" size="xs" @click="copy(String(row.id))">
               {{ t('tpl.duplicate') }}
             </UiButton>
             <UiButton
+              v-if="canManage && row.status === 'DRAFT'"
               variant="tertiary"
               size="xs"
               @click="toDelete = { id: String(row.id), name: String(row.name) }"
@@ -124,7 +193,7 @@ function confirmDelete() {
             :title="filtering ? t('tpl.noMatch.title') : t('tpl.empty.title')"
             :description="filtering ? t('tpl.noMatch.body') : t('tpl.empty.body')"
           >
-            <UiButton v-if="!filtering" size="xs" icon="plus" @click="createNew">
+            <UiButton v-if="!filtering && canManage" size="xs" icon="plus" @click="createNew">
               {{ t('tpl.new') }}
             </UiButton>
           </UiEmptyState>

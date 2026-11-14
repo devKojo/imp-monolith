@@ -1,7 +1,7 @@
 /**
  * Campaign templates: a reusable blueprint of what a participant is asked when they enter a
  * campaign. Hand-written types for now; replace with the generated client when the templates API
- * exists (nothing is persisted yet, see sample.ts).
+ * is generated (R-STK-04). They mirror apps/api modules/templates.
  */
 export const ARCHETYPES = ['giveaway', 'quiz', 'survey', 'instant'] as const;
 export type Archetype = (typeof ARCHETYPES)[number];
@@ -39,9 +39,23 @@ export type CampaignTemplate = {
   name: string;
   archetype: Archetype;
   status: TemplateStatus;
+  /** Bumped by the server on every change; sent back with a save so a stale save is refused. */
+  version: number;
   blocks: TemplateBlock[];
   /** ISO timestamp of the last save. */
   updatedAt: string;
+};
+
+/** One row of the template library. */
+export type TemplateSummary = {
+  id: string;
+  name: string;
+  archetype: Archetype;
+  status: TemplateStatus;
+  version: number;
+  fieldCount: number;
+  updatedAt: string;
+  publishedAt: string | null;
 };
 
 export type PreflightId = 'fields' | 'identity' | 'consent' | 'labels';

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { t } from '../../../i18n';
+import { LIMITS } from '../logic';
 import type { TemplateBlock } from '../types';
 
 /** Edits the selected field. Changes are sent up as small patches; the page owns the data. */
@@ -21,6 +22,7 @@ const setOptions = (value: string) => emit('update', { options: value.split('\n'
       :id="`field-label-${block.id}`"
       :model-value="block.label"
       :label="t('tpl.field.label')"
+      :maxlength="LIMITS.label"
       @update:model-value="emit('update', { label: $event })"
     />
     <UiTextInput
@@ -37,6 +39,7 @@ const setOptions = (value: string) => emit('update', { options: value.split('\n'
       :id="`field-helper-${block.id}`"
       :model-value="block.helper"
       :label="t('tpl.field.helper')"
+      :maxlength="LIMITS.helper"
       @update:model-value="emit('update', { helper: $event })"
     />
     <UiCheckbox
