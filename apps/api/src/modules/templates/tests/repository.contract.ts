@@ -125,6 +125,20 @@ export function repositoryContract(
       });
     });
 
+    it('keeps short and long text answers as different kinds', async () => {
+      const t = await make('Text kinds');
+      await w.repo.saveDraft(a, t.id, 1, {
+        name: 'Text kinds',
+        archetype: 'survey',
+        fields: [
+          field({ kind: 'text', key: 'short', label: 'Short' }),
+          field({ kind: 'long_text', key: 'long', label: 'Long' }),
+        ],
+      });
+      const saved = await w.repo.get(a, t.id);
+      expect(saved?.fields.map((f) => f.kind)).toEqual(['text', 'long_text']);
+    });
+
     it('duplicates as a new draft with its own ids and leaves the source alone', async () => {
       const t = await make('Original');
       await w.repo.saveDraft(a, t.id, 1, {

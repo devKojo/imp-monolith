@@ -16,6 +16,7 @@ export const FIELD_KINDS = [
   'likert',
   'upload',
   'text',
+  'long_text',
   'consent',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];

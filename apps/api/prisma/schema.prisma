@@ -55,6 +55,7 @@ enum TemplateFieldKind {
   LIKERT
   UPLOAD
   TEXT
+  LONG_TEXT
   CONSENT
 }
 
