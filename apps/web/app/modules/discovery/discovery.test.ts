@@ -8,12 +8,42 @@ import {
   sortByEnding,
   timeLeftText,
 } from './logic';
-import { createApiSource, createSampleSource, sampleCampaigns } from './source';
-import { EMPTY_QUERY, isCampaignType } from './types';
+import { MAX_PAGES, createApiSource } from './source';
+import { EMPTY_QUERY, type DiscoveryCampaign } from './types';
 
 const NOW = Date.parse('2026-11-07T10:00:00Z');
 const H = 3_600_000;
 const iso = (hours: number) => new Date(NOW + hours * H).toISOString();
+
+/** A few campaigns shaped like the API's response, for testing the filtering and the source. */
+function fixtures(nowMs: number): DiscoveryCampaign[] {
+  const at = (hours: number) => new Date(nowMs + hours * H).toISOString();
+  const make = (
+    n: number,
+    type: DiscoveryCampaign['type'],
+    title: string,
+    businessName: string,
+    hours: number,
+    prize?: string,
+  ): DiscoveryCampaign => ({
+    id: `0197a000-0000-7000-8000-${String(n).padStart(12, '0')}`,
+    slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    title,
+    summary: `About ${title}`,
+    businessName,
+    type,
+    endsAt: at(hours),
+    timeZone: 'UTC',
+    ...(prize ? { prize: { label: 'Prize', value: prize } } : {}),
+  });
+  return [
+    make(1, 'quiz', 'Black Friday Quiz', 'Savanna Travel', 62, 'Weekend getaway'),
+    make(2, 'giveaway', 'A year of coffee', 'Volta Coffee', 120, '12 bags of coffee'),
+    make(3, 'survey', 'Tell us what you read', 'Accra Books', 240, 'GHS 300 book voucher'),
+    make(4, 'quiz', 'Ghana trivia', 'Fizz Drinks', 300, 'GHS 50 airtime'),
+    make(5, 'giveaway', 'Gym membership', 'FitHub', 200),
+  ];
+}
 
 describe('timeLeftText (relative time, server and client agree)', () => {
   it.each([
@@ -43,7 +73,7 @@ describe('countText', () => {
 });
 
 describe('filterCampaigns', () => {
-  const list = sampleCampaigns(NOW);
+  const list = fixtures(NOW);
 
   it('returns everything for the empty query', () => {
     expect(filterCampaigns(list, EMPTY_QUERY)).toHaveLength(list.length);
@@ -57,7 +87,7 @@ describe('filterCampaigns', () => {
 
   it('searches title, summary, business and prize case-insensitively', () => {
     expect(filterCampaigns(list, { q: 'COFFEE', type: 'all' }).map((c) => c.slug)).toContain(
-      'coffee-month-giveaway',
+      'a-year-of-coffee',
     );
     expect(filterCampaigns(list, { q: 'savanna', type: 'all' })).toHaveLength(1);
     expect(filterCampaigns(list, { q: 'airtime', type: 'all' })).toHaveLength(1);
@@ -78,35 +108,14 @@ describe('filterCampaigns', () => {
   });
 });
 
-describe('sample data', () => {
-  it('is well-formed: uuids, unique slugs, valid types, future end times, an IANA zone', () => {
-    const list = sampleCampaigns(NOW);
-    expect(new Set(list.map((c) => c.slug)).size).toBe(list.length);
-    for (const c of list) {
-      expect(c.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-      expect(isCampaignType(c.type)).toBe(true);
-      expect(Date.parse(c.endsAt)).toBeGreaterThan(NOW);
-      expect(() => new Intl.DateTimeFormat('en', { timeZone: c.timeZone })).not.toThrow();
-    }
-  });
-
-  it('is clearly marked as sample data so the page can say so', async () => {
-    expect(createSampleSource(NOW).isSample).toBe(true);
-    const sorted = await createSampleSource(NOW).list(EMPTY_QUERY);
-    expect(sorted[0]!.slug).toBe('best-kente-design'); // ends first (7 hours)
-  });
-});
-
 describe('createApiSource', () => {
   it('sends only the non-default filters and tolerates unknown types from a newer server', async () => {
     const seen: Array<{ url: string; query?: Record<string, string> }> = [];
     const source = createApiSource(async (url, opts) => {
       seen.push({ url, query: opts?.query });
       return {
-        items: [
-          { ...sampleCampaigns(NOW)[0]!, type: 'hologram' as never },
-          sampleCampaigns(NOW)[1]!,
-        ],
+        items: [{ ...fixtures(NOW)[0]!, type: 'hologram' as never }, fixtures(NOW)[1]!],
+        nextCursor: null,
       } as never;
     });
     const items = await source.list({ q: ' quiz ', type: 'poll' });
@@ -115,9 +124,41 @@ describe('createApiSource', () => {
       query: { q: 'quiz', type: 'poll' },
     });
     expect(items).toHaveLength(1);
-    expect(source.isSample).toBe(false);
     await source.list(EMPTY_QUERY);
     expect(seen[1]!.query).toEqual({});
+  });
+
+  it('follows the cursor until the server has no more, keeping the filters', async () => {
+    const pages: Record<string, { items: DiscoveryCampaign[]; nextCursor: string | null }> = {
+      '': { items: fixtures(NOW).slice(0, 2), nextCursor: 'c1' },
+      c1: { items: fixtures(NOW).slice(2, 4), nextCursor: 'c2' },
+      c2: { items: fixtures(NOW).slice(4), nextCursor: null },
+    };
+    const seen: Array<Record<string, string> | undefined> = [];
+    const source = createApiSource((async (
+      _url: string,
+      opts?: { query?: Record<string, string> },
+    ) => {
+      seen.push(opts?.query);
+      return pages[opts?.query?.cursor ?? ''];
+    }) as never);
+    const items = await source.list({ q: 'x', type: 'quiz' });
+    expect(items.map((c) => c.id)).toEqual(fixtures(NOW).map((c) => c.id));
+    expect(seen).toEqual([
+      { q: 'x', type: 'quiz' },
+      { q: 'x', type: 'quiz', cursor: 'c1' },
+      { q: 'x', type: 'quiz', cursor: 'c2' },
+    ]);
+  });
+
+  it('stops after a fixed number of pages even if the server keeps sending a cursor', async () => {
+    let calls = 0;
+    const source = createApiSource((async () => {
+      calls += 1;
+      return { items: [], nextCursor: 'again' };
+    }) as never);
+    await source.list(EMPTY_QUERY);
+    expect(calls).toBe(MAX_PAGES);
   });
 
   it('copes with a missing items array', async () => {
@@ -131,12 +172,5 @@ describe('paging', () => {
     expect(nextVisible(PAGE_SIZE, 20)).toBe(PAGE_SIZE * 2);
     expect(nextVisible(PAGE_SIZE * 2, 20)).toBe(20);
     expect(nextVisible(20, 20)).toBe(20);
-  });
-
-  it('has more sample campaigns than one page, with unique ids and slugs', () => {
-    const all = sampleCampaigns(0);
-    expect(all.length).toBeGreaterThan(PAGE_SIZE);
-    expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
-    expect(new Set(all.map((c) => c.slug)).size).toBe(all.length);
   });
 });

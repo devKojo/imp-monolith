@@ -233,6 +233,54 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
     ]);
   });
 
+  it('shows a launched campaign on the public listing to a visitor, and takes it off when paused', async () => {
+    const owner = people.owner;
+    const templateId = await publishedTemplate();
+    const title = `Public ${tag}`;
+    const { body } = await write(owner, 'post', 'campaigns', { title });
+    await write(owner, 'put', `campaigns/${body.id}`, {
+      expectedVersion: 1,
+      ...content(templateId, { title }),
+    });
+
+    // No cookie, no session: this is what a visitor's browser sends.
+    const listing = () =>
+      request(app).get(`/api/v1/public/campaigns?q=${encodeURIComponent(title)}`);
+    expect((await listing()).body.items).toEqual([]); // a draft is not public
+
+    const live = await write(owner, 'post', `campaigns/${body.id}/launch`, { expectedVersion: 2 });
+    const res = await listing();
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('public, s-maxage=30, stale-while-revalidate=300');
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(res.body.nextCursor).toBeNull();
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0]).toMatchObject({
+      id: body.id,
+      slug: live.body.slug,
+      title,
+      summary: 'Win big',
+      businessName: `E2E-CA-${tag}`,
+      type: 'giveaway',
+      timeZone: 'UTC',
+      prize: { label: 'Grand prize', value: 'GH₵ 5,000' },
+    });
+    expect(JSON.stringify(res.body)).not.toContain(tenantA);
+
+    const paused = await write(owner, 'post', `campaigns/${body.id}/pause`, {
+      expectedVersion: live.body.version,
+    });
+    expect((await listing()).body.items).toEqual([]);
+    const resumed = await write(owner, 'post', `campaigns/${body.id}/resume`, {
+      expectedVersion: paused.body.version,
+    });
+    expect((await listing()).body.items).toHaveLength(1);
+    await write(owner, 'post', `campaigns/${body.id}/cancel`, {
+      expectedVersion: resumed.body.version,
+    });
+    expect((await listing()).body.items).toEqual([]);
+  });
+
   it('explains a failed launch and keeps drafts editable', async () => {
     const owner = people.owner;
     const { body } = await write(owner, 'post', 'campaigns', { title: 'Bare' });

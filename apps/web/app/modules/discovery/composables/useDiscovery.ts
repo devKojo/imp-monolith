@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { createApiSource, createSampleSource, type JsonFetcher } from '../source';
+import { createApiSource, type JsonFetcher } from '../source';
 import { isCampaignType, type DiscoveryCampaign, type DiscoveryQuery } from '../types';
 
 /**
@@ -11,18 +11,19 @@ import { isCampaignType, type DiscoveryCampaign, type DiscoveryQuery } from '../
 export function useDiscovery() {
   const route = useRoute();
   const router = useRouter();
-  const { public: config } = useRuntimeConfig();
   const now = useState<number>('discover:now', () => Date.now());
+  const config = useRuntimeConfig();
 
   const query = computed<DiscoveryQuery>(() => ({
     q: typeof route.query.q === 'string' ? route.query.q : '',
     type: isCampaignType(route.query.type) ? route.query.type : 'all',
   }));
 
-  const source =
-    config.discoverySource === 'api'
-      ? createApiSource(((url, opts) => $fetch(url, opts as never)) as JsonFetcher)
-      : createSampleSource(now.value);
+  // While rendering on the server the API is reached directly; in the browser, through the web origin.
+  const base = import.meta.server
+    ? `${config.apiInternalBase}/api/v1/public/campaigns`
+    : '/api/v1/public/campaigns';
+  const source = createApiSource(((url, opts) => $fetch(url, opts as never)) as JsonFetcher, base);
 
   const { data, pending, error, refresh } = useAsyncData<DiscoveryCampaign[]>(
     'discover',
@@ -50,6 +51,5 @@ export function useDiscovery() {
     setQuery,
     clear: () => setQuery({ q: '', type: 'all' }),
     now,
-    isSample: source.isSample,
   };
 }

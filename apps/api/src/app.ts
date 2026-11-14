@@ -25,6 +25,7 @@ export async function createApp(deps: {
   if (deps.identity) app.use(deps.identity.basePath, deps.identity.router);
   if (deps.templates) app.use(deps.templates.basePath, deps.templates.router);
   if (deps.campaigns) app.use(deps.campaigns.basePath, deps.campaigns.router);
+  if (deps.campaigns) app.use(deps.campaigns.publicBasePath, deps.campaigns.publicRouter);
   await initNotificationsModule(deps);
 
   app.use(notFound);
