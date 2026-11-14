@@ -23,6 +23,8 @@ const EXPECTED_INDEXES = [
   'outbox_dispatched_idx',
   'templates_tenant_id_id_key',
   'template_fields_tenant_id_template_id_key_key',
+  'campaigns_slug_key',
+  'campaigns_tenant_id_id_key',
   'memberships_tenant_id_id_key',
   'outbox_events_aggregate_id_aggregate_version_key',
 ];
@@ -52,6 +54,8 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['password_resets', 'reset_update'],
   ['templates', 'tenant_isolation'],
   ['template_fields', 'tenant_isolation'],
+  ['campaigns', 'tenant_isolation'],
+  ['campaign_prizes', 'tenant_isolation'],
 ];
 // [role, table, privilege, expected]
 const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
@@ -81,6 +85,11 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_runtime', 'template_fields', 'DELETE', true],
   ['app_system', 'templates', 'SELECT', false],
   ['app_system', 'template_fields', 'SELECT', false],
+  ['app_runtime', 'campaigns', 'DELETE', false],
+  ['app_runtime', 'campaigns', 'UPDATE', true],
+  ['app_runtime', 'campaign_prizes', 'DELETE', true],
+  ['app_system', 'campaigns', 'SELECT', false],
+  ['app_system', 'campaign_prizes', 'SELECT', false],
 ];
 
 const client = new pg.Client({ connectionString: url });

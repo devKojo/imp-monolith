@@ -46,6 +46,10 @@ export class InMemoryTemplateRepository implements TemplateRepository {
     return row ? this.strip(row) : null;
   }
 
+  async summaries(ctx: TenantContext, ids: readonly string[]) {
+    return (await this.list(ctx, {})).filter((t) => ids.includes(t.id));
+  }
+
   async create(
     ctx: TenantContext,
     input: { name: string; archetype: Archetype; createdById: string },

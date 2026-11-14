@@ -173,3 +173,47 @@ describe('duplicating and deleting', () => {
     await expect(service.remove(owner, randomUUID())).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('a template a running campaign uses', () => {
+  const inUse = (value: boolean) =>
+    new TemplatesService(new InMemoryTemplateRepository(), { isInUse: async () => value });
+
+  it('cannot be unpublished or deleted while in use', async () => {
+    const free = inUse(false);
+    const t = await free.create(owner, { name: 'Entry', archetype: 'giveaway' });
+    const saved = await free.update(owner, t.id, {
+      expectedVersion: 1,
+      name: 'Entry',
+      archetype: 'giveaway',
+      fields: publishable,
+    });
+    const live = await free.publish(owner, t.id, saved.version);
+
+    // Same data, but now something running relies on it.
+    const busy = inUse(true);
+    const repo = (free as unknown as { repo: InMemoryTemplateRepository }).repo;
+    (busy as unknown as { repo: InMemoryTemplateRepository }).repo = repo;
+    await expect(busy.unpublish(owner, t.id, live.version)).rejects.toMatchObject({
+      status: 409,
+      code: 'TEMPLATE_IN_USE',
+    });
+    await expect(busy.remove(owner, t.id)).rejects.toMatchObject({
+      status: 409,
+      code: 'TEMPLATE_IN_USE',
+    });
+    expect((await busy.get(owner, t.id)).status).toBe('PUBLISHED');
+  });
+
+  it('can be unpublished once nothing uses it', async () => {
+    const s = inUse(false);
+    const t = await s.create(owner, { name: 'Entry', archetype: 'giveaway' });
+    const saved = await s.update(owner, t.id, {
+      expectedVersion: 1,
+      name: 'Entry',
+      archetype: 'giveaway',
+      fields: publishable,
+    });
+    const live = await s.publish(owner, t.id, saved.version);
+    expect((await s.unpublish(owner, t.id, live.version)).status).toBe('DRAFT');
+  });
+});

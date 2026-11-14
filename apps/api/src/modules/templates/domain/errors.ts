@@ -40,6 +40,13 @@ export class TemplateLockedError extends AppError {
   }
 }
 
+/** A running campaign uses this template, so it cannot be unpublished or deleted. */
+export class TemplateInUseError extends AppError {
+  constructor() {
+    super('A running campaign uses this template', 409, 'TEMPLATE_IN_USE');
+  }
+}
+
 /** Unpublish or publish asked for a state the template is already in. */
 export class TemplateStateError extends AppError {
   constructor(message: string) {

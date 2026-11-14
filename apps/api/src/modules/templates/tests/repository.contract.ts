@@ -180,6 +180,17 @@ export function repositoryContract(
       ]);
     });
 
+    it('returns summaries only for templates that exist in this business', async () => {
+      const one = await make('Lookup one');
+      const two = await make('Lookup two');
+      const gone = await make('Lookup gone');
+      await w.repo.softDelete(a, gone.id);
+      const found = await w.repo.summaries(a, [one.id, two.id, gone.id, randomUUID()]);
+      expect(found.map((t) => t.id).sort()).toEqual([one.id, two.id].sort());
+      expect(await w.repo.summaries(b, [one.id, two.id])).toEqual([]);
+      expect(await w.repo.summaries(a, [])).toEqual([]);
+    });
+
     it("keeps one business out of another's templates", async () => {
       const t = await make('Private');
       expect(await w.repo.get(b, t.id)).toBeNull();

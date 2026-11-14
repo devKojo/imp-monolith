@@ -26,6 +26,8 @@ export interface TemplateRepository {
     filter: { status?: TemplateStatus; q?: string },
   ): Promise<TemplateSummary[]>;
   get(ctx: TenantContext, id: string): Promise<TemplateDetail | null>;
+  /** Summaries of the given templates that exist in this business (missing or deleted ones are left out). */
+  summaries(ctx: TenantContext, ids: readonly string[]): Promise<TemplateSummary[]>;
   create(
     ctx: TenantContext,
     input: { name: string; archetype: Archetype; createdById: string },
@@ -52,4 +54,13 @@ export interface TemplateRepository {
   ): Promise<TemplateDetail | null>;
   /** Soft delete of a DRAFT. */
   softDelete(ctx: TenantContext, id: string): Promise<'ok' | 'not_found' | 'locked'>;
+}
+
+/**
+ * Answers whether a template is relied on by something that is running, so it must not be unpublished
+ * or deleted. Provided by the module that owns the dependants (campaigns) at the composition root, so
+ * templates never reads another module's tables.
+ */
+export interface TemplateUsage {
+  isInUse(ctx: TenantContext, templateId: string): Promise<boolean>;
 }

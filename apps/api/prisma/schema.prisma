@@ -58,6 +58,15 @@ enum TemplateFieldKind {
   CONSENT
 }
 
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
 /// @owner business
 /// A Business is a tenant: its id is the tenantId used by RLS on every other tenant table.
 model Business {
@@ -69,6 +78,7 @@ model Business {
 
   memberships Membership[]
   templates   Template[]
+  campaigns   Campaign[]
 
   @@map("businesses")
 }
@@ -234,8 +244,9 @@ model Template {
   publishedAt DateTime?         @map("published_at") @db.Timestamptz
   deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
 
-  business Business        @relation(fields: [tenantId], references: [id])
-  fields   TemplateField[]
+  business  Business        @relation(fields: [tenantId], references: [id])
+  fields    TemplateField[]
+  campaigns Campaign[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
@@ -264,4 +275,58 @@ model TemplateField {
   @@unique([tenantId, templateId, key])
   @@index([tenantId, templateId, position])
   @@map("template_fields")
+}
+
+/// @owner campaigns
+/// A campaign a business runs from a published template: what the public page says, who can win what,
+/// and when it runs. Tenant-scoped (RLS). Soft-deleted via deletedAt (R-DAT-09). Only a DRAFT is
+/// editable; the page address (slug) is fixed when the campaign is launched (R-TEN-07).
+model Campaign {
+  id          String         @id @default(uuid(7)) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  /// The entry form. Optional while drafting; a published template is required to launch.
+  templateId  String?        @map("template_id") @db.Uuid
+  title       String
+  summary     String         @default("")
+  /// Unique across all businesses: the public page is /c/{slug}. Null until launch.
+  slug        String?        @unique
+  status      CampaignStatus @default(DRAFT)
+  startAt     DateTime?      @map("start_at") @db.Timestamptz
+  endAt       DateTime?      @map("end_at") @db.Timestamptz
+  /// Optimistic concurrency: bumped on every change; writers send the version they read.
+  version     Int            @default(1)
+  createdById String         @map("created_by_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  launchedAt  DateTime?      @map("launched_at") @db.Timestamptz
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+
+  business Business        @relation(fields: [tenantId], references: [id])
+  template Template?       @relation(fields: [tenantId, templateId], references: [tenantId, id])
+  prizes   CampaignPrize[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+  @@index([tenantId, templateId])
+  @@map("campaigns")
+}
+
+/// @owner campaigns
+/// One prize tier of a campaign, in `position` order. Replaced as a set when the campaign is saved.
+model CampaignPrize {
+  id          String @id @default(uuid(7)) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  campaignId  String @map("campaign_id") @db.Uuid
+  position    Int
+  name        String
+  /// Free text shown as written (for example "GH₵ 5,000"); the platform does not handle money.
+  valueLabel  String @default("") @map("value_label")
+  winners     Int    @default(1)
+  description String @default("")
+
+  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, campaignId, position])
+  @@map("campaign_prizes")
 }

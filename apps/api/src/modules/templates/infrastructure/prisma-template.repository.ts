@@ -109,6 +109,16 @@ export class PrismaTemplateRepository implements TemplateRepository {
     return withTenant(this.db, ctx, (tx) => this.read(tx, ctx, id));
   }
 
+  summaries(ctx: TenantContext, ids: readonly string[]): Promise<TemplateSummary[]> {
+    return withTenant(this.db, ctx, async (tx) => {
+      const rows = await tx.template.findMany({
+        where: { tenantId: ctx.tenantId, deletedAt: null, id: { in: [...ids] } },
+        include: { _count: { select: { fields: true } } },
+      });
+      return rows.map((r) => summaryOf(r, r._count.fields));
+    });
+  }
+
   private async read(tx: TenantTx, ctx: TenantContext, id: string): Promise<TemplateDetail | null> {
     const row = await tx.template.findFirst({
       where: { id, tenantId: ctx.tenantId, deletedAt: null },
