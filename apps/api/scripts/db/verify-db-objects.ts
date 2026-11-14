@@ -56,6 +56,10 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['template_fields', 'tenant_isolation'],
   ['campaigns', 'tenant_isolation'],
   ['campaign_prizes', 'tenant_isolation'],
+  ['campaigns', 'public_read'],
+  ['campaign_prizes', 'public_read'],
+  ['templates', 'public_read'],
+  ['businesses', 'public_read'],
 ];
 // [role, table, privilege, expected]
 const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [

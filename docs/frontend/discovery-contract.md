@@ -2,9 +2,12 @@
 
 The architecture specification's endpoint catalogue (section 10.1) lists `GET /public/campaigns/:slug`
 but no listing endpoint, and the UI/UX information architecture (section 2.1) has no discovery
-route. The discovery page (`/discover`) exists in the designs, so this proposes what both documents
-need. **It needs an amendment to both specs and an API implementation; until then the page shows
-clearly labelled sample data** (`runtimeConfig.public.discoverySource = 'sample'` in development).
+route. This contract fills that gap. **Implemented** by the campaigns module (see its `MODULE.md`);
+the page shows real campaigns only and has no sample data.
+
+Deviations from the proposal below: PENDING businesses are listed (suspended ones are not); `timeZone` is
+always `UTC`; an instant win is a `giveaway`; `poll` and `vote` return nothing yet; `imageUrl`/`imageAlt`
+are not returned; the legal gate for competitions is not enforced yet.
 
 ## Endpoint
 

@@ -20,10 +20,13 @@ export default defineNuxtConfig({
   ssr: true,
   typescript: { strict: true },
   runtimeConfig: {
+    // Server only (never sent to the browser): where the web server itself reaches the API while
+    // rendering a page. The browser uses relative /api URLs, which the dev proxy or CloudFront route;
+    // the server has no such router in front of it. 127.0.0.1, not localhost, for the reason above.
+    // Override with NUXT_API_INTERNAL_BASE.
+    apiInternalBase: 'http://127.0.0.1:3000',
     public: {
       apiBase: 'http://localhost:3000', // override with NUXT_PUBLIC_API_BASE
-      // 'sample' shows labelled example campaigns; 'api' calls GET /api/v1/public/campaigns.
-      discoverySource: process.env.NODE_ENV === 'production' ? 'api' : 'sample',
     },
   },
   routeRules: {

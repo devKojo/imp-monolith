@@ -107,12 +107,25 @@ allowed statuses in the `UPDATE ... WHERE`, so the check and the write are one a
 `campaign.created`, `.updated`, `.launched`, `.paused`, `.resumed`, `.cancelled`, `.duplicated`, `.deleted`,
 with the campaign id (and version or source id) as metadata. No titles or prize text (R-PRV-06).
 
+## Public listing (`GET /api/v1/public/campaigns`, no session)
+
+Running campaigns of every business, soonest to close first, for the `/discover` page. Query: `q` (max 100),
+`type`, `cursor` (opaque keyset). Cacheable (`public, s-maxage=30, stale-while-revalidate=300`), no cookies.
+
+- **How it reads across businesses.** `withPublic` sets the transaction-local `app.public_read = 'on'`, which opens
+  read-only `public_read` policies on `campaigns`, `campaign_prizes`, `templates` and `businesses`. They allow only
+  running, undeleted campaigns with a slug and a future end, and the rows those campaigns need. Nothing else
+  (fields, users, sessions, audit, other statuses) is reachable, and the scope cannot write.
+- **Visible** means LIVE, or SCHEDULED and already started, not deleted, not ended, business not suspended.
+- **Deviation:** businesses still PENDING are listed, because sign-up does not yet include an approval step.
+  Suspended ones are not.
+- Output is public content only. `timeZone` is always `UTC`; an instant win shows as a giveaway; polls and votes
+  have no source yet and return nothing; there are no images.
+
 ## Not built yet
 
-- **The public campaign page and API** (`/c/{slug}`, `GET /public/campaigns`) and participation (entering,
-  one-time codes, draws). Public reads need a cross-business read path decided with the public-api profile;
-  entering needs the participation module. The campaign builder previews the page; nothing is published to
-  participants yet.
+- **The public campaign page** (`/c/{slug}`) and participation (entering, one-time codes, draws). Entering needs
+  the participation module. The listing links to `/c/{slug}`, which has no page yet.
 - **Events.** Launch, pause and cancel should emit outbox events (identifiers only, R-EVT-12) once the outbox
   publisher exists.
 - **Contracts** are hand-written here and in the web app; replace with the generated client (R-STK-04). The
