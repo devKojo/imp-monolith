@@ -16,6 +16,7 @@ export const BLOCK_KINDS = [
   'likert',
   'upload',
   'text',
+  'long_text',
   'consent',
 ] as const;
 export type BlockKind = (typeof BLOCK_KINDS)[number];

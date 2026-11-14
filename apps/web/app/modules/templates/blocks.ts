@@ -70,6 +70,13 @@ export const BLOCK_DEFS: Record<BlockKind, BlockDef> = {
     verifiesIdentity: false,
     required: false,
   },
+  long_text: {
+    icon: 'menu',
+    group: 'engagement',
+    key: 'long_answer',
+    verifiesIdentity: false,
+    required: false,
+  },
   consent: {
     icon: 'shield-check',
     group: 'engagement',
