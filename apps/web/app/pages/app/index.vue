@@ -118,6 +118,7 @@ async function logout() {
     <template #actions>
       <UiButton
         variant="tertiary"
+        size="xs"
         icon="log-out"
         :loading="loggingOut"
         :loading-label="t('console.loggingOut')"
@@ -125,18 +126,15 @@ async function logout() {
       >
         {{ t('console.logout') }}
       </UiButton>
-      <UiButton icon="plus" disabled>{{ t('console.create') }}</UiButton>
+      <UiButton size="xs" icon="plus" disabled>{{ t('console.create') }}</UiButton>
     </template>
 
-    <UiBanner tone="system" :title="t('console.sample.title')" class="gap-after">
-      {{ t('console.sample.body') }}
-    </UiBanner>
     <UiSystemState v-if="failure" kind="generic" />
 
     <header class="page-head">
       <div>
-        <h1 class="page-head__title">{{ t('console.title') }}</h1>
-        <p class="ui-text-body-s ui-text-secondary">{{ t('console.subtitle') }}</p>
+        <h1 class="ui-text-h1 page-head__title">{{ t('console.title') }}</h1>
+        <p class="ui-text-caption ui-text-hint">{{ t('console.sample') }}</p>
       </div>
       <UiSelect
         v-if="options.length > 1"
@@ -154,44 +152,27 @@ async function logout() {
         :value="sample.participants.value"
         :badge="sample.participants.change"
         badge-icon="arrow-up"
-        icon="users"
-        :footer="[{ label: t('console.stat.vsLast'), value: sample.participants.newCount }]"
       />
       <UiStatCard
         :label="t('console.stat.campaigns')"
         :value="t('console.stat.live', { n: sample.campaigns.live })"
         :suffix="t('console.stat.ofTotal', { n: sample.campaigns.total })"
-        icon="rocket"
-        :footer="[
-          {
-            label: sample.campaigns.nextLaunch,
-            value: t('console.stat.scheduled', { n: sample.campaigns.scheduled }),
-          },
-        ]"
       />
       <UiStatCard
         :label="t('console.stat.health')"
         :value="sample.drawHealth.value"
         :badge="t('console.stat.verified')"
         badge-tone="info"
-        icon="shield-check"
-        :footer="[
-          {
-            label: t('console.stat.integrity'),
-            value: t('console.stat.anomalies', { n: sample.drawHealth.anomalies }),
-          },
-        ]"
       />
     </section>
 
     <section class="draw">
-      <UiIconTile icon="refresh" size="lg" />
       <div class="draw__text">
         <p class="draw__title">
           <strong class="ui-text-h3">{{ sample.nextDraw.title }}</strong>
           <UiBadge tone="info" shape="pill">{{ sample.nextDraw.countdown }}</UiBadge>
         </p>
-        <p class="ui-text-body-s ui-text-secondary">
+        <p class="ui-text-caption ui-text-hint">
           {{
             t('console.draw.detail', {
               winners: sample.nextDraw.winners,
@@ -201,8 +182,8 @@ async function logout() {
         </p>
       </div>
       <div class="draw__actions">
-        <UiButton variant="secondary" disabled>{{ t('console.draw.preview') }}</UiButton>
-        <UiButton disabled>{{ t('console.draw.execute') }}</UiButton>
+        <UiButton variant="tertiary" size="xs" disabled>{{ t('console.draw.preview') }}</UiButton>
+        <UiButton variant="secondary" size="xs" disabled>{{ t('console.draw.execute') }}</UiButton>
       </div>
     </section>
 
@@ -227,7 +208,6 @@ async function logout() {
       >
         <template #cell-name="{ row }">
           <span class="cell-name">
-            <UiIconTile :icon="(row as (typeof sample.campaignRows)[number]).icon" tone="neutral" />
             <span>
               <strong class="ui-text-label">{{ row.name }}</strong>
               <br />
@@ -239,7 +219,9 @@ async function logout() {
           <UiStatusChip vocabulary="campaign" :status="String(row.status)" />
         </template>
         <template #cell-actions="{ row }">
-          <UiButton variant="tertiary" disabled>{{ actionLabel(String(row.status)) }}</UiButton>
+          <UiButton variant="tertiary" size="xs" disabled>{{
+            actionLabel(String(row.status))
+          }}</UiButton>
         </template>
         <template #empty>
           <UiEmptyState
@@ -254,9 +236,6 @@ async function logout() {
 </template>
 
 <style scoped>
-.gap-after {
-  margin-block-end: var(--ui-space-6);
-}
 .page-head {
   display: flex;
   flex-wrap: wrap;
@@ -268,17 +247,10 @@ async function logout() {
 .page-head p {
   margin: var(--ui-space-1) 0 0;
 }
-.page-head__title {
-  margin: 0;
-  font-size: var(--ui-font-display-size);
-  line-height: var(--ui-font-display-line);
-  font-weight: 800;
-  letter-spacing: -0.025em;
-}
 .stats {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--ui-space-5);
+  gap: var(--ui-space-4);
   margin-block-end: var(--ui-space-8);
 }
 @media (min-width: 768px) {
@@ -296,7 +268,6 @@ async function logout() {
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-radius-lg);
-  box-shadow: var(--ui-elevation-1);
 }
 .draw__text {
   flex: 1;
@@ -319,7 +290,6 @@ async function logout() {
   background: var(--ui-color-surface);
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-radius-lg);
-  box-shadow: var(--ui-elevation-1);
   overflow: hidden;
 }
 .table-card__head {

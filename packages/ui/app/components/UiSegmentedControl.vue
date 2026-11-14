@@ -39,7 +39,7 @@ const groupName = props.name ?? `seg-${props.label.toLowerCase().replace(/\W+/g,
   padding: var(--ui-space-1);
   background: var(--ui-color-surface-subtle);
   border: 1px solid var(--ui-color-border);
-  border-radius: var(--ui-radius-lg);
+  border-radius: var(--ui-radius-md);
 }
 .ui-seg__opt {
   position: relative;
@@ -55,17 +55,19 @@ const groupName = props.name ?? `seg-${props.label.toLowerCase().replace(/\W+/g,
 .ui-seg__label {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--ui-control-target, var(--ui-target-dashboard));
+  min-block-size: calc(var(--ui-space-6) + var(--ui-space-1));
   padding: 0 var(--ui-space-3);
-  border-radius: var(--ui-radius-md);
+  border-radius: var(--ui-radius-sm);
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
   color: var(--ui-color-text-secondary);
   pointer-events: none;
 }
 .ui-seg__input:checked + .ui-seg__label {
   background: var(--ui-color-surface);
-  box-shadow: var(--ui-elevation-1);
+  box-shadow: inset 0 0 0 1px var(--ui-color-border);
   color: var(--ui-color-text-primary);
-  font-weight: 700;
+  font-weight: 600;
 }
 .ui-seg__input:hover:not(:checked) + .ui-seg__label {
   color: var(--ui-color-text-primary);

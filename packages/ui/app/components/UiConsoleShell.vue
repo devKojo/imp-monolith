@@ -170,8 +170,7 @@ function onKey(e: KeyboardEvent) {
   align-items: center;
   gap: var(--ui-space-4);
   padding: var(--ui-space-3) var(--ui-space-8);
-  background: color-mix(in srgb, var(--ui-color-surface) 92%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--ui-color-surface);
   border-block-end: 1px solid var(--ui-color-border);
 }
 .ui-console__search {
