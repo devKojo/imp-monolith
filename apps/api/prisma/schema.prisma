@@ -101,6 +101,7 @@ model User {
   sessions           Session[]
   emailVerifications EmailVerification[]
   passwordResets     PasswordReset[]
+  quizAttempts       QuizAttempt[]
 
   @@map("users")
 }
@@ -301,9 +302,12 @@ model Campaign {
   launchedAt  DateTime?      @map("launched_at") @db.Timestamptz
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
 
-  business Business        @relation(fields: [tenantId], references: [id])
-  template Template?       @relation(fields: [tenantId, templateId], references: [tenantId, id])
-  prizes   CampaignPrize[]
+  business  Business        @relation(fields: [tenantId], references: [id])
+  template  Template?       @relation(fields: [tenantId, templateId], references: [tenantId, id])
+  prizes    CampaignPrize[]
+  quiz      Quiz?
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
@@ -329,4 +333,82 @@ model CampaignPrize {
 
   @@index([tenantId, campaignId, position])
   @@map("campaign_prizes")
+}
+
+/// @owner quiz
+/// Settings of a quiz campaign: an optional time limit for the whole attempt and the pass mark.
+model Quiz {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  campaignId       String   @map("campaign_id") @db.Uuid
+  /// Null means untimed.
+  timeLimitMinutes Int?     @map("time_limit_minutes")
+  passPercent      Int      @default(70) @map("pass_percent")
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, campaignId])
+  @@map("quizzes")
+}
+
+/// @owner quiz
+/// One single-choice question, in `position` order. Replaced as a set while the campaign is a draft.
+/// `correctIndex` never leaves the server while the quiz runs.
+model QuizQuestion {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  campaignId   String   @map("campaign_id") @db.Uuid
+  position     Int
+  prompt       String
+  options      String[]
+  correctIndex Int      @map("correct_index")
+
+  campaign Campaign     @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  answers  QuizAnswer[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, campaignId, position])
+  @@map("quiz_questions")
+}
+
+/// @owner quiz
+/// A participant's attempt: one per participant per campaign. `expiresAt` is set when it starts, from the
+/// time limit, and is the only clock that counts. Scored by the server when submitted or expired.
+model QuizAttempt {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  campaignId  String    @map("campaign_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz
+  score       Int?
+  total       Int?
+  passed      Boolean?
+
+  campaign Campaign     @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id])
+  answers  QuizAnswer[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, campaignId, userId])
+  @@map("quiz_attempts")
+}
+
+/// @owner quiz
+/// The option a participant chose for one question; one row per question per attempt.
+model QuizAnswer {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  attemptId   String   @map("attempt_id") @db.Uuid
+  questionId  String   @map("question_id") @db.Uuid
+  choiceIndex Int      @map("choice_index")
+  answeredAt  DateTime @default(now()) @map("answered_at") @db.Timestamptz
+
+  attempt  QuizAttempt  @relation(fields: [tenantId, attemptId], references: [tenantId, id], onDelete: Cascade)
+  question QuizQuestion @relation(fields: [tenantId, questionId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, attemptId, questionId])
+  @@map("quiz_answers")
 }

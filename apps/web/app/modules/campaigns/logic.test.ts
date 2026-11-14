@@ -141,3 +141,24 @@ describe('date and time fields', () => {
     expect(toParts(null, 'UTC')).toEqual({ date: '', time: '', zone: 'UTC' });
   });
 });
+
+describe('quiz questions at launch', () => {
+  const quizPasses = (count?: number) =>
+    Object.fromEntries(
+      preflight(
+        campaign({ template: template({ archetype: 'quiz' }), prizes: [] }),
+        NOW,
+        count,
+      ).map((c) => [c.id, c.pass]),
+    );
+
+  it('asks a quiz for at least one question', () => {
+    expect(quizPasses(0)).toMatchObject({ questions: false });
+    expect(quizPasses(3)).toMatchObject({ questions: true });
+  });
+
+  it('does not ask when the count is not known, or the campaign is not a quiz', () => {
+    expect(quizPasses()).not.toHaveProperty('questions');
+    expect(passes()).not.toHaveProperty('questions');
+  });
+});

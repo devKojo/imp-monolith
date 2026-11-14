@@ -55,7 +55,7 @@ export type StoredSummary = Omit<StoredCampaign, 'summary' | 'prizes' | 'launche
 export type CampaignDetail = StoredCampaign & { template: TemplateRef | null };
 export type CampaignSummary = StoredSummary & { template: TemplateRef | null };
 
-export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes';
+export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes' | 'questions';
 export type PreflightCheck = { id: PreflightId; pass: boolean };
 
 /** The signed-in person acting on a business, resolved by the session, never by the request. */

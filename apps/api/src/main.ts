@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { SmtpMailer, createIdentityModule } from './modules/identity';
 import { PrismaCampaignUsage, createCampaignsModule } from './modules/campaigns';
+import { createQuizModule } from './modules/quiz';
 import { createTemplatesModule } from './modules/templates';
 import { createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
@@ -30,8 +31,15 @@ const identity = createIdentityModule({
 // Templates refuse to be unpublished or deleted while a running campaign uses them; the campaigns
 // module answers that question, and gets its templates from the templates module (no cycle).
 const templates = createTemplatesModule({ db, identity, usage: new PrismaCampaignUsage(db) });
-const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
-const app = await createApp({ bus, identity, templates, campaigns });
+const quiz = createQuizModule({ db, identity });
+// A quiz campaign needs at least one question to launch; the quiz module answers how many it has.
+const campaigns = createCampaignsModule({
+  db,
+  identity,
+  templates: templates.lookup,
+  questions: quiz.questions,
+});
+const app = await createApp({ bus, identity, templates, campaigns, quiz });
 const server = app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
 
 const shutdown = async () => {

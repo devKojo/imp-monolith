@@ -70,3 +70,8 @@ export interface CampaignRepository {
 export interface TemplateLookup {
   many(ctx: TenantContext, ids: readonly string[]): Promise<TemplateRef[]>;
 }
+
+/** How many quiz questions a campaign has. Provided by the quiz module at the composition root. */
+export interface QuestionCounter {
+  count(ctx: TenantContext, campaignId: string): Promise<number>;
+}

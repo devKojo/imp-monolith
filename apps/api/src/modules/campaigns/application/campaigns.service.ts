@@ -33,7 +33,7 @@ import {
   slugify,
   withEffectiveStatus,
 } from '../domain/rules';
-import type { CampaignRepository, TemplateLookup, WriteResult } from './ports';
+import type { CampaignRepository, QuestionCounter, TemplateLookup, WriteResult } from './ports';
 
 type Need = 'read' | 'operate' | 'manage';
 const CHECKS: Record<Need, (role: string) => boolean> = {
@@ -54,6 +54,8 @@ export class CampaignsService {
     private readonly now: () => Date = () => new Date(),
     /** Random part of a new page address; replaceable so tests are deterministic. */
     private readonly suffix: () => string = () => randomBytes(3).toString('hex'),
+    /** Only needed for quiz campaigns; without it the questions check is not made. */
+    private readonly questions?: QuestionCounter,
   ) {}
 
   private scope(actor: Actor | null, need: Need): TenantContext {
@@ -156,6 +158,10 @@ export class CampaignsService {
     const template = await this.templateOf(ctx, current.templateId);
     const now = this.now();
     const startAt = current.startAt ? new Date(current.startAt) : null;
+    const questionCount =
+      template?.archetype === 'quiz' && this.questions
+        ? await this.questions.count(ctx, id)
+        : undefined;
     const failed = failedChecks(
       {
         title: current.title,
@@ -163,6 +169,7 @@ export class CampaignsService {
         startAt,
         endAt: current.endAt ? new Date(current.endAt) : null,
         prizes: current.prizes,
+        ...(questionCount !== undefined ? { questionCount } : {}),
       },
       now,
     );
