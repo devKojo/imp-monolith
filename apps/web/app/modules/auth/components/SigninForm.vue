@@ -100,8 +100,9 @@ const crumbs = [
 <template>
   <UiAuthShell
     :size="isBusiness ? 'wide' : 'narrow'"
+    :layout="isBusiness ? 'split' : 'card'"
     :breadcrumbs="crumbs"
-    :title="t('signin.title')"
+    :title="isBusiness ? t('signin.title.business') : t('signin.title')"
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
     <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
@@ -153,7 +154,7 @@ const crumbs = [
       </UiButton>
     </form>
 
-    <template #footer>
+    <template v-if="!isBusiness" #footer>
       {{ t('signin.noAccount') }}
       <UiLink :to="isBusiness ? '/business/register' : '/signup'">{{
         t('signin.createAccount')

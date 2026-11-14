@@ -147,6 +147,7 @@ const crumbs = [
 <template>
   <UiAuthShell
     :size="isBusiness ? 'wide' : 'narrow'"
+    :layout="isBusiness ? 'split' : 'card'"
     :breadcrumbs="crumbs"
     :title="k('title')"
     :subtitle="k('subtitle')"
@@ -228,7 +229,7 @@ const crumbs = [
       </UiButton>
     </form>
 
-    <template #footer>
+    <template v-if="!isBusiness" #footer>
       {{ k('haveAccount') }}
       <UiLink :to="isBusiness ? '/business/signin' : '/signin'" @click="carryEmail">{{
         k('signin')

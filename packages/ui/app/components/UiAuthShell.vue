@@ -6,7 +6,10 @@ import UiSkipLink from './UiSkipLink.vue';
  * Frame for sign-in, sign-up and onboarding screens: breadcrumbs back to where the person came
  * from (or a brand line when none are given), one centred card (title, subtitle,
  * body, account-routing footer strip) and optional text under it. `wide` adds a side column for
- * supporting content on large screens. It holds no per-user data, so it is safe to server-render.
+ * supporting content on large screens. `layout="split"` is the full-bleed variant for entry pages: the
+ * `aside` fills the leading column (stacked above the card on small screens), the card sits in the
+ * trailing column with a left-aligned heading, and `badge` is shown above the heading (for example a
+ * sign-in/register switch). It holds no per-user data, so it is safe to server-render.
  */
 withDefaults(
   defineProps<{
@@ -17,25 +20,34 @@ withDefaults(
     /** Trail back to the public site, e.g. Discover > Sign in. The last item is the current page. */
     breadcrumbs?: Array<{ label: string; to?: string }>;
     size?: 'narrow' | 'wide';
+    layout?: 'card' | 'split';
   }>(),
-  { size: 'narrow' },
+  { size: 'narrow', layout: 'card' },
 );
 </script>
 
 <template>
-  <div class="ui-auth">
+  <div class="ui-auth" :data-layout="layout">
     <UiSkipLink />
-    <header v-if="breadcrumbs?.length || brandName || $slots.brand" class="ui-auth__brand">
+    <header
+      v-if="layout === 'card' && (breadcrumbs?.length || brandName || $slots.brand)"
+      class="ui-auth__brand"
+    >
       <UiBreadcrumbs v-if="breadcrumbs?.length" :items="breadcrumbs" />
       <slot v-else name="brand">
         <strong class="ui-text-h3">{{ brandName }}</strong>
       </slot>
     </header>
     <main id="main" tabindex="-1" class="ui-auth__main" :data-size="size">
-      <aside v-if="size === 'wide' && $slots.aside" class="ui-auth__aside">
+      <aside v-if="(layout === 'split' || size === 'wide') && $slots.aside" class="ui-auth__aside">
         <slot name="aside" />
       </aside>
       <div class="ui-auth__col">
+        <UiBreadcrumbs
+          v-if="layout === 'split' && breadcrumbs?.length"
+          :items="breadcrumbs"
+          class="ui-auth__crumbs"
+        />
         <section class="ui-auth__card">
           <div class="ui-auth__head">
             <slot name="badge" />
@@ -143,7 +155,7 @@ withDefaults(
 .ui-auth__head :deep(.ui-badge) {
   margin-block-end: var(--ui-space-3);
 }
-.ui-auth__title {
+.ui-auth[data-layout='card'] .ui-auth__title {
   margin: 0;
   font-size: var(--ui-font-display-size);
   line-height: var(--ui-font-display-line);
@@ -177,6 +189,64 @@ withDefaults(
   gap: var(--ui-space-2) var(--ui-space-4);
   color: var(--ui-color-text-hint);
   text-align: center;
+}
+
+/* Split layout: full-bleed entry page (leading panel + trailing card). */
+.ui-auth__title {
+  margin: 0;
+}
+.ui-auth[data-layout='split'] .ui-auth__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+.ui-auth[data-layout='split'] .ui-auth__aside {
+  display: block;
+  flex: none;
+  max-inline-size: none;
+  color: var(--ui-color-text-inverse);
+  background: var(--ui-color-surface-inverse);
+}
+.ui-auth[data-layout='split'] .ui-auth__col {
+  align-items: stretch;
+  justify-self: center;
+  gap: var(--ui-space-4);
+  max-inline-size: 448px;
+  padding: var(--ui-space-8) var(--ui-space-4);
+}
+.ui-auth[data-layout='split'] .ui-auth__col::before,
+.ui-auth[data-layout='split'] .ui-auth__col::after {
+  display: none;
+}
+.ui-auth[data-layout='split'] .ui-auth__col {
+  align-self: center;
+}
+.ui-auth[data-layout='split'] .ui-auth__card {
+  border-radius: var(--ui-radius-xl);
+  box-shadow: var(--ui-elevation-2);
+}
+.ui-auth[data-layout='split'] .ui-auth__head {
+  align-items: flex-start;
+  text-align: start;
+}
+.ui-auth[data-layout='split'] .ui-auth__subtitle {
+  max-inline-size: none;
+}
+.ui-auth[data-layout='split'] .ui-auth__head :deep(.ui-badge),
+.ui-auth[data-layout='split'] .ui-auth__head > :first-child {
+  inline-size: 100%;
+}
+@media (min-width: 1024px) {
+  .ui-auth[data-layout='split'] .ui-auth__main {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+  .ui-auth[data-layout='split'] .ui-auth__col {
+    padding: var(--ui-space-12);
+    inline-size: 100%;
+    max-inline-size: 560px;
+  }
 }
 @media (max-width: 479px) {
   .ui-auth__head {

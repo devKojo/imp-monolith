@@ -30,6 +30,7 @@ export const staticSiteText = {
   // sign in
   'signin.title': 'Welcome back',
   'signin.subtitle': 'Sign in to see your entries, rewards and live draws.',
+  'signin.title.business': 'Sign in to your business',
   'signin.subtitle.business': 'Sign in to manage your campaigns.',
   'signin.email': 'Email address',
   'signin.password': 'Password',
@@ -145,22 +146,22 @@ export const staticSiteText = {
   'footer.support.report': 'Report abuse',
   'footer.copyright': '© {year} IMP. All rights reserved.',
 
-  // business entry page (sign-in and registration side panel)
-  'business.entry.badge': 'Business portal',
-  'business.entry.title': 'Run campaigns on IMP',
+  // business entry page (sign-in and registration)
+  'business.entry.badge': 'IMP business portal',
+  'business.entry.title':
+    'Manage campaigns, verifiable draws and participant growth in one portal.',
   'business.entry.subtitle':
     'Create quizzes, polls and giveaways, invite your team and reach participants. Business accounts are separate from participant accounts.',
+  'business.entry.chip.codes': 'Entries confirmed by one-time code',
+  'business.entry.chip.draws': 'Draws you can verify',
+  'business.entry.strip': 'What you can do here',
+  'business.entry.campaigns': 'Run campaigns',
+  'business.entry.team': 'Work as a team',
+  'business.entry.trust': 'Earn trust',
   'business.entry.participantNote': 'Looking to take part in campaigns? Visit Discover instead.',
   'business.entry.switch': 'Business account',
   'business.entry.tab.signin': 'Sign in',
   'business.entry.tab.register': 'Register',
-  'business.entry.campaigns.title': 'Run campaigns',
-  'business.entry.campaigns.body':
-    'Build quizzes, polls and giveaways and publish them to participants.',
-  'business.entry.team.title': 'Work as a team',
-  'business.entry.team.body': 'Invite colleagues and give each person the access their role needs.',
-  'business.entry.trust.title': 'Earn trust',
-  'business.entry.trust.body': 'Entries are confirmed by one-time code and draws can be verified.',
 
   // discovery
   'discover.more': 'Show more campaigns',
