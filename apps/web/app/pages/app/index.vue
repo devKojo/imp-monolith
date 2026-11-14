@@ -3,7 +3,8 @@ import { computed, ref } from 'vue';
 import { t } from '../../i18n';
 import { businessSample as sample } from '../../modules/business/sample';
 import { useAuth } from '../../modules/auth/composables/useAuth';
-import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
+import { SIGNIN } from '../../modules/auth/constants';
+import BusinessShell from '../../modules/business/components/BusinessShell.vue';
 import { classifyAuthError, toApiError, type AuthFailure } from '../../modules/auth/errors';
 import { ROLE_LABELS } from '../../modules/auth/validation';
 
@@ -18,15 +19,8 @@ useHead({ title: t('console.title') });
 const auth = useAuth();
 const session = auth.session;
 const failure = ref<AuthFailure | null>(null);
-const loggingOut = ref(false);
 const switching = ref(false);
 
-const active = computed(() =>
-  session.value?.memberships.find((m) => m.membershipId === session.value?.active?.membershipId),
-);
-const roleLabel = computed(() =>
-  active.value ? (ROLE_LABELS[active.value.role] ?? active.value.role) : '',
-);
 const selected = ref(session.value?.active?.membershipId ?? '');
 const options = computed(
   () =>
@@ -35,14 +29,6 @@ const options = computed(
       label: `${m.businessName} (${ROLE_LABELS[m.role] ?? m.role})`,
     })) ?? [],
 );
-
-const nav = computed(() => [
-  { label: t('console.nav.overview'), to: '/app', icon: 'grid' as const, current: true },
-  { label: t('console.nav.campaigns'), to: '/app/campaigns', icon: 'rocket' as const },
-  { label: t('console.nav.participants'), to: '/app/participants', icon: 'users' as const },
-  { label: t('console.nav.analytics'), to: '/app/analytics', icon: 'trending-up' as const },
-  { label: t('console.nav.settings'), to: '/app/settings', icon: 'sliders' as const },
-]);
 
 const query = ref('');
 const status = ref('all');
@@ -89,43 +75,14 @@ async function onSwitch(membershipId: string) {
     switching.value = false;
   }
 }
-
-async function logout() {
-  loggingOut.value = true;
-  try {
-    await auth.logout();
-  } catch (e) {
-    failure.value = classifyAuthError(toApiError(e));
-  } finally {
-    loggingOut.value = false;
-  }
-  if (!session.value) await navigateTo(SIGNIN.business);
-}
 </script>
 
 <template>
-  <UiConsoleShell
-    v-if="session"
-    :brand-name="BRAND_NAME"
-    :nav="nav"
-    :nav-label="t('console.nav.label')"
-    :user-name="session.user.name"
-    :user-role="active ? `${active.businessName} · ${roleLabel}` : roleLabel"
-  >
+  <BusinessShell current="overview">
     <template #search>
       <UiSearchField v-model="query" :label="t('console.search')" />
     </template>
     <template #actions>
-      <UiButton
-        variant="tertiary"
-        size="xs"
-        icon="log-out"
-        :loading="loggingOut"
-        :loading-label="t('console.loggingOut')"
-        @click="logout"
-      >
-        {{ t('console.logout') }}
-      </UiButton>
       <UiButton size="xs" icon="plus" disabled>{{ t('console.create') }}</UiButton>
     </template>
 
@@ -231,8 +188,7 @@ async function logout() {
         </template>
       </UiDataTable>
     </section>
-  </UiConsoleShell>
-  <UiSkeleton v-else variant="card" />
+  </BusinessShell>
 </template>
 
 <style scoped>
