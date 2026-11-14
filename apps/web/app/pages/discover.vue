@@ -5,6 +5,7 @@ import type { IconName } from '@imp/ui/app/icons';
 import { t, type AppTextKey } from '../i18n';
 import { useDiscovery } from '../modules/discovery/composables/useDiscovery';
 import { BRAND_NAME } from '../modules/auth/constants';
+import { siteFooter } from '../modules/site/footer';
 import { PAGE_SIZE, countText, nextVisible, timeLeftText } from '../modules/discovery/logic';
 import { isCampaignType, type CampaignType } from '../modules/discovery/types';
 
@@ -100,31 +101,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => observer?.disconnect());
 
-const footerColumns = [
-  {
-    title: t('footer.participants'),
-    links: [
-      { label: t('footer.participants.discover'), to: '/discover' },
-      { label: t('footer.participants.signin'), to: '/signin' },
-      { label: t('footer.participants.signup'), to: '/signup' },
-    ],
-  },
-  {
-    title: t('footer.business'),
-    links: [
-      { label: t('footer.business.register'), to: '/business/register' },
-      { label: t('footer.business.signin'), to: '/business/signin' },
-    ],
-  },
-  {
-    title: t('footer.support'),
-    links: [
-      { label: t('footer.support.help'), to: '/help' },
-      { label: t('footer.support.report'), to: '/report-abuse' },
-    ],
-  },
-];
-const copyright = t('footer.copyright', { year: new Date().getFullYear() });
+const footer = siteFooter();
 
 const filtered = computed(() => query.value.q.trim() !== '' || query.value.type !== 'all');
 const resultCount = computed(() => (pending.value ? '' : countText(campaigns.value.length)));
@@ -141,13 +118,13 @@ const livePill = computed(() =>
   <UiPublicShell
     :brand-name="BRAND_NAME"
     wide
-    :footer-tagline="t('footer.tagline')"
-    :footer-columns="footerColumns"
-    :copyright="copyright"
+    :footer-tagline="footer.tagline"
+    :footer-columns="footer.columns"
+    :copyright="footer.copyright"
   >
     <template #nav>
       <UiLink to="/discover" aria-current="page">{{ t('nav.discover') }}</UiLink>
-      <UiLink to="/business/register">{{ t('nav.forBusinesses') }}</UiLink>
+      <UiLink to="/business">{{ t('nav.forBusinesses') }}</UiLink>
     </template>
     <template #actions>
       <UiButton to="/signin" variant="secondary">{{ t('nav.signin') }}</UiButton>

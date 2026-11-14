@@ -137,7 +137,9 @@ async function submit() {
   }
 }
 const crumbs = [
-  { label: t('nav.discover'), to: '/discover' },
+  isBusiness
+    ? { label: t('nav.forBusinesses'), to: '/business' }
+    : { label: t('nav.discover'), to: '/discover' },
   { label: isBusiness ? t('footer.business.register') : t('nav.signup') },
 ];
 </script>
@@ -228,11 +230,6 @@ const crumbs = [
       {{ k('haveAccount') }}
       <UiLink :to="isBusiness ? '/business/signin' : '/signin'" @click="carryEmail">{{
         k('signin')
-      }}</UiLink>
-    </template>
-    <template #below>
-      <UiLink :to="isBusiness ? '/signup' : '/business/register'" bare>{{
-        isBusiness ? t('register.switch.participant') : t('register.switch.business')
       }}</UiLink>
     </template>
   </UiAuthShell>

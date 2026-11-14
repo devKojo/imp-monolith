@@ -31,8 +31,6 @@ export const staticSiteText = {
   'signin.title': 'Welcome back',
   'signin.subtitle': 'Sign in to see your entries, rewards and live draws.',
   'signin.subtitle.business': 'Sign in to manage your campaigns.',
-  'signin.switch.business': 'Running campaigns? Business sign in',
-  'signin.switch.participant': 'Joining campaigns? Participant sign in',
   'signin.email': 'Email address',
   'signin.password': 'Password',
   'signin.submit': 'Sign in',
@@ -100,8 +98,6 @@ export const staticSiteText = {
   'register.agreementLegend': 'Agreement',
   'register.agreementError': 'Accept the agreement to create your account.',
   'register.submitting': 'Creating your account...',
-  'register.switch.participant': 'Joining campaigns? Create a participant account',
-  'register.switch.business': 'Running campaigns? Register your business',
 
   // wrong portal (the account exists, but belongs to the other sign-in)
   'wrongPortal.participant.title': 'This is a business account',
@@ -142,12 +138,29 @@ export const staticSiteText = {
   'footer.participants.signin': 'Sign in',
   'footer.participants.signup': 'Create account',
   'footer.business': 'For businesses',
+  'footer.business.overview': 'Business overview',
   'footer.business.register': 'Register your business',
   'footer.business.signin': 'Business sign in',
   'footer.support': 'Support',
   'footer.support.help': 'Help centre',
   'footer.support.report': 'Report abuse',
   'footer.copyright': '© {year} IMP. All rights reserved.',
+
+  // business entry page
+  'business.entry.title': 'Run campaigns on IMP',
+  'business.entry.subtitle':
+    'Create quizzes, polls and giveaways, invite your team and reach participants. Business accounts are separate from participant accounts.',
+  'business.entry.participantNote': 'Looking to take part in campaigns? Visit Discover instead.',
+  'business.entry.tiles': 'What you can do',
+  'business.entry.tile.campaigns.title': 'Run campaigns',
+  'business.entry.tile.campaigns.body':
+    'Build quizzes, polls and giveaways and publish them to participants.',
+  'business.entry.tile.team.title': 'Work as a team',
+  'business.entry.tile.team.body':
+    'Invite colleagues and give each person the access their role needs.',
+  'business.entry.tile.trust.title': 'Earn trust',
+  'business.entry.tile.trust.body':
+    'Entries are confirmed by one-time code and draws can be verified.',
 
   // discovery
   'discover.more': 'Show more campaigns',
