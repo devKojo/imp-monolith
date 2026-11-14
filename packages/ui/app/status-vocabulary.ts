@@ -81,6 +81,20 @@ export const statusVocabularies = {
       meaning: 'Removed after review',
     },
   },
+  template: {
+    DRAFT: {
+      label: 'Draft',
+      icon: 'pencil',
+      tone: 'neutral',
+      meaning: 'Editable; not ready for campaigns',
+    },
+    PUBLISHED: {
+      label: 'Published',
+      icon: 'check-circle',
+      tone: 'success',
+      meaning: 'Passed every check; ready for campaigns',
+    },
+  },
   moderation: {
     PENDING_REVIEW: {
       label: 'Pending review',

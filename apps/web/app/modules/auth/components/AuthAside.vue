@@ -32,14 +32,6 @@ const strip = {
       </p>
       <h2 id="auth-aside-title" class="aside__title">{{ text('title') }}</h2>
       <p class="aside__lead ui-text-body-l">{{ text('lead') }}</p>
-      <ul class="aside__chips">
-        <li class="aside__chip ui-text-label-sm">
-          <UiIcon name="check-circle" :size="18" />{{ t('aside.chip.codes') }}
-        </li>
-        <li class="aside__chip ui-text-label-sm">
-          <UiIcon name="shield-check" :size="18" />{{ t('aside.chip.draws') }}
-        </li>
-      </ul>
     </div>
     <div class="aside__bottom">
       <p class="aside__label ui-text-label-sm">{{ text('strip') }}</p>
@@ -112,20 +104,6 @@ const strip = {
 }
 .aside__lead {
   color: var(--ui-color-text-inverse-muted);
-}
-.aside__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ui-space-3);
-}
-.aside__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ui-space-2);
-  padding: var(--ui-space-2) var(--ui-space-3);
-  border: 1px solid color-mix(in srgb, var(--ui-color-text-inverse) 20%, transparent);
-  border-radius: var(--ui-radius-md);
-  background: color-mix(in srgb, var(--ui-color-text-inverse) 15%, transparent);
 }
 .aside__bottom {
   display: flex;

@@ -74,7 +74,7 @@ async function submit() {
   >
     <template v-if="invalid">
       <p class="ui-text-body" role="alert">{{ t('reset.invalid.body') }}</p>
-      <UiButton to="/forgot-password" block icon-trailing="arrow-right">
+      <UiButton size="xs" to="/forgot-password" block icon-trailing="arrow-right">
         {{ t('reset.invalid.cta') }}
       </UiButton>
     </template>
@@ -89,6 +89,7 @@ async function submit() {
         :error="error"
       />
       <UiButton
+        size="xs"
         type="submit"
         block
         :loading="loading"

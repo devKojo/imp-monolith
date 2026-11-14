@@ -138,6 +138,7 @@ const crumbs = [
         </template>
       </UiPasswordField>
       <UiButton
+        size="xs"
         type="submit"
         block
         icon-trailing="arrow-right"
@@ -155,9 +156,6 @@ const crumbs = [
       <UiLink :to="isBusiness ? '/business/register' : '/signup'">{{
         t('signin.createAccount')
       }}</UiLink>
-    </template>
-    <template #below>
-      <span>{{ t('signin.sessionNote') }}</span>
     </template>
   </AuthPage>
 </template>

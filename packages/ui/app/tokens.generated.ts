@@ -7,7 +7,7 @@ export const tokens = {
     "surface": "#FFFFFF",
     "surface-subtle": "#F1F3FF",
     "border": "#DBE2F9",
-    "border-strong": "#868CA0",
+    "border-strong": "#8A90A3",
     "action-primary": "#1D4ED8",
     "action-primary-text": "#FFFFFF",
     "focus-ring": "#1D4ED8",
