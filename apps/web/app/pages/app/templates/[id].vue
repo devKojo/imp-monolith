@@ -87,6 +87,7 @@ const archetypeOptions = ARCHETYPES.map((a) => ({
 }));
 
 const device = ref('mobile');
+const fullPreview = ref(false);
 const deviceOptions = [
   { value: 'mobile', label: t('tpl.device.mobile') },
   { value: 'desktop', label: t('tpl.device.desktop') },
@@ -336,11 +337,16 @@ const crumbs = computed(() => [
           <UiCard as="section" aria-labelledby="preview-title" class="preview">
             <div class="preview__head">
               <h2 id="preview-title" class="ui-text-h3">{{ t('tpl.preview') }}</h2>
-              <UiSegmentedControl
-                v-model="device"
-                :label="t('tpl.device')"
-                :options="deviceOptions"
-              />
+              <div class="preview__tools">
+                <UiSegmentedControl
+                  v-model="device"
+                  :label="t('tpl.device')"
+                  :options="deviceOptions"
+                />
+                <UiButton variant="tertiary" size="xs" icon="eye" @click="fullPreview = true">
+                  {{ t('tpl.preview.full') }}
+                </UiButton>
+              </div>
             </div>
             <ParticipantPreview
               :name="draft.name || t('tpl.newName')"
@@ -351,6 +357,20 @@ const crumbs = computed(() => [
           <div id="stage-checks"><PreflightList :checks="checks" /></div>
         </aside>
       </div>
+
+      <UiDialog v-model:open="fullPreview" :title="t('tpl.preview')">
+        <ParticipantPreview
+          :name="draft.name || t('tpl.newName')"
+          :blocks="blocks"
+          :device="device === 'desktop' ? 'desktop' : 'mobile'"
+          tall
+        />
+        <template #footer>
+          <UiButton variant="secondary" size="xs" @click="fullPreview = false">
+            {{ t('tpl.preview.close') }}
+          </UiButton>
+        </template>
+      </UiDialog>
 
       <UiConfirmDialog
         v-model:open="discardOpen"
@@ -434,5 +454,11 @@ const crumbs = computed(() => [
 }
 .preview h2 {
   margin: 0;
+}
+.preview__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
 }
 </style>

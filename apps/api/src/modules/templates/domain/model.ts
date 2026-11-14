@@ -28,7 +28,7 @@ export const LIMITS = {
   helperMax: 240,
   optionMax: 120,
   fieldsMax: 30,
-  optionsMax: 10,
+  optionsMax: 20,
   /** A choice question needs at least this many answers before the template can be published. */
   optionsMinToPublish: 2,
 } as const;
