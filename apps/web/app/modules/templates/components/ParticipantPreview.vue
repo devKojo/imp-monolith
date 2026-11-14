@@ -67,6 +67,15 @@ const choices = (b: TemplateBlock) =>
             }}</UiButton>
           </div>
           <UiTextInput
+            v-else-if="b.kind === 'long_text'"
+            multiline
+            :rows="4"
+            :model-value="''"
+            :label="b.label"
+            :hint="b.helper || undefined"
+            :required="b.required"
+          />
+          <UiTextInput
             v-else
             :model-value="''"
             :type="inputType(b.kind)"
