@@ -20,7 +20,6 @@ export function siteFooter() {
       {
         title: t('footer.business'),
         links: [
-          { label: t('footer.business.overview'), to: '/business' },
           { label: t('footer.business.register'), to: '/business/register' },
           { label: t('footer.business.signin'), to: '/business/signin' },
         ],

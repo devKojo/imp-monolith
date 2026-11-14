@@ -138,7 +138,6 @@ export const staticSiteText = {
   'footer.participants.signin': 'Sign in',
   'footer.participants.signup': 'Create account',
   'footer.business': 'For businesses',
-  'footer.business.overview': 'Business overview',
   'footer.business.register': 'Register your business',
   'footer.business.signin': 'Business sign in',
   'footer.support': 'Support',
@@ -146,21 +145,22 @@ export const staticSiteText = {
   'footer.support.report': 'Report abuse',
   'footer.copyright': '© {year} IMP. All rights reserved.',
 
-  // business entry page
+  // business entry page (sign-in and registration side panel)
+  'business.entry.badge': 'Business portal',
   'business.entry.title': 'Run campaigns on IMP',
   'business.entry.subtitle':
     'Create quizzes, polls and giveaways, invite your team and reach participants. Business accounts are separate from participant accounts.',
   'business.entry.participantNote': 'Looking to take part in campaigns? Visit Discover instead.',
-  'business.entry.tiles': 'What you can do',
-  'business.entry.tile.campaigns.title': 'Run campaigns',
-  'business.entry.tile.campaigns.body':
+  'business.entry.switch': 'Business account',
+  'business.entry.tab.signin': 'Sign in',
+  'business.entry.tab.register': 'Register',
+  'business.entry.campaigns.title': 'Run campaigns',
+  'business.entry.campaigns.body':
     'Build quizzes, polls and giveaways and publish them to participants.',
-  'business.entry.tile.team.title': 'Work as a team',
-  'business.entry.tile.team.body':
-    'Invite colleagues and give each person the access their role needs.',
-  'business.entry.tile.trust.title': 'Earn trust',
-  'business.entry.tile.trust.body':
-    'Entries are confirmed by one-time code and draws can be verified.',
+  'business.entry.team.title': 'Work as a team',
+  'business.entry.team.body': 'Invite colleagues and give each person the access their role needs.',
+  'business.entry.trust.title': 'Earn trust',
+  'business.entry.trust.body': 'Entries are confirmed by one-time code and draws can be verified.',
 
   // discovery
   'discover.more': 'Show more campaigns',
