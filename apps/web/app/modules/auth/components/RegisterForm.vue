@@ -152,7 +152,7 @@ const crumbs = [
     :subtitle="k('subtitle')"
   >
     <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
-    <form class="form" novalidate @submit.prevent="submit">
+    <form class="form" :class="{ minimal: isBusiness }" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
         :failure="failure"
@@ -169,7 +169,6 @@ const crumbs = [
         autocomplete="organization"
         required
         :label="t('register.business.name')"
-        :hint="t('register.business.nameHint')"
         :error="errors.businessName"
       />
       <div class="stack">
@@ -179,7 +178,7 @@ const crumbs = [
           icon="user"
           autocomplete="name"
           required
-          :label="isBusiness ? t('register.business.adminName') : t('register.participant.name')"
+          :label="t('register.participant.name')"
           :error="errors.name"
         />
         <UiTextInput
@@ -201,9 +200,9 @@ const crumbs = [
         autocomplete="new-password"
         required
         :label="t('register.password')"
-        :hint="t('register.passwordHint')"
+        :hint="isBusiness ? t('register.business.passwordHint') : t('register.passwordHint')"
         :error="errors.password"
-        :rules="rules"
+        :rules="isBusiness ? undefined : rules"
       />
 
       <UiConsentGroup
@@ -237,6 +236,20 @@ const crumbs = [
 </template>
 
 <style scoped>
+/* Business form: plain fields, one-line support text in the smallest size. */
+.minimal :deep(.ui-field__hint),
+.minimal :deep(.ui-consent__link) {
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
+}
+.minimal :deep(.ui-consent__legend) {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .form {
   display: flex;
   flex-direction: column;

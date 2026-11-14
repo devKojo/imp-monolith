@@ -238,6 +238,12 @@ withDefaults(
   padding: 0;
   text-align: start;
 }
+.ui-auth[data-layout='split'] .ui-auth__subtitle,
+.ui-auth[data-layout='split'] .ui-auth__footer,
+.ui-auth[data-layout='split'] .ui-auth__below {
+  font-size: var(--ui-font-caption-size);
+  line-height: var(--ui-font-caption-line);
+}
 .ui-auth[data-layout='split'] .ui-auth__subtitle {
   max-inline-size: none;
 }
