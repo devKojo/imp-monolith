@@ -4,7 +4,6 @@ import { t } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import BusinessAuthSwitch from './BusinessAuthSwitch.vue';
 import BusinessEntryAside from './BusinessEntryAside.vue';
 import { HOME } from '../constants';
 import type { Portal } from '../types';
@@ -106,7 +105,6 @@ const crumbs = [
     :subtitle="isBusiness ? t('signin.subtitle.business') : t('signin.subtitle')"
   >
     <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
-    <template v-if="isBusiness" #badge><BusinessAuthSwitch active="signin" /></template>
     <UiBanner v-if="justRegistered" tone="info" :title="t('signin.created')" />
     <UiBanner v-if="passwordChanged" tone="info" :title="t('signin.passwordChanged')" />
 
@@ -154,7 +152,7 @@ const crumbs = [
       </UiButton>
     </form>
 
-    <template v-if="!isBusiness" #footer>
+    <template #footer>
       {{ t('signin.noAccount') }}
       <UiLink :to="isBusiness ? '/business/register' : '/signup'">{{
         t('signin.createAccount')

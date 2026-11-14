@@ -159,9 +159,6 @@ export const staticSiteText = {
   'business.entry.team': 'Work as a team',
   'business.entry.trust': 'Earn trust',
   'business.entry.participantNote': 'Looking to take part in campaigns? Visit Discover instead.',
-  'business.entry.switch': 'Business account',
-  'business.entry.tab.signin': 'Sign in',
-  'business.entry.tab.register': 'Register',
 
   // discovery
   'discover.more': 'Show more campaigns',

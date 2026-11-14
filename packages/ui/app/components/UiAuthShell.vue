@@ -8,8 +8,8 @@ import UiSkipLink from './UiSkipLink.vue';
  * body, account-routing footer strip) and optional text under it. `wide` adds a side column for
  * supporting content on large screens. `layout="split"` is the full-bleed variant for entry pages: the
  * `aside` fills the leading column (stacked above the card on small screens), the card sits in the
- * trailing column with a left-aligned heading, and `badge` is shown above the heading (for example a
- * sign-in/register switch). It holds no per-user data, so it is safe to server-render.
+ * trailing column as a flat, minimal form (no surface, shadow or footer strip) with a left-aligned
+ * heading. It holds no per-user data, so it is safe to server-render.
  */
 withDefaults(
   defineProps<{
@@ -191,7 +191,7 @@ withDefaults(
   text-align: center;
 }
 
-/* Split layout: full-bleed entry page (leading panel + trailing card). */
+/* Split layout: full-bleed entry page (leading panel + a flat form in the trailing column). */
 .ui-auth__title {
   margin: 0;
 }
@@ -211,32 +211,43 @@ withDefaults(
 }
 .ui-auth[data-layout='split'] .ui-auth__col {
   align-items: stretch;
+  align-self: center;
   justify-self: center;
-  gap: var(--ui-space-4);
-  max-inline-size: 448px;
+  gap: var(--ui-space-6);
+  max-inline-size: 420px;
   padding: var(--ui-space-8) var(--ui-space-4);
 }
 .ui-auth[data-layout='split'] .ui-auth__col::before,
 .ui-auth[data-layout='split'] .ui-auth__col::after {
   display: none;
 }
-.ui-auth[data-layout='split'] .ui-auth__col {
-  align-self: center;
+/* Left-aligned like the rest of the form. */
+.ui-auth[data-layout='split'] .ui-auth__below {
+  justify-content: flex-start;
+  text-align: start;
 }
+/* Flat: no card surface, shadow or footer strip; the form sits on the page. */
 .ui-auth[data-layout='split'] .ui-auth__card {
-  border-radius: var(--ui-radius-xl);
-  box-shadow: var(--ui-elevation-2);
+  overflow: visible;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 .ui-auth[data-layout='split'] .ui-auth__head {
   align-items: flex-start;
+  padding: 0;
   text-align: start;
 }
 .ui-auth[data-layout='split'] .ui-auth__subtitle {
   max-inline-size: none;
 }
-.ui-auth[data-layout='split'] .ui-auth__head :deep(.ui-badge),
-.ui-auth[data-layout='split'] .ui-auth__head > :first-child {
-  inline-size: 100%;
+.ui-auth[data-layout='split'] .ui-auth__body {
+  padding: var(--ui-space-6) 0 0;
+}
+.ui-auth[data-layout='split'] .ui-auth__footer {
+  padding: var(--ui-space-6) 0 0;
+  background: transparent;
+  text-align: start;
 }
 @media (min-width: 1024px) {
   .ui-auth[data-layout='split'] .ui-auth__main {
@@ -245,7 +256,7 @@ withDefaults(
   .ui-auth[data-layout='split'] .ui-auth__col {
     padding: var(--ui-space-12);
     inline-size: 100%;
-    max-inline-size: 560px;
+    max-inline-size: 520px;
   }
 }
 @media (max-width: 479px) {

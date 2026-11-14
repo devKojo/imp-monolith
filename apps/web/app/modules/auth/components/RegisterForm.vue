@@ -5,7 +5,6 @@ import { t, type AppTextKey } from '../../../i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSignupDraft } from '../composables/useSignupDraft';
 import AuthFailureNotice from './AuthFailureNotice.vue';
-import BusinessAuthSwitch from './BusinessAuthSwitch.vue';
 import BusinessEntryAside from './BusinessEntryAside.vue';
 import { AGREEMENT_VERSION, HOME, SIGNIN } from '../constants';
 import { classifyAuthError, toApiError, type AuthFailure } from '../errors';
@@ -153,7 +152,6 @@ const crumbs = [
     :subtitle="k('subtitle')"
   >
     <template v-if="isBusiness" #aside><BusinessEntryAside /></template>
-    <template v-if="isBusiness" #badge><BusinessAuthSwitch active="register" /></template>
     <form class="form" novalidate @submit.prevent="submit">
       <UiErrorSummary :errors="summary" />
       <AuthFailureNotice
@@ -174,7 +172,7 @@ const crumbs = [
         :hint="t('register.business.nameHint')"
         :error="errors.businessName"
       />
-      <div :class="isBusiness ? 'row' : 'stack'">
+      <div class="stack">
         <UiTextInput
           id="register-name"
           v-model="name"
@@ -229,7 +227,7 @@ const crumbs = [
       </UiButton>
     </form>
 
-    <template v-if="!isBusiness" #footer>
+    <template #footer>
       {{ k('haveAccount') }}
       <UiLink :to="isBusiness ? '/business/signin' : '/signin'" @click="carryEmail">{{
         k('signin')
@@ -248,15 +246,5 @@ const crumbs = [
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-4);
-}
-.row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ui-space-4);
-}
-@media (min-width: 640px) {
-  .row {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 </style>

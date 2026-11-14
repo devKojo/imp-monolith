@@ -62,6 +62,8 @@ const strip = [
 .aside h2,
 .aside ul {
   margin: 0;
+}
+.aside ul {
   padding: 0;
   list-style: none;
 }
