@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId } from 'vue';
+import { computed, ref } from 'vue';
 import { uiText } from '../composables/useUiText';
 import { tokens } from '../tokens.generated';
 import UiButton from './UiButton.vue';
@@ -8,7 +8,8 @@ export type ChartSeries = { name: string; points: Array<{ label: string; value: 
 
 /**
  * SVG chart (UI-A11Y-10, ADR-F008). Never colour alone: every series has its own marker and dash
- * pattern and a direct label at its end; bars use hatching patterns. Always paired with a text
+ * pattern and a direct label at its end; bars, slices and steps are solid fills in the series colours, named
+ * by a label or legend entry beside them. Always paired with a text
  * summary and a data-table toggle. Approximate and provisional figures are labelled.
  */
 const props = defineProps<{
@@ -28,14 +29,7 @@ const props = defineProps<{
   centerText?: string;
 }>();
 
-const id = useId();
 const showTable = ref(false);
-// Line, area and bar charts hatch per series; a funnel or a donut hatches per step or slice, up to five.
-const patterns = computed(() =>
-  props.type === 'funnel' || props.type === 'donut'
-    ? Math.min(5, props.series[0]?.points.length ?? 0)
-    : props.series.length,
-);
 const fullTable = ref(false);
 const W = 600;
 const H = 280;
@@ -66,6 +60,8 @@ const path = (s: ChartSeries) =>
 const barW = computed(() =>
   Math.min(40, plotW / Math.max(1, labels.value.length) / (props.series.length + 0.5)),
 );
+// Steps are drawn up to this width, which leaves room for the label to the right of the longest one.
+const funnelMax = plotW * 0.5;
 const funnel = computed(() => {
   const pts = props.series[0]?.points ?? [];
   const top = pts[0]?.value || 1;
@@ -143,20 +139,6 @@ const statusText = computed(() =>
       :aria-label="`${title}. ${summary}`"
       class="ui-chart__svg"
     >
-      <defs>
-        <pattern
-          v-for="i in patterns"
-          :id="`${id}-p${i - 1}`"
-          :key="i"
-          width="8"
-          height="8"
-          patternUnits="userSpaceOnUse"
-          :patternTransform="`rotate(${(i - 1) * 35})`"
-        >
-          <rect width="8" height="8" fill="var(--ui-color-surface)" />
-          <rect :width="2 + ((i - 1) % 3)" height="8" :fill="stroke(i - 1)" />
-        </pattern>
-      </defs>
       <g v-if="type !== 'funnel' && type !== 'donut'">
         <g v-for="t in ticks" :key="t">
           <line
@@ -184,7 +166,7 @@ const statusText = computed(() =>
 
       <template v-if="type === 'line' || type === 'area'">
         <g v-for="(s, i) in series" :key="s.name">
-          <path v-if="type === 'area'" :d="area(s)" :fill="stroke(i)" fill-opacity="0.16" />
+          <path v-if="type === 'area'" :d="area(s)" :fill="stroke(i)" fill-opacity="0.22" />
           <path
             :d="path(s)"
             fill="none"
@@ -224,9 +206,8 @@ const statusText = computed(() =>
             :y="y(p.value)"
             :width="barW"
             :height="y(0) - y(p.value)"
-            :fill="`url(#${id}-p${i})`"
-            :stroke="stroke(i)"
-            stroke-width="2"
+            :fill="stroke(i)"
+            rx="2"
           />
         </g>
         <text
@@ -258,7 +239,7 @@ const statusText = computed(() =>
             :cy="D.cy"
             :r="D.r"
             fill="none"
-            :stroke="`url(#${id}-p${sl.i % 5})`"
+            :stroke="stroke(sl.i)"
             :stroke-width="D.w"
             :stroke-dasharray="sl.dash"
             :stroke-dashoffset="sl.offset"
@@ -273,9 +254,8 @@ const statusText = computed(() =>
             :y="M.top + 24 + sl.i * 44"
             width="20"
             height="20"
-            :fill="`url(#${id}-p${sl.i % 5})`"
-            :stroke="stroke(sl.i)"
-            stroke-width="2"
+            :fill="stroke(sl.i)"
+            rx="3"
           />
           <text
             :x="330"
@@ -293,14 +273,13 @@ const statusText = computed(() =>
           <rect
             :x="M.start"
             :y="f.y"
-            :width="(f.pct / 100) * (plotW + 40)"
+            :width="(f.pct / 100) * funnelMax"
             :height="f.h"
-            :fill="`url(#${id}-p${i % 5})`"
-            :stroke="stroke(i)"
-            stroke-width="2"
+            :fill="stroke(i)"
+            rx="3"
           />
           <text
-            :x="M.start + 6"
+            :x="M.start + (f.pct / 100) * funnelMax + 10"
             :y="f.y + f.h / 2 + 4"
             class="ui-chart__label"
             fill="var(--ui-color-text-primary)"
