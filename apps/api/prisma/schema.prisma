@@ -98,6 +98,7 @@ model User {
   emailVerifications EmailVerification[]
   passwordResets     PasswordReset[]
   quizAttempts       QuizAttempt[]
+  surveyResponses    SurveyResponse[]
 
   @@map("users")
 }
@@ -252,11 +253,12 @@ model Campaign {
   /// Settings the campaign type uses, e.g. {"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}.
   settings    Json           @default("{}")
 
-  business Business          @relation(fields: [tenantId], references: [id])
-  template CampaignTemplate? @relation(fields: [templateId], references: [id])
-  prizes   CampaignPrize[]
-  fields   CampaignField[]
-  attempts QuizAttempt[]
+  business        Business          @relation(fields: [tenantId], references: [id])
+  template        CampaignTemplate? @relation(fields: [templateId], references: [id])
+  prizes          CampaignPrize[]
+  fields          CampaignField[]
+  attempts        QuizAttempt[]
+  surveyResponses SurveyResponse[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
@@ -327,8 +329,9 @@ model CampaignField {
   options      String[]          @default([])
   correctIndex Int?              @map("correct_index")
 
-  campaign Campaign     @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
-  answers  QuizAnswer[]
+  campaign      Campaign       @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  answers       QuizAnswer[]
+  surveyAnswers SurveyAnswer[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, campaignId, key])
@@ -394,4 +397,43 @@ model QuizAnswer {
 
   @@unique([tenantId, attemptId, questionId])
   @@map("quiz_answers")
+}
+
+/// @owner survey
+/// A participant's response to a survey campaign: one per participant per campaign. It is open while
+/// `submittedAt` is empty (answers can change) and final once it is set.
+model SurveyResponse {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  campaignId  String    @map("campaign_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz
+
+  campaign Campaign       @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id])
+  answers  SurveyAnswer[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, campaignId, userId])
+  @@map("survey_responses")
+}
+
+/// @owner survey
+/// One answer to one survey question: the chosen option (a choice or a rating, counted from 0) or the
+/// written text. Exactly one of the two is set.
+model SurveyAnswer {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  responseId  String   @map("response_id") @db.Uuid
+  questionId  String   @map("question_id") @db.Uuid
+  choiceIndex Int?     @map("choice_index")
+  text        String?
+  answeredAt  DateTime @default(now()) @map("answered_at") @db.Timestamptz
+
+  response SurveyResponse @relation(fields: [tenantId, responseId], references: [tenantId, id], onDelete: Cascade)
+  question CampaignField  @relation(fields: [tenantId, questionId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, responseId, questionId])
+  @@map("survey_answers")
 }

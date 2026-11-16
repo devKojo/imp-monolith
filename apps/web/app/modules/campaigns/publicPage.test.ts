@@ -59,6 +59,7 @@ describe('prizes and entry', () => {
   });
   it('lets visitors enter quizzes only for now', () => {
     expect(canEnter('quiz')).toBe(true);
+    expect(canEnter('survey')).toBe(true);
     expect(canEnter('giveaway')).toBe(false);
   });
 });

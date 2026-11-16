@@ -64,6 +64,7 @@ describe('reuse over duplication', () => {
       'UiTextInput',
       'UiCheckbox',
       'UiChoiceGroup',
+      'UiRatingMatrix',
       'UiPhoneInput',
       'UiOtpInput',
       'UiDateTimeField',

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t, type AppTextKey } from '../../../i18n';
 import type { PublicCampaignPage, QuizInfo } from '../../quiz/types';
+import type { SurveyInfo } from '../../survey/types';
 import { winnersLabelKey } from '../logic';
 import { canEnter, timeLeft, totalWinners } from '../publicPage';
 import ShareCampaign from './ShareCampaign.vue';
@@ -18,6 +19,8 @@ import ShareCampaign from './ShareCampaign.vue';
 const props = defineProps<{
   campaign: PublicCampaignPage;
   info: QuizInfo | null;
+  /** The facts of a survey campaign; null for any other kind. */
+  survey: SurveyInfo | null;
   /** Label of the main action, or empty when this visitor cannot enter (for example a business account). */
   actionLabel: string;
   /** Where the action goes when the visitor is not signed in; otherwise the action is a click. */
@@ -72,6 +75,14 @@ const prizeSummary = computed(() =>
 
 // ---- details: what a participant should know before starting
 const details = computed(() => {
+  const s = props.survey;
+  if (s) {
+    return [
+      t('survey.rules.questions', { n: s.questionCount }),
+      t('survey.rules.time', { n: s.estimatedMinutes }),
+      ...(s.requiredCount > 0 ? [t('survey.rules.required', { n: s.requiredCount })] : []),
+    ];
+  }
   const i = props.info;
   if (!i) return [];
   return [
@@ -80,9 +91,13 @@ const details = computed(() => {
     t('quiz.rules.pass', { n: i.passPercent }),
   ];
 });
-const ready = computed(
-  () => enterable.value && props.info !== null && props.info.questionCount > 0,
+const questionCount = computed(
+  () => props.survey?.questionCount ?? props.info?.questionCount ?? null,
 );
+const ready = computed(
+  () => enterable.value && questionCount.value !== null && questionCount.value > 0,
+);
+const isSurvey = computed(() => kind.value === 'survey');
 const hasSections = computed(() => ({
   prizes: tiers.value.length > 0,
   details: details.value.length > 0,
@@ -131,8 +146,8 @@ const hasSections = computed(() => ({
           </li>
         </ul>
 
-        <UiBanner v-if="info && info.questionCount === 0" tone="info">
-          {{ t('quiz.empty') }}
+        <UiBanner v-if="questionCount === 0" tone="info">
+          {{ isSurvey ? t('survey.empty') : t('quiz.empty') }}
         </UiBanner>
         <UiBanner v-else-if="!enterable" tone="info">{{ t('quiz.notQuiz') }}</UiBanner>
         <UiBanner v-else-if="businessAccount" tone="info">{{ t('quiz.businessAccount') }}</UiBanner>
@@ -158,7 +173,7 @@ const hasSections = computed(() => ({
           <ShareCampaign :slug="campaign.slug" :title="campaign.title" variant="secondary" />
         </div>
         <p v-if="ready && actionTo" class="ui-text-caption ui-text-hint">
-          {{ t('quiz.signin.hint') }}
+          {{ isSurvey ? t('survey.signin.hint') : t('quiz.signin.hint') }}
         </p>
       </div>
 
@@ -191,7 +206,7 @@ const hasSections = computed(() => ({
     <section v-if="hasSections.details" id="details" class="band" aria-labelledby="details-title">
       <p class="eyebrow ui-text-label-sm">{{ t('pub.details.eyebrow') }}</p>
       <h2 id="details-title" class="ui-text-h1">{{ t('pub.details.title') }}</h2>
-      <p class="ui-text-body">{{ t('pub.details.quiz') }}</p>
+      <p class="ui-text-body">{{ isSurvey ? t('pub.details.survey') : t('pub.details.quiz') }}</p>
       <ul class="rules">
         <li v-for="d in details" :key="d" class="ui-text-body">{{ d }}</li>
         <li class="ui-text-body">{{ closes }}</li>

@@ -39,4 +39,4 @@ export const totalWinners = (prizes: readonly { winners: number }[]): number =>
   prizes.reduce((sum, p) => sum + p.winners, 0);
 
 /** Campaign types a visitor can actually enter today. */
-export const canEnter = (type: string): boolean => type === 'quiz';
+export const canEnter = (type: string): boolean => type === 'quiz' || type === 'survey';

@@ -3,6 +3,7 @@ import { env } from './config/env';
 import { SmtpMailer, createIdentityModule } from './modules/identity';
 import { createCampaignsModule } from './modules/campaigns';
 import { createQuizModule } from './modules/quiz';
+import { createSurveyModule } from './modules/survey';
 import { createTemplatesModule } from './modules/templates';
 import { createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
@@ -29,11 +30,12 @@ const identity = createIdentityModule({
   sessionSecret: env.SESSION_SECRET,
 });
 // The built-in campaign types are global and read-only; campaigns look them up through the templates
-// module, and quizzes read the questions written on the campaign.
+// module, and quizzes and surveys read the questions written on the campaign.
 const templates = createTemplatesModule({ db, identity });
 const quiz = createQuizModule({ db, identity });
+const survey = createSurveyModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
-const app = await createApp({ bus, identity, templates, campaigns, quiz });
+const app = await createApp({ bus, identity, templates, campaigns, quiz, survey });
 const server = app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
 
 const shutdown = async () => {

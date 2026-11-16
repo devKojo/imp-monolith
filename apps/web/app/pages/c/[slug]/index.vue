@@ -5,21 +5,25 @@ import { BRAND_NAME } from '../../../modules/auth/constants';
 import { useAuth } from '../../../modules/auth/composables/useAuth';
 import { toApiError } from '../../../modules/auth/errors';
 import { quizErrorKey } from '../../../modules/quiz/errors';
+import { surveyErrorKey } from '../../../modules/survey/errors';
+import type { SurveyInfo } from '../../../modules/survey/types';
+import { useSurvey } from '../../../modules/survey/useSurvey';
 import { useQuiz } from '../../../modules/quiz/useQuiz';
 import type { PublicCampaignPage, QuizInfo } from '../../../modules/quiz/types';
 import PublicCampaignView from '../../../modules/campaigns/components/PublicCampaignView.vue';
 import { siteFooter } from '../../../modules/site/footer';
 
 /**
- * The page of a running campaign (/c/{slug}). For a quiz it shows the rules and the way in: sign in
- * with a participant account, then start (or continue, or see the result). Other kinds of campaign
- * are listed on the discovery page but cannot be entered yet. Rendered in the browser: it reads the
+ * The page of a running campaign (/c/{slug}). For a quiz or a survey it shows the facts and the way in:
+ * sign in with a participant account, then start (or continue, or see the result). Other kinds of
+ * campaign are listed on the discovery page but cannot be entered yet. Rendered in the browser: it reads the
  * signed-in state to choose the button.
  */
 definePageMeta({ ssr: false });
 
 const slug = String(useRoute().params.slug);
 const quiz = useQuiz();
+const survey = useSurvey();
 const auth = useAuth();
 const footer = siteFooter();
 
@@ -27,6 +31,7 @@ type Standing = 'signedOut' | 'business' | 'none' | 'inProgress' | 'done';
 const state = ref<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
 const campaign = ref<PublicCampaignPage | null>(null);
 const info = ref<QuizInfo | null>(null);
+const surveyInfo = ref<SurveyInfo | null>(null);
 const standing = ref<Standing>('signedOut');
 const problem = ref('');
 const starting = ref(false);
@@ -38,12 +43,13 @@ async function load() {
   try {
     campaign.value = await quiz.campaign(slug);
     if (campaign.value.type === 'quiz') info.value = await quiz.info(slug);
+    if (campaign.value.type === 'survey') surveyInfo.value = await survey.info(slug);
   } catch (e) {
     state.value = toApiError(e).status === 404 ? 'unavailable' : 'error';
     return;
   }
   state.value = 'ready';
-  if (info.value) await findStanding();
+  if (info.value || surveyInfo.value) await findStanding();
 }
 
 /** Where this visitor stands, if they are signed in; never redirects, the page is public. */
@@ -52,10 +58,16 @@ async function findStanding() {
   if (!session) return (standing.value = 'signedOut');
   if (session.user.accountType !== 'PARTICIPANT') return (standing.value = 'business');
   try {
-    const attempt = await quiz.current(slug);
-    standing.value = attempt.result ? 'done' : 'inProgress';
+    if (surveyInfo.value) {
+      const response = await survey.current(slug);
+      standing.value = response.submittedAt ? 'done' : 'inProgress';
+    } else {
+      const attempt = await quiz.current(slug);
+      standing.value = attempt.result ? 'done' : 'inProgress';
+    }
   } catch (e) {
-    standing.value = toApiError(e).code === 'NO_ATTEMPT' ? 'none' : 'signedOut';
+    const code = toApiError(e).code;
+    standing.value = code === 'NO_ATTEMPT' || code === 'NO_RESPONSE' ? 'none' : 'signedOut';
   }
 }
 onMounted(load);
@@ -64,26 +76,32 @@ async function start() {
   starting.value = true;
   problem.value = '';
   try {
-    if (standing.value === 'none') await quiz.start(slug);
-    await navigateTo(`/c/${slug}/quiz`);
+    if (surveyInfo.value) {
+      if (standing.value === 'none') await survey.start(slug);
+      await navigateTo(`/c/${slug}/survey`);
+    } else {
+      if (standing.value === 'none') await quiz.start(slug);
+      await navigateTo(`/c/${slug}/quiz`);
+    }
   } catch (e) {
-    problem.value = t(quizErrorKey(toApiError(e)));
+    const err = toApiError(e);
+    problem.value = t(surveyInfo.value ? surveyErrorKey(err) : quizErrorKey(err));
   } finally {
     starting.value = false;
   }
 }
 
 const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-const action = computed(
-  () =>
-    ({
-      none: t('quiz.start'),
-      inProgress: t('quiz.resume'),
-      done: t('quiz.viewResult'),
-      signedOut: t('quiz.signin'),
-      business: '',
-    })[standing.value],
-);
+const action = computed(() => {
+  const isSurvey = surveyInfo.value !== null;
+  return {
+    none: t(isSurvey ? 'survey.start' : 'quiz.start'),
+    inProgress: t(isSurvey ? 'survey.resume' : 'quiz.resume'),
+    done: t(isSurvey ? 'survey.viewResult' : 'quiz.viewResult'),
+    signedOut: t(isSurvey ? 'survey.signin' : 'quiz.signin'),
+    business: '',
+  }[standing.value];
+});
 const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
 </script>
 
@@ -99,7 +117,7 @@ const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
       <UiLink to="/discover">{{ t('nav.discover') }}</UiLink>
       <template v-if="state === 'ready' && campaign">
         <UiLink v-if="campaign.prizes.length > 0" to="#prizes">{{ t('pub.nav.prizes') }}</UiLink>
-        <UiLink v-if="info" to="#details">{{ t('pub.nav.details') }}</UiLink>
+        <UiLink v-if="info || surveyInfo" to="#details">{{ t('pub.nav.details') }}</UiLink>
       </template>
     </template>
     <template #actions>
@@ -122,6 +140,7 @@ const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
       v-else
       :campaign="campaign"
       :info="info"
+      :survey="surveyInfo"
       :action-label="action"
       :action-to="standing === 'signedOut' ? signinTo : null"
       :starting="starting"
