@@ -17,7 +17,8 @@ export type SortState = { key: string; direction: 'asc' | 'desc' } | null;
 
 /**
  * Data table (UI-DSH-04/06): sticky header, sortable columns, focusable named scroll container,
- * priority column collapse, keyset "Load more" and stacked cards below 768 px. Cells render through
+ * priority column collapse, keyset "Load more" (or page controls through the `foot` slot, see
+ * UiPagination) and stacked cards below 768 px. Cells render through
  * `#cell-<key>` slots, so status chips, masked values and row actions reuse their own components.
  */
 const props = withDefaults(
@@ -112,7 +113,10 @@ const showing = computed(() =>
         </tbody>
       </table>
     </div>
-    <div v-if="rows.length > 0" class="ui-table__foot">
+    <div v-if="$slots.foot && rows.length > 0" class="ui-table__foot">
+      <slot name="foot" />
+    </div>
+    <div v-else-if="rows.length > 0" class="ui-table__foot">
       <span class="ui-text-body-s ui-text-hint">{{ showing }}</span>
       <UiButton v-if="hasMore" variant="secondary" :loading="loading" @click="emit('loadMore')">{{
         uiText('table.loadMore')

@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { uiText } from '../composables/useUiText';
 import UiAvatar from './UiAvatar.vue';
+import UiBadge from './UiBadge.vue';
 import UiButton from './UiButton.vue';
 import UiSidebarNav, { type NavItem } from './UiSidebarNav.vue';
 import UiSkipLink from './UiSkipLink.vue';
@@ -16,6 +17,8 @@ defineProps<{
   brandName: string;
   /** Small tag after the brand ("v2.4"); optional. */
   brandTag?: string;
+  /** Names the side of the product this is ("Business"), shown as a badge under the brand. */
+  portalLabel?: string;
   nav: NavItem[];
   userName: string;
   userRole: string;
@@ -30,7 +33,7 @@ function onKey(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="ui-console" @keydown="onKey">
+  <div class="ui-console" data-portal="business" @keydown="onKey">
     <UiSkipLink />
     <aside class="ui-console__side" :data-open="drawer">
       <div class="ui-console__brand">
@@ -39,6 +42,9 @@ function onKey(e: KeyboardEvent) {
         </slot>
         <span v-if="brandTag" class="ui-console__tag ui-text-caption">{{ brandTag }}</span>
       </div>
+      <p v-if="portalLabel" class="ui-console__portal">
+        <UiBadge icon="building" shape="pill" variant="outline">{{ portalLabel }}</UiBadge>
+      </p>
       <UiSidebarNav :items="nav" :label="navLabel" />
       <div class="ui-console__account">
         <UiButton variant="tertiary" block class="ui-console__account-btn" @click="emit('account')">
@@ -200,5 +206,22 @@ function onKey(e: KeyboardEvent) {
   .ui-console__main {
     padding: var(--ui-space-5) var(--ui-space-4);
   }
+}
+
+/* A strip across the top that says whose side this is: the participant portal is brand blue, the business
+   console is dark. Together with the labelled badge beside the brand, the two are never confused. */
+.ui-console[data-portal='business']::before {
+  content: '';
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 60;
+  block-size: var(--ui-space-1);
+  background: var(--ui-color-surface-inverse);
+  pointer-events: none;
+}
+.ui-console__portal {
+  margin: 0;
+  padding-inline: var(--ui-space-4);
 }
 </style>

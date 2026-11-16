@@ -12,17 +12,31 @@ export type ChartSeries = { name: string; points: Array<{ label: string; value: 
  * summary and a data-table toggle. Approximate and provisional figures are labelled.
  */
 const props = defineProps<{
-  type: 'line' | 'bar' | 'funnel';
+  type: 'line' | 'area' | 'bar' | 'funnel' | 'donut';
   title: string;
   series: ChartSeries[];
   /** Plain-language reading of the chart: required, shown under it. */
   summary: string;
   approx?: boolean;
   status?: 'provisional' | 'final';
+  /**
+   * Rows of the data table shown at first; the rest sit behind "View breakdown". Over time (line, area,
+   * bar) the most recent rows are kept; otherwise the first. Leave unset to show every row.
+   */
+  tableLimit?: number;
+  /** Text in the middle of a donut (usually the total). */
+  centerText?: string;
 }>();
 
 const id = useId();
 const showTable = ref(false);
+// Line, area and bar charts hatch per series; a funnel or a donut hatches per step or slice, up to five.
+const patterns = computed(() =>
+  props.type === 'funnel' || props.type === 'donut'
+    ? Math.min(5, props.series[0]?.points.length ?? 0)
+    : props.series.length,
+);
+const fullTable = ref(false);
 const W = 600;
 const H = 280;
 const M = { top: 16, end: 96, bottom: 36, start: 48 };
@@ -30,10 +44,16 @@ const plotW = W - M.start - M.end;
 const plotH = H - M.top - M.bottom;
 
 const labels = computed(() => props.series[0]?.points.map((p) => p.label) ?? []);
+// Many labels would overlap, so the axis names every n-th one; the data table below lists them all.
+const axisLabels = computed(() => {
+  const step = Math.max(1, Math.ceil(labels.value.length / 8));
+  return labels.value.map((l, i) => ({ l, i })).filter(({ i }) => i % step === 0);
+});
 const max = computed(() => {
   const m = Math.max(1, ...props.series.flatMap((s) => s.points.map((p) => p.value)));
   const pow = 10 ** Math.floor(Math.log10(m));
-  return Math.ceil(m / pow) * pow;
+  // A multiple of four, so the five gridlines (0, 1/4 ... 1) fall on whole numbers.
+  return Math.ceil((Math.ceil(m / pow) * pow) / 4) * 4;
 });
 const x = (i: number) =>
   M.start + (labels.value.length <= 1 ? plotW / 2 : (i / (labels.value.length - 1)) * plotW);
@@ -56,6 +76,45 @@ const funnel = computed(() => {
     h: plotH / Math.max(1, pts.length) - 8,
   }));
 });
+// The data table: every row, or just a few with the rest behind "View breakdown".
+const overTime = computed(
+  () => props.type === 'line' || props.type === 'area' || props.type === 'bar',
+);
+const hidden = computed(() =>
+  props.tableLimit && !fullTable.value ? Math.max(0, labels.value.length - props.tableLimit) : 0,
+);
+const tableRows = computed(() => {
+  const all = labels.value.map((label, i) => ({ label, i }));
+  if (hidden.value === 0) return all;
+  return overTime.value ? all.slice(-props.tableLimit!) : all.slice(0, props.tableLimit);
+});
+const canCollapse = computed(() => !!props.tableLimit && labels.value.length > props.tableLimit);
+const moreRows = computed(() => labels.value.length - (props.tableLimit ?? 0));
+
+// Donut: each slice is a ring segment drawn as a dashed circle, so a single 100% slice still works.
+const D = { cx: 150, cy: H / 2, r: 82, w: 44 };
+const circumference = 2 * Math.PI * D.r;
+const donut = computed(() => {
+  const pts = props.series[0]?.points ?? [];
+  const total = pts.reduce((n, p) => n + p.value, 0);
+  let acc = 0;
+  return {
+    total,
+    slices: pts.map((p, i) => {
+      const len = total > 0 ? (p.value / total) * circumference : 0;
+      const slice = {
+        ...p,
+        i,
+        pct: total > 0 ? Math.round((p.value / total) * 100) : 0,
+        dash: `${Math.max(0, len - (len > 4 ? 3 : 0))} ${circumference}`,
+        offset: -acc,
+      };
+      acc += len;
+      return slice;
+    }),
+  };
+});
+const area = (s: ChartSeries) => `${path(s)} L${x(s.points.length - 1)} ${y(0)} L${x(0)} ${y(0)} Z`;
 const statusText = computed(() =>
   props.status === 'provisional'
     ? uiText('chart.provisional')
@@ -86,19 +145,19 @@ const statusText = computed(() =>
     >
       <defs>
         <pattern
-          v-for="(s, i) in series"
-          :id="`${id}-p${i}`"
-          :key="s.name"
+          v-for="i in patterns"
+          :id="`${id}-p${i - 1}`"
+          :key="i"
           width="8"
           height="8"
           patternUnits="userSpaceOnUse"
-          :patternTransform="`rotate(${i * 35})`"
+          :patternTransform="`rotate(${(i - 1) * 35})`"
         >
           <rect width="8" height="8" fill="var(--ui-color-surface)" />
-          <rect :width="2 + (i % 3)" height="8" :fill="stroke(i)" />
+          <rect :width="2 + ((i - 1) % 3)" height="8" :fill="stroke(i - 1)" />
         </pattern>
       </defs>
-      <g v-if="type !== 'funnel'">
+      <g v-if="type !== 'funnel' && type !== 'donut'">
         <g v-for="t in ticks" :key="t">
           <line
             :x1="M.start"
@@ -112,8 +171,8 @@ const statusText = computed(() =>
           </text>
         </g>
         <text
-          v-for="(l, i) in labels"
-          :key="l"
+          v-for="{ l, i } in axisLabels"
+          :key="i"
           :x="x(i)"
           :y="H - 12"
           text-anchor="middle"
@@ -123,8 +182,9 @@ const statusText = computed(() =>
         </text>
       </g>
 
-      <template v-if="type === 'line'">
+      <template v-if="type === 'line' || type === 'area'">
         <g v-for="(s, i) in series" :key="s.name">
+          <path v-if="type === 'area'" :d="area(s)" :fill="stroke(i)" fill-opacity="0.16" />
           <path
             :d="path(s)"
             fill="none"
@@ -181,6 +241,53 @@ const statusText = computed(() =>
         </text>
       </template>
 
+      <template v-else-if="type === 'donut'">
+        <circle
+          :cx="D.cx"
+          :cy="D.cy"
+          :r="D.r"
+          fill="none"
+          stroke="var(--ui-color-border)"
+          :stroke-width="D.w"
+        />
+        <g :transform="`rotate(-90 ${D.cx} ${D.cy})`">
+          <circle
+            v-for="sl in donut.slices"
+            :key="sl.label"
+            :cx="D.cx"
+            :cy="D.cy"
+            :r="D.r"
+            fill="none"
+            :stroke="`url(#${id}-p${sl.i % 5})`"
+            :stroke-width="D.w"
+            :stroke-dasharray="sl.dash"
+            :stroke-dashoffset="sl.offset"
+          />
+        </g>
+        <text :x="D.cx" :y="D.cy + 6" text-anchor="middle" class="ui-chart__center">
+          {{ centerText ?? donut.total.toLocaleString() }}
+        </text>
+        <g v-for="sl in donut.slices" :key="`l-${sl.label}`">
+          <rect
+            :x="300"
+            :y="M.top + 24 + sl.i * 44"
+            width="20"
+            height="20"
+            :fill="`url(#${id}-p${sl.i % 5})`"
+            :stroke="stroke(sl.i)"
+            stroke-width="2"
+          />
+          <text
+            :x="330"
+            :y="M.top + 39 + sl.i * 44"
+            class="ui-chart__label"
+            fill="var(--ui-color-text-primary)"
+          >
+            {{ sl.label }}: {{ sl.value.toLocaleString() }} ({{ sl.pct }}%)
+          </text>
+        </g>
+      </template>
+
       <template v-else>
         <g v-for="(f, i) in funnel" :key="f.label">
           <rect
@@ -217,12 +324,23 @@ const statusText = computed(() =>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(l, i) in labels" :key="l">
-          <th scope="row">{{ l }}</th>
-          <td v-for="s in series" :key="s.name">{{ s.points[i]?.value.toLocaleString() }}</td>
+        <tr v-for="r in tableRows" :key="r.i">
+          <th scope="row">{{ r.label }}</th>
+          <td v-for="s in series" :key="s.name">{{ s.points[r.i]?.value.toLocaleString() }}</td>
         </tr>
       </tbody>
     </table>
+    <UiButton
+      v-if="showTable && canCollapse"
+      variant="tertiary"
+      size="xs"
+      :aria-expanded="fullTable"
+      @click="fullTable = !fullTable"
+    >
+      {{
+        fullTable ? uiText('chart.hideBreakdown') : uiText('chart.viewBreakdown', { n: moreRows })
+      }}
+    </UiButton>
     <p class="ui-chart__summary ui-text-body-s">{{ summary }}</p>
   </figure>
 </template>
@@ -248,6 +366,11 @@ const statusText = computed(() =>
 .ui-chart__tick {
   font-size: var(--ui-font-caption-size);
   fill: var(--ui-color-text-hint);
+}
+.ui-chart__center {
+  font-size: var(--ui-font-h2-size);
+  font-weight: 700;
+  fill: var(--ui-color-text-primary);
 }
 .ui-chart__label {
   font-size: var(--ui-font-body-s-size);

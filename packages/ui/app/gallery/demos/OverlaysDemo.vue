@@ -22,6 +22,7 @@ const last = ref('');
       v-model:open="basic"
       title="Share campaign"
       description="Anyone with the link can view the public page."
+      closable
     >
       <p>Dialogs trap focus, close with Escape and return focus here.</p>
       <template #footer><UiButton @click="basic = false">Close</UiButton></template>

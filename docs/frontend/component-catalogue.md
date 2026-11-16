@@ -4,7 +4,7 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-66 components.
+68 components.
 
 ## Foundation
 
@@ -23,7 +23,7 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
+| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDialog`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPagination`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
 | `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
 | `UiPermissionGate` | Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule. | `UiCopyButton`, `UiIcon` | - | UI-DSH-03, Spec 7.3 |
 
@@ -60,13 +60,13 @@
 | `UiSkeleton` | Layout-matching placeholders for text, card, table, chart and form. | - | `UiDataTable` | UI-PRF-02, Spec 11 |
 | `UiSystemState` | Renders any state from the section 11 matrix (401, 403, 404, 409, 429, 503, offline, ...). | `UiBanner`, `UiButton`, `UiEmptyState` | - | Spec 11, UXA-006 |
 | `UiMeter` | Usage and spend-cap meter with 80% and 100% treatments. | `UiIcon`, `UiProgress` | - | UI-DSH-12, UI-DSH-10 |
-| `UiBadge` | The one small label, tag or pill. Status chips, type tags and time-left markers are badges. | `UiIcon` | `UiCampaignCard`, `UiCarousel`, `UiDrawCard`, `UiInstantWinCard`, `UiStatCard`, `UiStatusChip` | UI-DSH-05, Spec 3.4 |
+| `UiBadge` | The one small label, tag or pill. Status chips, type tags and time-left markers are badges. | `UiIcon` | `UiCampaignCard`, `UiCarousel`, `UiConsoleShell`, `UiDrawCard`, `UiInstantWinCard`, `UiPortalShell`, `UiStatCard`, `UiStatusChip` | UI-DSH-05, Spec 3.4 |
 
 ## Overlays
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiDialog` | Base modal on native <dialog>: focus trap, Escape, focus return. | - | `UiConfirmDialog`, `UiConflictDialog`, `UiStepUpDialog` | Spec 5, UI-A11Y-03 |
+| `UiDialog` | Base modal on native <dialog>: focus trap, Escape, focus return; a separate header (with an optional close icon) above a scrolling body. | `UiButton` | `UiConfirmDialog`, `UiConflictDialog`, `UiStepUpDialog` | Spec 5, UI-A11Y-03 |
 | `UiConfirmDialog` | Confirm and destructive confirmation with optional typed phrase. | `UiButton`, `UiDialog`, `UiTextInput` | - | UI-DSH-13, UI-RWD-02, UI-ADM-03 |
 | `UiConflictDialog` | Version-conflict dialog for 412 responses; never loses input. | `UiButton`, `UiDialog` | - | UI-BLD-03, UXA-011 |
 | `UiStepUpDialog` | Step-up authentication with a required audited purpose. | `UiButton`, `UiDialog`, `UiTextInput` | - | UI-DSH-07, R-IAM-03 |
@@ -75,9 +75,10 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
+| `UiPagination` | Page controls for long lists: "Showing 11-20 of 134", previous and next, and a short run of page numbers. | `UiButton` | - | UI-DSH-04, UI-A11Y-05 |
 | `UiDataTable` | Sticky-header, sortable table with load-more, priority collapse and card layout on mobile. | `UiButton`, `UiEmptyState`, `UiIcon`, `UiSkeleton` | - | UI-DSH-04, UI-DSH-06, UI-A11Y-11 |
 | `UiMaskedValue` | Masked PII with permission-gated reveal that re-masks after 30 s. | `UiButton`, `UiLiveRegion` | - | UI-DSH-07, UXA-012, Spec 7.4 |
-| `UiChart` | Line, bar and funnel SVG charts with markers, patterns, data table and summary. | `UiButton` | - | UI-A11Y-10, UI-DSH-08 |
+| `UiChart` | Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally truncated behind "View breakdown") and summary. | `UiButton` | - | UI-A11Y-10, UI-DSH-08 |
 | `UiStatCard` | One KPI: label, headline value, optional suffix, trend badge, icon and label/value rows. | `UiBadge`, `UiIconTile` | - | UI-DSH-04, UI-DSH-05 |
 
 ## Navigation
@@ -95,8 +96,8 @@
 | `UiDashboardShell` | Dashboard frame: sidebar or drawer, top bar, banners, breadcrumbs, main landmark. | `UiSidebarNav`, `UiSkipLink`, `UiTopBar` | - | UI-DSH-01, UI-FND-05 |
 | `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
 | `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column, or a full-bleed split entry layout. | `UiBreadcrumbs`, `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
-| `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
-| `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
+| `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiBadge`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
+| `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiBadge`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
 
 ## Domain
 
@@ -116,10 +117,10 @@
 ## Most reused
 
 - `UiIcon`: used by 28 components
-- `UiButton`: used by 23 components
+- `UiButton`: used by 25 components
 - `UiLink`: used by 8 components
+- `UiBadge`: used by 8 components
 - `UiLiveRegion`: used by 6 components
-- `UiBadge`: used by 6 components
 - `UiProgress`: used by 5 components
 - `UiCard`: used by 5 components
 - `UiSkipLink`: used by 5 components

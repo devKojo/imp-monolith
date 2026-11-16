@@ -11,6 +11,7 @@ import ShareCampaign from '../../../modules/campaigns/components/ShareCampaign.v
 import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
 import type { CampaignSummary } from '../../../modules/campaigns/types';
 import { useCampaigns } from '../../../modules/campaigns/useCampaigns';
+import { CONSOLE_PAGE_SIZE, pageSlice } from '../../../utils/paginate';
 
 /**
  * Campaign library: every campaign of the active business, from the API, with the actions that matter
@@ -107,6 +108,9 @@ const rows = computed(() =>
     prizes: c.prizeCount,
   })),
 );
+const page = ref(1);
+const pageRows = computed(() => pageSlice(rows.value, page.value));
+watch([query, status], () => (page.value = 1));
 const filtering = computed(() => query.value.trim() !== '' || status.value !== 'all');
 
 const creating = ref(false);
@@ -204,10 +208,18 @@ const confirmDelete = () =>
         flush
         :name="t('cmp.title')"
         :columns="columns"
-        :rows="rows"
+        :rows="pageRows"
         :loading="loading"
         row-key="id"
       >
+        <template #foot>
+          <UiPagination
+            v-model:page="page"
+            :total="rows.length"
+            :page-size="CONSOLE_PAGE_SIZE"
+            :label="t('cmp.title')"
+          />
+        </template>
         <template #cell-name="{ row }">
           <UiLink :to="`/app/campaigns/${String(row.id)}`">{{ row.name }}</UiLink>
         </template>

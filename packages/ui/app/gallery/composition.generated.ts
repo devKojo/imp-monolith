@@ -27,8 +27,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "usedBy": [
       "UiCampaignCard",
       "UiCarousel",
+      "UiConsoleShell",
       "UiDrawCard",
       "UiInstantWinCard",
+      "UiPortalShell",
       "UiStatCard",
       "UiStatusChip"
     ]
@@ -68,10 +70,12 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiCopyButton",
       "UiCountdown",
       "UiDataTable",
+      "UiDialog",
       "UiDrawProofPanel",
       "UiMaskedValue",
       "UiMediaUploader",
       "UiOtpInput",
+      "UiPagination",
       "UiPasswordField",
       "UiPortalShell",
       "UiReorderableList",
@@ -165,6 +169,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   "UiConsoleShell": {
     "composes": [
       "UiAvatar",
+      "UiBadge",
       "UiButton",
       "UiSidebarNav",
       "UiSkipLink"
@@ -213,7 +218,9 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "usedBy": []
   },
   "UiDialog": {
-    "composes": [],
+    "composes": [
+      "UiButton"
+    ],
     "usedBy": [
       "UiConfirmDialog",
       "UiConflictDialog",
@@ -384,6 +391,12 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiPagination": {
+    "composes": [
+      "UiButton"
+    ],
+    "usedBy": []
+  },
   "UiPasswordField": {
     "composes": [
       "UiButton",
@@ -410,6 +423,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   "UiPortalShell": {
     "composes": [
       "UiAvatar",
+      "UiBadge",
       "UiButton",
       "UiLink",
       "UiSkipLink"
