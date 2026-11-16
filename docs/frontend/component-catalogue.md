@@ -23,7 +23,7 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
+| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
 | `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
 | `UiPermissionGate` | Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule. | `UiCopyButton`, `UiIcon` | - | UI-DSH-03, Spec 7.3 |
 
@@ -60,7 +60,7 @@
 | `UiSkeleton` | Layout-matching placeholders for text, card, table, chart and form. | - | `UiDataTable` | UI-PRF-02, Spec 11 |
 | `UiSystemState` | Renders any state from the section 11 matrix (401, 403, 404, 409, 429, 503, offline, ...). | `UiBanner`, `UiButton`, `UiEmptyState` | - | Spec 11, UXA-006 |
 | `UiMeter` | Usage and spend-cap meter with 80% and 100% treatments. | `UiIcon`, `UiProgress` | - | UI-DSH-12, UI-DSH-10 |
-| `UiBadge` | The one small label, tag or pill. Status chips, type tags and time-left markers are badges. | `UiIcon` | `UiCampaignCard`, `UiDrawCard`, `UiInstantWinCard`, `UiStatCard`, `UiStatusChip` | UI-DSH-05, Spec 3.4 |
+| `UiBadge` | The one small label, tag or pill. Status chips, type tags and time-left markers are badges. | `UiIcon` | `UiCampaignCard`, `UiCarousel`, `UiDrawCard`, `UiInstantWinCard`, `UiStatCard`, `UiStatusChip` | UI-DSH-05, Spec 3.4 |
 
 ## Overlays
 
@@ -87,6 +87,7 @@
 | `UiStepper` | Builder stages (with status) and participant "Step n of N" progress. | `UiIcon`, `UiProgress` | - | UI-BLD-01, UI-PUB-05 |
 | `UiTabs` | Tabs with arrow-key navigation. | - | - | Spec 5 |
 | `UiAccordion` | Disclosure list for how-it-works and FAQ. | `UiIcon` | - | Spec 5, UI-PUB-01 |
+| `UiCarousel` | A titled section showing one slide at a time, with previous/next buttons and a dot per slide. | `UiBadge`, `UiButton` | - | UI-PRT-01, UI-A11Y-05 |
 | `UiBreadcrumbs` | Breadcrumb trail with the current page marked. | `UiIcon`, `UiLink` | `UiAuthShell` | UI-DSH-01 |
 | `UiSidebarNav` | Primary navigation filtered by role by the caller. | `UiIcon`, `UiLink` | `UiConsoleShell`, `UiDashboardShell` | UI-DSH-01, Spec 2.2 |
 | `UiTopBar` | Business name and role, search, help, notifications and user menu. | `UiButton`, `UiIcon`, `UiLink` | `UiDashboardShell` | UI-DSH-01, UI-A11Y-13, UI-DSH-14 |
@@ -115,10 +116,10 @@
 ## Most reused
 
 - `UiIcon`: used by 28 components
-- `UiButton`: used by 22 components
+- `UiButton`: used by 23 components
 - `UiLink`: used by 8 components
 - `UiLiveRegion`: used by 6 components
+- `UiBadge`: used by 6 components
 - `UiProgress`: used by 5 components
 - `UiCard`: used by 5 components
 - `UiSkipLink`: used by 5 components
-- `UiBadge`: used by 5 components

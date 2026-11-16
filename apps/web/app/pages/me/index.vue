@@ -3,12 +3,14 @@ import { computed, ref } from 'vue';
 import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
+import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
+import { useOpenCampaigns } from '../../modules/participant/useOpenCampaigns';
 import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.vue';
-import { participantSample as sample } from '../../modules/participant/sample';
 
 /**
  * Participant hub (client-rendered, no-store). Participants have an account but no business
- * (ADR-P001). The figures are labelled samples until the participation API exists.
+ * (ADR-P001). Only the account is real so far; entries, draws and rewards appear once the
+ * participation API exists, until then the page says so instead of showing made-up figures.
  */
 definePageMeta({ middleware: 'auth', portal: 'participant' });
 useHead({ title: t('me.title') });
@@ -16,6 +18,7 @@ useHead({ title: t('me.title') });
 const auth = useAuth();
 const session = auth.session;
 const loggingOut = ref(false);
+const open = useOpenCampaigns();
 
 const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0] ?? '');
 const nav = [
@@ -46,10 +49,6 @@ async function logout() {
     @sign-out="logout"
   >
     <VerifyEmailPrompt class="gap-after" />
-    <UiBanner tone="system" :title="t('me.sample.title')" class="gap-after">
-      {{ t('me.sample.body') }}
-    </UiBanner>
-
     <header class="hero">
       <UiBadge shape="pill" tone="info">{{ t('me.eyebrow') }}</UiBadge>
       <h1 class="hero__title">
@@ -57,87 +56,19 @@ async function logout() {
         <span class="hero__name">{{ firstName }}</span>
       </h1>
       <p class="hero__summary ui-text-body-l">
-        {{ t('me.summary', { ready: sample.rewardsReady, draws: sample.draws.length }) }}
+        {{ t('me.summary') }}
       </p>
     </header>
 
-    <section class="stats" :aria-label="t('me.stats.label')">
-      <UiStatCard
-        label-style="eyebrow"
-        :label="t('me.stat.entries')"
-        :value="String(sample.activeEntries)"
-        :suffix="t('me.stat.entries.suffix')"
-        icon="ticket"
-      />
-      <UiStatCard
-        label-style="eyebrow"
-        :label="t('me.stat.rewards')"
-        :value="sample.rewardsValue"
-        :badge="t('me.stat.rewards.ready', { n: sample.rewardsReady })"
-        icon="cash"
-        icon-tone="success"
-      />
-      <UiStatCard
-        label-style="eyebrow"
-        :label="t('me.stat.next')"
-        :value="t('me.stat.next.value', { hours: sample.nextDrawHours })"
-        icon="timer"
-      />
+    <section class="open-campaigns">
+      <UiSkeleton v-if="open.pending.value" variant="card" />
+      <UiSystemState v-else-if="open.error.value" kind="generic" @action="open.refresh()" />
+      <CampaignCarousel v-else :campaigns="open.campaigns.value" :now="open.now.value" />
     </section>
 
-    <section class="feature">
-      <UiClaimCard
-        :eyebrow="t('me.claim.eyebrow')"
-        :meta="t('me.claim.expires', { days: sample.claim.expiresInDays })"
-        :amount="sample.claim.amount"
-        :title="sample.claim.title"
-        :description="t('me.claim.body')"
-        :note="t('me.claim.note')"
-      >
-        <template #action>
-          <UiButton variant="secondary" icon="zap" disabled>{{ t('me.claim.action') }}</UiButton>
-        </template>
-      </UiClaimCard>
-      <UiInstantWinCard
-        :tag="t('me.win.tag')"
-        :reference="t('me.win.ref', { ref: sample.instantWin.reference })"
-        :title="t('me.win.title')"
-        :description="
-          t('me.win.body', { odds: sample.instantWin.odds, prize: sample.instantWin.prize })
-        "
-        :panel-title="t('me.win.panel')"
-        :panel-text="t('me.win.panelText')"
-      >
-        <template #action>
-          <UiButton block icon="wand" disabled>{{ t('me.win.action') }}</UiButton>
-        </template>
-      </UiInstantWinCard>
-    </section>
-
-    <section class="draws" aria-labelledby="draws-title">
-      <div class="draws__head">
-        <div>
-          <h2 id="draws-title" class="ui-text-h2">{{ t('me.draws.title') }}</h2>
-          <p class="ui-text-body-s ui-text-hint">{{ t('me.draws.subtitle') }}</p>
-        </div>
-        <p class="ui-text-label-sm ui-text-hint">
-          {{ t('me.draws.count', { n: sample.draws.length }) }}
-        </p>
-      </div>
-      <div class="draws__grid">
-        <UiDrawCard
-          v-for="d in sample.draws"
-          :key="d.id"
-          :icon="d.icon"
-          :title="d.title"
-          :subtitle="d.subtitle"
-          :when="t('me.draw.in', { n: d.whenDays })"
-          :ticket-label="t('me.draw.ticket')"
-          :ticket="`#${d.ticket}`"
-          :status="t('me.draw.confirmed')"
-        />
-      </div>
-    </section>
+    <UiEmptyState :title="t('me.empty.title')" :description="t('me.empty.body')" icon="ticket">
+      <UiButton to="/discover">{{ t('me.empty.action') }}</UiButton>
+    </UiEmptyState>
 
     <template #footer>
       <span>© {{ t('me.footer') }}</span>
@@ -167,49 +98,11 @@ async function logout() {
 .hero__name {
   color: var(--ui-color-action-primary);
 }
+.open-campaigns {
+  margin-block-end: var(--ui-space-8);
+}
 .hero__summary {
   margin: 0;
   color: var(--ui-color-text-secondary);
-}
-.stats {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ui-space-4);
-  margin-block-end: var(--ui-space-8);
-}
-.feature {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ui-space-6);
-  margin-block-end: var(--ui-space-10);
-}
-.draws__head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--ui-space-3);
-  margin-block-end: var(--ui-space-4);
-}
-.draws__head p {
-  margin: 0;
-}
-.draws__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ui-space-4);
-}
-@media (min-width: 768px) {
-  .stats,
-  .draws__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .draws__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1024px) {
-  .feature {
-    grid-template-columns: 1.45fr 1fr;
-  }
 }
 </style>

@@ -26,6 +26,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": [
       "UiCampaignCard",
+      "UiCarousel",
       "UiDrawCard",
       "UiInstantWinCard",
       "UiStatCard",
@@ -59,6 +60,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiBanner",
       "UiCampaignCard",
       "UiCaptchaWrapper",
+      "UiCarousel",
       "UiChart",
       "UiConfirmDialog",
       "UiConflictDialog",
@@ -106,6 +108,13 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiFeatureTile",
       "UiRewardCard"
     ]
+  },
+  "UiCarousel": {
+    "composes": [
+      "UiBadge",
+      "UiButton"
+    ],
+    "usedBy": []
   },
   "UiChart": {
     "composes": [

@@ -56,6 +56,7 @@ describe('reuse over duplication', () => {
       'UiSwitch',
       'UiTabs',
       'UiAccordion',
+      'UiCarousel',
       'UiStepper',
       'UiDataTable',
       'UiPermissionGate',

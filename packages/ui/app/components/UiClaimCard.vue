@@ -9,8 +9,8 @@ defineProps<{
   eyebrow: string;
   /** Top-right note ("Expires in 14 days"). */
   meta?: string;
-  /** The headline value ("$100.00"). */
-  amount: string;
+  /** The headline value ("$100.00"). Omit when there is none; the title leads instead. */
+  amount?: string;
   title: string;
   description?: string;
   /** Text beside the action ("Instant redemption code revealed immediately"). */
@@ -26,7 +26,7 @@ defineProps<{
       >
       <span v-if="meta" class="ui-claim__meta ui-text-label">{{ meta }}</span>
     </div>
-    <p class="ui-claim__amount">{{ amount }}</p>
+    <p v-if="amount" class="ui-claim__amount">{{ amount }}</p>
     <h3 class="ui-claim__title">{{ title }}</h3>
     <p v-if="description" class="ui-claim__desc ui-text-body">{{ description }}</p>
     <div class="ui-claim__actions">

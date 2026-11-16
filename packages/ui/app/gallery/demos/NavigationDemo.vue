@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import UiAccordion from '../../components/UiAccordion.vue';
 import UiBanner from '../../components/UiBanner.vue';
 import UiBreadcrumbs from '../../components/UiBreadcrumbs.vue';
+import UiCarousel from '../../components/UiCarousel.vue';
 import UiButton from '../../components/UiButton.vue';
 import UiDashboardShell from '../../components/UiDashboardShell.vue';
 import UiPublicShell from '../../components/UiPublicShell.vue';
@@ -23,6 +24,8 @@ import UiPortalShell from '../../components/UiPortalShell.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const tab = ref('overview');
+const slide = ref(0);
+const slides = ['Weekend getaway draw', 'Weekly coffee giveaway', 'Campus quiz'];
 const stage = ref('config');
 const stages: Step[] = [
   { id: 'details', label: 'Details', status: 'complete' },
@@ -71,6 +74,22 @@ const authPassword = ref('');
       <template #panel-participants>Participants content.</template>
       <template #panel-analytics>Analytics content.</template>
     </UiTabs>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiCarousel">
+    <UiCarousel
+      v-model="slide"
+      title="Available campaigns"
+      subtitle="Explore what is open right now."
+      badge="3 open"
+      :count="slides.length"
+    >
+      <template #default="{ index }">
+        <UiBanner tone="info" :title="slides[index]"
+          >Slide {{ index + 1 }} of {{ slides.length }}</UiBanner
+        >
+      </template>
+    </UiCarousel>
   </GalleryBlock>
 
   <GalleryBlock name="UiAccordion">
