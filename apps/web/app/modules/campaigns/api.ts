@@ -55,8 +55,9 @@ export function createCampaignsApi(fetcher: Fetcher, base = '/api/v1/campaigns')
     call<Campaign>('POST', `/${id}/${action}`, { body: { expectedVersion }, csrf });
 
   return {
-    list: async (): Promise<CampaignSummary[]> =>
-      (await call<{ items: CampaignSummary[] }>('GET', '')).items,
+    /** The campaigns that are not archived, or with `archived` only the archived ones. */
+    list: async (archived = false): Promise<CampaignSummary[]> =>
+      (await call<{ items: CampaignSummary[] }>('GET', archived ? '?archived=true' : '')).items,
     get: (id: string) => call<Campaign>('GET', `/${id}`),
     create: (input: { title: string; templateId?: string | null }, csrf: string) =>
       call<Campaign>('POST', '', { body: input, csrf }),
@@ -66,6 +67,8 @@ export function createCampaignsApi(fetcher: Fetcher, base = '/api/v1/campaigns')
     pause: (id: string, version: number, csrf: string) => act(id, 'pause', version, csrf),
     resume: (id: string, version: number, csrf: string) => act(id, 'resume', version, csrf),
     cancel: (id: string, version: number, csrf: string) => act(id, 'cancel', version, csrf),
+    archive: (id: string, version: number, csrf: string) => act(id, 'archive', version, csrf),
+    unarchive: (id: string, version: number, csrf: string) => act(id, 'unarchive', version, csrf),
     duplicate: (id: string, csrf: string, title?: string) =>
       call<Campaign>('POST', `/${id}/duplicate`, { body: title ? { title } : {}, csrf }),
     remove: (id: string, csrf: string) => call<void>('DELETE', `/${id}`, { csrf }),

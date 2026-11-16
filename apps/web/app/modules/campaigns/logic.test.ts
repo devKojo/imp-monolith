@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addPrize,
   fromParts,
+  isArchivable,
   isLaunchable,
   movePrize,
   newPrize,
@@ -59,6 +60,13 @@ const campaign = (over: Record<string, unknown> = {}) => ({
 });
 const passes = (over: Record<string, unknown> = {}) =>
   Object.fromEntries(preflight(campaign(over), NOW).map((c) => [c.id, c.pass]));
+
+describe('isArchivable', () => {
+  it('allows a draft and a finished campaign, never a running or paused one', () => {
+    for (const s of ['DRAFT', 'COMPLETED', 'CANCELLED']) expect(isArchivable(s)).toBe(true);
+    for (const s of ['SCHEDULED', 'LIVE', 'PAUSED']) expect(isArchivable(s)).toBe(false);
+  });
+});
 
 describe('prizes', () => {
   it('adds, updates, removes and moves without touching the input', () => {

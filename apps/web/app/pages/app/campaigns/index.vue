@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { useToast } from '@imp/ui/app/composables/useToast';
 import { t, type AppTextKey } from '../../../i18n';
 import { toApiError } from '../../../modules/auth/errors';
 import BusinessShell from '../../../modules/business/components/BusinessShell.vue';
 import { campaignErrorKey } from '../../../modules/campaigns/errors';
-import { browserZone } from '../../../modules/campaigns/logic';
+import { browserZone, isArchivable } from '../../../modules/campaigns/logic';
 import ShareCampaign from '../../../modules/campaigns/components/ShareCampaign.vue';
 import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
 import type { CampaignSummary } from '../../../modules/campaigns/types';
@@ -26,6 +26,10 @@ const { canManage, canOperate } = store;
 const toast = useToast();
 const zone = browserZone();
 
+const query = ref('');
+const status = ref('all');
+// Archived campaigns are kept apart from the rest: choosing that filter loads them instead.
+const showArchived = computed(() => status.value === 'archived');
 const items = ref<CampaignSummary[]>([]);
 const loading = ref(true);
 const loadFailed = ref(false);
@@ -35,7 +39,7 @@ async function load() {
   loading.value = true;
   loadFailed.value = false;
   try {
-    items.value = await store.list();
+    items.value = await store.list(showArchived.value);
   } catch {
     loadFailed.value = true;
   } finally {
@@ -43,6 +47,8 @@ async function load() {
   }
 }
 onMounted(load);
+// Switching to or from the archived view needs the other list from the server.
+watch(showArchived, () => void load());
 
 async function attempt(action: () => Promise<void>) {
   problem.value = '';
@@ -53,8 +59,6 @@ async function attempt(action: () => Promise<void>) {
   }
 }
 
-const query = ref('');
-const status = ref('all');
 const statusOptions = [
   { value: 'all', label: t('cmp.filter.all') },
   { value: 'draft', label: t('cmp.filter.draft') },
@@ -62,6 +66,7 @@ const statusOptions = [
   { value: 'live', label: t('cmp.filter.live') },
   { value: 'paused', label: t('cmp.filter.paused') },
   { value: 'ended', label: t('cmp.filter.ended') },
+  { value: 'archived', label: t('cmp.filter.archived') },
 ];
 const columns = [
   { key: 'name', label: t('cmp.col.name') },
@@ -74,6 +79,7 @@ const columns = [
 
 const matchesStatus = (c: CampaignSummary) =>
   status.value === 'all' ||
+  status.value === 'archived' ||
   (status.value === 'ended'
     ? c.status === 'COMPLETED' || c.status === 'CANCELLED'
     : c.status.toLowerCase() === status.value);
@@ -95,6 +101,8 @@ const rows = computed(() =>
       : t('cmp.noTemplate'),
     status: c.status,
     slug: isPublicNow(c, new Date()) ? c.slug : null,
+    archived: c.archivedAt !== null,
+    archivable: isArchivable(c.status),
     closes: c.endAt ? formatInZone(new Date(c.endAt), zone) : t('cmp.noClose'),
     prizes: c.prizeCount,
   })),
@@ -126,6 +134,19 @@ const togglePause = (row: { id: string; version: number; status: string }) =>
     await (paused ? store.resume(row) : store.pause(row));
     await load();
     toast.push(paused ? t('cmp.resumed') : t('cmp.paused'), 'info');
+  });
+
+const archive = (row: { id: string; version: number }) =>
+  attempt(async () => {
+    await store.archive(row);
+    await load();
+    toast.push(t('cmp.archivedDone'), 'info');
+  });
+const unarchive = (row: { id: string; version: number }) =>
+  attempt(async () => {
+    await store.unarchive(row);
+    await load();
+    toast.push(t('cmp.unarchivedDone'), 'info');
   });
 
 const toDelete = ref<{ id: string; name: string } | null>(null);
@@ -196,7 +217,9 @@ const confirmDelete = () =>
         <template #cell-actions="{ row }">
           <span class="actions">
             <UiButton :to="`/app/campaigns/${String(row.id)}`" variant="tertiary" size="xs">
-              {{ canManage && row.status === 'DRAFT' ? t('cmp.edit') : t('cmp.view') }}
+              {{
+                canManage && row.status === 'DRAFT' && !row.archived ? t('cmp.edit') : t('cmp.view')
+              }}
             </UiButton>
             <UiButton
               v-if="row.slug"
@@ -230,6 +253,22 @@ const confirmDelete = () =>
             >
               {{ row.status === 'PAUSED' ? t('cmp.resume') : t('cmp.pause') }}
             </UiButton>
+            <UiButton
+              v-if="canManage && row.archived"
+              variant="tertiary"
+              size="xs"
+              @click="unarchive({ id: String(row.id), version: Number(row.version) })"
+            >
+              {{ t('cmp.unarchive') }}<span class="ui-sr-only"> {{ row.name }}</span>
+            </UiButton>
+            <UiButton
+              v-else-if="canManage && row.archivable"
+              variant="tertiary"
+              size="xs"
+              @click="archive({ id: String(row.id), version: Number(row.version) })"
+            >
+              {{ t('cmp.archive') }}<span class="ui-sr-only"> {{ row.name }}</span>
+            </UiButton>
             <UiButton v-if="canManage" variant="tertiary" size="xs" @click="copy(String(row.id))">
               {{ t('cmp.duplicate') }}
             </UiButton>
@@ -245,10 +284,27 @@ const confirmDelete = () =>
         </template>
         <template #empty>
           <UiEmptyState
-            :title="filtering ? t('cmp.noMatch.title') : t('cmp.empty.title')"
-            :description="filtering ? t('cmp.noMatch.body') : t('cmp.empty.body')"
+            :title="
+              showArchived
+                ? t('cmp.archived.empty.title')
+                : filtering
+                  ? t('cmp.noMatch.title')
+                  : t('cmp.empty.title')
+            "
+            :description="
+              showArchived
+                ? t('cmp.archived.empty.body')
+                : filtering
+                  ? t('cmp.noMatch.body')
+                  : t('cmp.empty.body')
+            "
           >
-            <UiButton v-if="!filtering && canManage" size="xs" icon="plus" @click="createNew">
+            <UiButton
+              v-if="!filtering && canManage && !showArchived"
+              size="xs"
+              icon="plus"
+              @click="createNew"
+            >
               {{ t('cmp.new') }}
             </UiButton>
           </UiEmptyState>
