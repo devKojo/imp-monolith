@@ -59,6 +59,8 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['campaign_fields', 'tenant_isolation'],
   ['quiz_attempts', 'tenant_isolation'],
   ['quiz_answers', 'tenant_isolation'],
+  ['survey_responses', 'tenant_isolation'],
+  ['survey_answers', 'tenant_isolation'],
   ['campaigns', 'public_read'],
   ['campaign_prizes', 'public_read'],
   ['templates', 'public_read'],
@@ -103,6 +105,7 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_runtime', 'campaign_template_fields', 'INSERT', false],
   ['app_runtime', 'quiz_attempts', 'DELETE', false],
   ['app_runtime', 'quiz_answers', 'DELETE', false],
+  ['app_runtime', 'survey_responses', 'DELETE', false],
   ['app_system', 'campaigns', 'SELECT', false],
   ['app_system', 'campaign_prizes', 'SELECT', false],
 ];
