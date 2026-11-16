@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import UiChart from '../../components/UiChart.vue';
 import UiDataTable, { type SortState } from '../../components/UiDataTable.vue';
+import UiPagination from '../../components/UiPagination.vue';
 import UiMaskedValue from '../../components/UiMaskedValue.vue';
 import UiStatusChip from '../../components/UiStatusChip.vue';
 import { maskEmail, maskPhone } from '../../utils/phone';
@@ -31,6 +32,7 @@ const rows = computed(() => {
   return list.slice(0, shown.value);
 });
 const loading = ref(false);
+const page = ref(3);
 function more() {
   loading.value = true;
   setTimeout(() => ((shown.value = all.length), (loading.value = false)), 600);
@@ -71,6 +73,11 @@ const funnel = [
 </script>
 
 <template>
+  <GalleryBlock name="UiPagination">
+    <UiPagination v-model:page="page" :total="134" :page-size="10" />
+    <UiPagination :total="7" :page-size="10" />
+  </GalleryBlock>
+
   <GalleryBlock name="UiDataTable">
     <UiDataTable
       v-model:sort="sort"
@@ -138,6 +145,27 @@ const funnel = [
       title="Entries per day (bars)"
       :series="line"
       summary="Thursday was the busiest day with 510 entries."
+    />
+    <UiChart
+      type="area"
+      title="Entries per day (area)"
+      :series="line"
+      summary="Entries rose from 120 on Monday to 510 on Thursday."
+      :table-limit="2"
+    />
+    <UiChart
+      type="donut"
+      title="Outcome"
+      :series="[
+        {
+          name: 'Outcome',
+          points: [
+            { label: 'Completed', value: 18 },
+            { label: 'In progress', value: 7 },
+          ],
+        },
+      ]"
+      summary="18 of 25 finished."
     />
     <UiChart
       type="funnel"

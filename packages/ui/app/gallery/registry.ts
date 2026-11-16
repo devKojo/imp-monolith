@@ -261,9 +261,10 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiDialog',
     category: 'Overlays',
-    summary: 'Base modal on native <dialog>: focus trap, Escape, focus return.',
+    summary:
+      'Base modal on native <dialog>: focus trap, Escape, focus return; a separate header (with an optional close icon) above a scrolling body.',
     specRefs: ['Spec 5', 'UI-A11Y-03'],
-    states: ['closed', 'open', 'persistent', 'wide'],
+    states: ['closed', 'open', 'persistent', 'wide', 'closable'],
     a11y: 'Title is an h2; focus returns to the trigger; no click-outside dismissal.',
   },
   {
@@ -292,6 +293,16 @@ export const registry: ComponentEntry[] = [
   },
   // ---- Data
   {
+    name: 'UiPagination',
+    category: 'Data',
+    summary:
+      'Page controls for long lists: "Showing 11-20 of 134", previous and next, and a short run of page numbers.',
+    specRefs: ['UI-DSH-04', 'UI-A11Y-05'],
+    states: ['first page', 'middle', 'last page', 'single page'],
+    a11y: 'A named nav; every button has a text name; the current page has aria-current; the range is announced politely.',
+    origin: 'business console tables and participant lists',
+  },
+  {
     name: 'UiDataTable',
     category: 'Data',
     summary:
@@ -311,9 +322,10 @@ export const registry: ComponentEntry[] = [
   {
     name: 'UiChart',
     category: 'Data',
-    summary: 'Line, bar and funnel SVG charts with markers, patterns, data table and summary.',
+    summary:
+      'Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally truncated behind "View breakdown") and summary.',
     specRefs: ['UI-A11Y-10', 'UI-DSH-08'],
-    states: ['chart', 'data table', 'approx', 'provisional'],
+    states: ['chart', 'data table', 'truncated table', 'approx', 'provisional'],
     a11y: 'Never colour alone; text summary always shown; table alternative.',
   },
   // ---- Navigation

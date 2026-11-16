@@ -143,6 +143,11 @@ export const en = {
   'stepUp.needBoth': 'Add a purpose and the 6-digit code.',
 
   // data
+  'pagination.label': 'Pagination',
+  'pagination.showing': 'Showing {from}-{to} of {total}',
+  'pagination.previous': 'Previous page',
+  'pagination.next': 'Next page',
+  'pagination.page': 'Page {n}',
   'table.loadMore': 'Load more',
   'table.showing': 'Showing {shown} of {total}',
   'table.scrollRegion': 'Scrollable table: {name}',
@@ -152,6 +157,8 @@ export const en = {
   'mask.hide': 'Hide now',
   'mask.hidden': '{what} hidden',
   'mask.notice': 'Revealing contact details is logged. Details hide again after 30 seconds.',
+  'chart.viewBreakdown': 'View breakdown ({n} more)',
+  'chart.hideBreakdown': 'Show less',
   'chart.showTable': 'Show data table',
   'chart.showChart': 'Show chart',
   'chart.approx': 'approx.',

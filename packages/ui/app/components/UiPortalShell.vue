@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UiAvatar from './UiAvatar.vue';
+import UiBadge from './UiBadge.vue';
 import UiButton from './UiButton.vue';
 import UiLink from './UiLink.vue';
 import UiSkipLink from './UiSkipLink.vue';
@@ -16,19 +17,24 @@ defineProps<{
   userStatus?: string;
   navLabel: string;
   signOutLabel: string;
+  /** Names the side of the product this is ("Participant"), shown as a badge beside the brand. */
+  portalLabel?: string;
 }>();
 
 const emit = defineEmits<{ signOut: [] }>();
 </script>
 
 <template>
-  <div class="ui-portal">
+  <div class="ui-portal" data-portal="participant">
     <UiSkipLink />
     <header class="ui-portal__header">
       <div class="ui-portal__bar">
         <slot name="brand">
           <strong class="ui-portal__brand ui-text-h3">{{ brandName }}</strong>
         </slot>
+        <UiBadge v-if="portalLabel" tone="info" icon="ticket" shape="pill">{{
+          portalLabel
+        }}</UiBadge>
         <nav :aria-label="navLabel" class="ui-portal__nav">
           <UiLink
             v-for="item in nav"
@@ -145,5 +151,18 @@ const emit = defineEmits<{ signOut: [] }>();
   background: var(--ui-color-surface);
   border-block-start: 1px solid var(--ui-color-border);
   color: var(--ui-color-text-secondary);
+}
+
+/* A strip across the top that says whose side this is: the participant portal is brand blue, the business
+   console is dark. Together with the labelled badge beside the brand, the two are never confused. */
+.ui-portal[data-portal='participant']::before {
+  content: '';
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 60;
+  block-size: var(--ui-space-1);
+  background: var(--ui-color-action-primary);
+  pointer-events: none;
 }
 </style>
