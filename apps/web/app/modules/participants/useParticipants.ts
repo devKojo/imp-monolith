@@ -31,6 +31,7 @@ export function useParticipants() {
     /** Whether the active role may see participants (the server still decides). */
     canView: computed(() => canViewParticipants(auth.session.value?.active?.role)),
     summary: () => run(() => api.summary()),
+    activity: () => run(() => api.activity()),
     campaign: (id: string) => run(() => api.campaign(id)),
     list: (...args: Parameters<typeof api.list>) => run(() => api.list(...args)),
   };

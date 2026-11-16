@@ -78,6 +78,8 @@ export type QuizSettings = {
   /** Minutes for the whole attempt; null for no limit. */
   timeLimitMinutes: number | null;
   passPercent: number;
+  /** Attempts a participant may make (1 to 5); one means no retake. */
+  maxAttempts: number;
 };
 /** What the campaign type uses: `quiz` is only present for a quiz. */
 export type CampaignSettings = { quiz?: QuizSettings };

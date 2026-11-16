@@ -34,6 +34,9 @@ export function createQuizApi(fetcher: Fetcher, root = '/api/v1') {
     // The participant: take the quiz.
     start: (slug: string, csrf: string) =>
       call<AttemptView>('POST', `/quiz/${slug}/attempt`, { csrf }),
+    /** The next attempt, once one is finished and attempts are left. */
+    retake: (slug: string, csrf: string) =>
+      call<AttemptView>('POST', `/quiz/${slug}/attempt/retake`, { csrf }),
     current: (slug: string) => call<AttemptView>('GET', `/quiz/${slug}/attempt`),
     answer: (slug: string, questionId: string, choiceIndex: number, csrf: string) =>
       call<void>('PUT', `/quiz/${slug}/attempt/answers/${questionId}`, {

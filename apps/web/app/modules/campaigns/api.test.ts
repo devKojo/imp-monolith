@@ -79,9 +79,11 @@ describe('save body', () => {
     expect(body.settings).toEqual({ quiz: null });
     const quiz = toUpdateBody({
       ...campaign,
-      settings: { quiz: { timeLimitMinutes: 10, passPercent: 80 } },
+      settings: { quiz: { timeLimitMinutes: 10, passPercent: 80, maxAttempts: 3 } },
     });
-    expect(quiz.settings).toEqual({ quiz: { timeLimitMinutes: 10, passPercent: 80 } });
+    expect(quiz.settings).toEqual({
+      quiz: { timeLimitMinutes: 10, passPercent: 80, maxAttempts: 3 },
+    });
   });
 
   it('sends the version that was read, the trimmed title, and prizes without client ids', () => {

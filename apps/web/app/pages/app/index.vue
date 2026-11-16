@@ -1,28 +1,30 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { formatInZone } from '@imp/ui/app/utils/datetime';
-import type { ActionItem } from '@imp/ui/app/components/UiActionMenu.vue';
-import { t, type AppTextKey } from '../../i18n';
+import { computed, onMounted, ref } from 'vue';
+import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { SIGNIN } from '../../modules/auth/constants';
 import BusinessShell from '../../modules/business/components/BusinessShell.vue';
+import { campaignBars, statusCounts, type StatusKey } from '../../modules/business/overview';
 import { classifyAuthError, toApiError, type AuthFailure } from '../../modules/auth/errors';
 import { ROLE_LABELS } from '../../modules/auth/validation';
 import { campaignErrorKey } from '../../modules/campaigns/errors';
-import { browserZone } from '../../modules/campaigns/logic';
 import type { CampaignSummary } from '../../modules/campaigns/types';
-import { isPublicNow, pagePath } from '../../modules/campaigns/publicPage';
 import { useCampaigns } from '../../modules/campaigns/useCampaigns';
-import { CONSOLE_PAGE_SIZE, pageSlice } from '../../utils/paginate';
-import type { ParticipantSummary } from '../../modules/participants/types';
+import {
+  activitySeries,
+  busiestDay,
+  completionPercent,
+  dayLabel,
+} from '../../modules/participants/logic';
+import type { BusinessActivity, ParticipantSummary } from '../../modules/participants/types';
 import { useParticipants } from '../../modules/participants/useParticipants';
 
 /**
- * Business console (client-rendered, no-store: private data never passes the SSR tier). Who you
- * are, the active business (derived by the server from the session's membership), switching
- * business, signing out and the campaigns shown here are all real, read from the campaigns API.
- * Figures with no backing feature yet (draw health, the next draw) are not shown. The participants
- * figure comes from the participants API and is shown only to roles that may see participants.
+ * Business overview (client-rendered, no-store: private data never passes the SSR tier). The headline
+ * figures and the analytics of the active business: campaigns by status, participation over the last
+ * days and by campaign, and quiz outcomes. The campaigns themselves live on the Campaigns page, so the
+ * list is not repeated here. Everything is real, read from the campaigns and participants APIs; the
+ * participation charts are shown only to roles that may see participants (the server decides).
  */
 definePageMeta({ middleware: 'auth', portal: 'business' });
 useHead({ title: t('console.title') });
@@ -31,7 +33,6 @@ const auth = useAuth();
 const session = auth.session;
 const store = useCampaigns();
 const people = useParticipants();
-const zone = browserZone();
 const failure = ref<AuthFailure | null>(null);
 const switching = ref(false);
 
@@ -60,16 +61,21 @@ async function load() {
   }
 }
 
-// ---- participants: a headline figure, only for roles that may see them. A failure leaves a dash.
+// ---- participation, only for roles that may see it. A failure leaves the charts out and the figure a dash.
 const participants = ref<ParticipantSummary | null>(null);
-async function loadParticipants() {
+const activity = ref<BusinessActivity | null>(null);
+async function loadParticipation() {
   participants.value = null;
+  activity.value = null;
   if (!people.canView.value) return;
-  participants.value = await people.summary().catch(() => null);
+  [participants.value, activity.value] = await Promise.all([
+    people.summary().catch(() => null),
+    people.activity().catch(() => null),
+  ]);
 }
 onMounted(() => {
   void load();
-  void loadParticipants();
+  void loadParticipation();
 });
 
 const count = (s: CampaignSummary['status']) => items.value.filter((c) => c.status === s).length;
@@ -77,70 +83,69 @@ const live = computed(() => count('LIVE'));
 const scheduled = computed(() => count('SCHEDULED'));
 const drafts = computed(() => count('DRAFT'));
 
-const query = ref('');
-const status = ref('all');
-const statusOptions = [
-  { value: 'all', label: t('cmp.filter.all') },
-  { value: 'draft', label: t('cmp.filter.draft') },
-  { value: 'scheduled', label: t('cmp.filter.scheduled') },
-  { value: 'live', label: t('cmp.filter.live') },
-  { value: 'paused', label: t('cmp.filter.paused') },
-  { value: 'ended', label: t('cmp.filter.ended') },
-];
-const columns = [
-  { key: 'name', label: t('console.table.campaign') },
-  { key: 'type', label: t('console.table.type'), priority: 'medium' as const },
-  { key: 'status', label: t('console.table.statusCol') },
-  { key: 'closes', label: t('cmp.col.closes'), priority: 'medium' as const },
-  { key: 'actions', label: t('console.table.actions') },
-];
-const matchesStatus = (c: CampaignSummary) =>
-  status.value === 'all' ||
-  (status.value === 'ended'
-    ? c.status === 'COMPLETED' || c.status === 'CANCELLED'
-    : c.status.toLowerCase() === status.value);
-const rows = computed(() =>
-  items.value
-    .filter(
-      (c) =>
-        matchesStatus(c) &&
-        (!query.value || c.title.toLowerCase().includes(query.value.trim().toLowerCase())),
-    )
-    .map((c) => ({
-      id: c.id,
-      name: c.title,
-      type: c.template
-        ? t(`tpl.archetype.${c.template.archetype}` as AppTextKey)
-        : t('cmp.noTemplate'),
-      status: c.status,
-      slug: isPublicNow(c, new Date()) ? c.slug : null,
-      closes: c.endAt ? formatInZone(new Date(c.endAt), zone) : t('cmp.noClose'),
-    })),
+// ---- the charts
+const statusLabel = (k: StatusKey) => t(`cmp.filter.${k}` as 'cmp.filter.live');
+const byStatus = computed(() => statusCounts(items.value, statusLabel));
+const statusSummary = computed(() =>
+  t('overview.chart.status.summary', {
+    n: items.value.length,
+    live: live.value,
+    scheduled: scheduled.value,
+    drafts: drafts.value,
+  }),
 );
-const page = ref(1);
-const pageRows = computed(() => pageSlice(rows.value, page.value));
-watch([query, status], () => (page.value = 1));
-const filtering = computed(() => query.value.trim() !== '' || status.value !== 'all');
-const actionLabel = (s: string) =>
-  s === 'DRAFT' ? t('console.table.edit') : t('console.table.view');
-const menuItems = (row: Record<string, unknown>): ActionItem[] => [
-  {
-    id: 'open',
-    label: actionLabel(String(row.status)),
-    icon: row.status === 'DRAFT' ? 'pencil' : 'eye',
-    to: `/app/campaigns/${String(row.id)}`,
-  },
-  ...(row.slug
+
+const names = computed(() => ({
+  started: t('participants.chart.started'),
+  completed: t('participants.chart.completed'),
+}));
+const daily = computed(() =>
+  activity.value ? activitySeries(activity.value.daily, names.value) : [],
+);
+const dailySummary = computed(() => {
+  const best = activity.value ? busiestDay(activity.value.daily) : null;
+  return best
+    ? t('participants.chart.activity.summary', { day: dayLabel(best.date), n: best.started })
+    : t('participants.chart.activity.none');
+});
+
+const campaigns = computed(() => participants.value?.campaigns ?? []);
+const byCampaign = computed(() => campaignBars(campaigns.value, names.value));
+const byCampaignSummary = computed(() => {
+  const top = campaigns.value[0];
+  return top
+    ? t('overview.chart.byCampaign.summary', { title: top.title, n: top.started })
+    : t('participants.empty.body');
+});
+
+const quiz = computed(() => activity.value?.quiz ?? null);
+const outcome = computed(() =>
+  quiz.value
     ? [
         {
-          id: 'page',
-          label: t('cmp.viewPage'),
-          icon: 'external' as const,
-          to: pagePath(String(row.slug)),
+          name: t('participants.chart.outcome'),
+          points: [
+            { label: t('participants.chart.passed'), value: quiz.value.passed },
+            { label: t('participants.chart.notPassed'), value: quiz.value.failed },
+          ],
         },
       ]
-    : []),
-];
+    : [],
+);
+const outcomeSummary = computed(() =>
+  quiz.value && quiz.value.correctPercent !== null
+    ? t('participants.chart.funnel.quiz', {
+        passed: quiz.value.passed,
+        failed: quiz.value.failed,
+        percent: quiz.value.correctPercent,
+      })
+    : '',
+);
+const completion = computed(() =>
+  participants.value
+    ? completionPercent(participants.value.started, participants.value.completed)
+    : 0,
+);
 
 // ---- starting a campaign
 const problem = ref('');
@@ -164,7 +169,7 @@ async function onSwitch(membershipId: string) {
   switching.value = true;
   try {
     await auth.switchTenant(membershipId);
-    await Promise.all([load(), loadParticipants()]); // both belong to the business that is now active
+    await Promise.all([load(), loadParticipation()]); // both belong to the business that is now active
   } catch (e) {
     const f = classifyAuthError(toApiError(e));
     if (f.kind === 'unauthenticated') await navigateTo(SIGNIN.business);
@@ -178,9 +183,6 @@ async function onSwitch(membershipId: string) {
 
 <template>
   <BusinessShell current="overview">
-    <template #search>
-      <UiSearchField v-model="query" :label="t('console.search')" />
-    </template>
     <template #actions>
       <UiButton
         v-if="store.canManage.value"
@@ -230,72 +232,73 @@ async function onSwitch(membershipId: string) {
           v-if="people.canView.value"
           :label="t('console.stat.participants')"
           :value="participants ? String(participants.participants) : '-'"
-          :suffix="
-            participants ? t('console.stat.participants.suffix', { n: participants.completed }) : ''
-          "
+          :suffix="participants ? t('overview.stat.completion', { n: completion }) : ''"
           icon="users"
         />
       </section>
 
-      <section class="table-card" aria-labelledby="campaigns-title">
-        <div class="table-card__head">
-          <h2 id="campaigns-title" class="ui-text-h3">
-            {{ t('console.table.title') }}
-            <span class="ui-text-hint ui-text-body-s">({{ items.length }})</span>
-          </h2>
-          <UiSegmentedControl
-            v-model="status"
-            :label="t('console.table.status')"
-            :options="statusOptions"
-          />
+      <UiSkeleton v-if="loading" variant="card" />
+
+      <UiEmptyState
+        v-else-if="items.length === 0"
+        :title="t('console.table.none.title')"
+        :description="t('console.table.none.body')"
+      >
+        <UiButton v-if="store.canManage.value" size="xs" icon="plus" @click="createNew">
+          {{ t('console.create') }}
+        </UiButton>
+      </UiEmptyState>
+
+      <template v-else>
+        <div class="analytics-head">
+          <h2 class="ui-text-h2">{{ t('overview.analytics') }}</h2>
+          <UiButton to="/app/campaigns" variant="secondary" size="xs" icon-trailing="arrow-right">
+            {{ t('overview.manage') }}
+          </UiButton>
         </div>
-        <UiSkeleton v-if="loading" variant="card" />
-        <UiDataTable
-          v-else
-          flush
-          :name="t('console.table.title')"
-          :columns="columns"
-          :rows="pageRows"
-          row-key="id"
-        >
-          <template #foot>
-            <UiPagination
-              v-model:page="page"
-              :total="rows.length"
-              :page-size="CONSOLE_PAGE_SIZE"
-              :label="t('console.table.title')"
+
+        <section class="charts" :aria-label="t('overview.analytics')">
+          <UiCard v-if="activity" as="section" class="chart chart--wide">
+            <UiChart
+              type="bar"
+              :title="t('overview.chart.activity')"
+              :series="daily"
+              :summary="dailySummary"
+              :table-limit="5"
             />
-          </template>
-          <template #cell-name="{ row }">
-            <strong class="ui-text-label">{{ row.name }}</strong>
-          </template>
-          <template #cell-status="{ row }">
-            <UiStatusChip vocabulary="campaign" :status="String(row.status)" />
-          </template>
-          <template #cell-actions="{ row }">
-            <UiActionMenu
-              :label="t('cmp.actions.for', { name: String(row.name) })"
-              :items="menuItems(row)"
+          </UiCard>
+
+          <UiCard as="section" class="chart">
+            <UiChart
+              type="donut"
+              :title="t('overview.chart.status')"
+              :series="[{ name: t('overview.chart.status'), points: byStatus }]"
+              :summary="statusSummary"
+              :center-text="String(items.length)"
             />
-          </template>
-          <template #empty>
-            <UiEmptyState
-              v-if="filtering"
-              :title="t('console.table.empty.title')"
-              :description="t('console.table.empty.body')"
+          </UiCard>
+
+          <UiCard v-if="quiz" as="section" class="chart">
+            <UiChart
+              type="donut"
+              :title="t('participants.chart.outcome')"
+              :series="outcome"
+              :summary="outcomeSummary"
+              :center-text="String(quiz.passed + quiz.failed)"
             />
-            <UiEmptyState
-              v-else
-              :title="t('console.table.none.title')"
-              :description="t('console.table.none.body')"
-            >
-              <UiButton v-if="store.canManage.value" size="xs" icon="plus" @click="createNew">
-                {{ t('console.create') }}
-              </UiButton>
-            </UiEmptyState>
-          </template>
-        </UiDataTable>
-      </section>
+          </UiCard>
+
+          <UiCard v-if="campaigns.length > 0" as="section" class="chart chart--wide">
+            <UiChart
+              type="bar"
+              :title="t('overview.chart.byCampaign')"
+              :series="byCampaign"
+              :summary="byCampaignSummary"
+              :table-limit="5"
+            />
+          </UiCard>
+        </section>
+      </template>
     </template>
   </BusinessShell>
 </template>
@@ -320,22 +323,34 @@ async function onSwitch(membershipId: string) {
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   }
 }
-.table-card {
-  background: var(--ui-color-surface);
-  border: 1px solid var(--ui-color-border);
-  border-radius: var(--ui-radius-lg);
-  overflow: hidden;
-}
-.table-card__head {
+.analytics-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--ui-space-3);
-  padding: var(--ui-space-5) var(--ui-space-6);
-  border-block-end: 1px solid var(--ui-color-border);
+  margin-block-end: var(--ui-space-4);
 }
-.table-card__head h2 {
+.analytics-head h2 {
   margin: 0;
+}
+/* A chart is drawn on a fixed canvas that scales with its card; capped, a wide card does not blow it up. */
+.chart :deep(.ui-chart__svg) {
+  display: block;
+  max-inline-size: 40rem;
+  margin-inline: auto;
+}
+.charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ui-space-5);
+}
+@media (min-width: 1024px) {
+  .charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .chart--wide {
+    grid-column: 1 / -1;
+  }
 }
 </style>

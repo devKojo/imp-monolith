@@ -89,6 +89,7 @@ const details = computed(() => {
     t('quiz.rules.questions', { n: i.questionCount }),
     i.timeLimitMinutes ? t('quiz.rules.time', { n: i.timeLimitMinutes }) : t('quiz.rules.untimed'),
     t('quiz.rules.pass', { n: i.passPercent }),
+    ...(i.maxAttempts > 1 ? [t('quiz.rules.attempts', { n: i.maxAttempts })] : []),
   ];
 });
 const questionCount = computed(

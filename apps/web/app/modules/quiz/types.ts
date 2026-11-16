@@ -5,6 +5,10 @@ export type AttemptResult = { score: number; total: number; passed: boolean; pas
 
 export type AttemptView = {
   id: string;
+  /** 1 for the first attempt, 2 for the first retake, and so on. */
+  attemptNumber: number;
+  /** Attempts allowed in all; a retake is possible while `attemptNumber` is below it. */
+  maxAttempts: number;
   startedAt: string;
   /** When the attempt ends by itself; null for an untimed quiz. */
   expiresAt: string | null;
@@ -26,6 +30,7 @@ export type QuizInfo = {
   questionCount: number;
   timeLimitMinutes: number | null;
   passPercent: number;
+  maxAttempts: number;
 };
 
 /** One prize tier as the public page shows it. */

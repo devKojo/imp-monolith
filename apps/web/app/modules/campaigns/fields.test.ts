@@ -13,6 +13,7 @@ import {
   moveField,
   newField,
   parsePassPercent,
+  parseMaxAttempts,
   parseTimeLimit,
   quizSettingsOf,
   removeAnswer,
@@ -113,10 +114,19 @@ describe('starting a campaign', () => {
   });
 
   it('has quiz settings only for a quiz', () => {
-    expect(defaultSettingsFor(quiz)).toEqual({ quiz: { timeLimitMinutes: null, passPercent: 70 } });
+    expect(defaultSettingsFor(quiz)).toEqual({
+      quiz: { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
+    });
     expect(defaultSettingsFor(survey)).toEqual({});
     expect(defaultSettingsFor(null)).toEqual({});
-    expect(quizSettingsOf({})).toEqual({ timeLimitMinutes: null, passPercent: 70 });
+    expect(quizSettingsOf({})).toEqual({ timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 });
+    // An older campaign that has no attempts setting gets one attempt.
+    expect(
+      quizSettingsOf({ quiz: { timeLimitMinutes: 5, passPercent: 60 } as never }),
+    ).toMatchObject({
+      maxAttempts: 1,
+      passPercent: 60,
+    });
   });
 });
 
@@ -193,5 +203,16 @@ describe('the number fields', () => {
     expect(parsePassPercent('0', 70)).toBe(1);
     expect(parsePassPercent('150', 70)).toBe(100);
     expect(parsePassPercent('85', 70)).toBe(85);
+  });
+});
+
+describe('parseMaxAttempts', () => {
+  it('is a whole number from 1 to the limit, keeping the old value for text that is not a number', () => {
+    expect(parseMaxAttempts('3', 1)).toBe(3);
+    expect(parseMaxAttempts('0', 1)).toBe(1);
+    expect(parseMaxAttempts('99', 1)).toBe(5);
+    expect(parseMaxAttempts('2.9', 1)).toBe(2);
+    expect(parseMaxAttempts('', 4)).toBe(4);
+    expect(parseMaxAttempts('abc', 4)).toBe(4);
   });
 });

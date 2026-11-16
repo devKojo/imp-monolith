@@ -1,6 +1,7 @@
 import type { Fetcher } from '../auth/api';
 import { toApiError } from '../auth/errors';
 import type {
+  BusinessActivity,
   CampaignActivity,
   ParticipantSummary,
   ParticipationFilter,
@@ -28,6 +29,7 @@ export function createParticipantsApi(fetcher: Fetcher, base = '/api/v1/particip
 
   return {
     summary: () => get<ParticipantSummary>('/summary'),
+    activity: () => get<BusinessActivity>('/activity'),
     campaign: (id: string) => get<CampaignActivity>(`/campaigns/${id}`),
     list: (filter: ParticipationFilter, offset = 0, limit = PAGE_SIZE) =>
       get<ParticipationPage>('', {

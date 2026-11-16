@@ -9,6 +9,8 @@ export type Participation = {
   name: string;
   campaignId: string;
   campaignTitle: string;
+  /** Which attempt this is (a quiz can be retaken); 1 for a survey. */
+  attempt: number;
   status: ParticipationStatus;
   startedAt: string;
   completedAt: string | null;
@@ -47,6 +49,13 @@ export type CampaignActivity = {
   kind: ParticipationKind;
   started: number;
   completed: number;
+  /** Oldest first, ending today (UTC); days without activity are zeros. */
+  daily: DailyActivity[];
+  quiz: { passed: number; failed: number; correctPercent: number | null } | null;
+};
+
+/** How the whole business is going: the last days of activity and quiz outcomes. */
+export type BusinessActivity = {
   /** Oldest first, ending today (UTC); days without activity are zeros. */
   daily: DailyActivity[];
   quiz: { passed: number; failed: number; correctPercent: number | null } | null;

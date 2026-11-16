@@ -31,6 +31,8 @@ export default defineNuxtConfig({
   },
   routeRules: {
     '/': { redirect: { to: '/discover', statusCode: 302 } },
+    // Analytics moved onto the overview; old links and bookmarks still arrive somewhere useful.
+    '/app/analytics': { redirect: { to: '/app', statusCode: 302 } },
     // Public and cacheable: no cookies, no per-user data.
     '/discover': { headers: publicEdge },
     // Authentication pages must never be cached or shared.

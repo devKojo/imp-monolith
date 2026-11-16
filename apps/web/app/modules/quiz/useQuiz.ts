@@ -31,6 +31,7 @@ export function useQuiz() {
     campaign: (slug: string) => api.campaign(slug),
     info: (slug: string) => api.info(slug),
     start: (slug: string) => run(() => api.start(slug, csrf())),
+    retake: (slug: string) => run(() => api.retake(slug, csrf())),
     current: (slug: string) => run(() => api.current(slug)),
     answer: (slug: string, questionId: string, choiceIndex: number) =>
       run(() => api.answer(slug, questionId, choiceIndex, csrf())),
