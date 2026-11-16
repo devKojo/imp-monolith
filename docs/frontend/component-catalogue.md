@@ -4,14 +4,14 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-68 components.
+69 components.
 
 ## Foundation
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
-| `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiActionMenu`, `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
 | `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
 | `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
 | `UiCard` | Bordered surface with optional heading; the base for panels, prize cards and media cards. | - | `UiCampaignCard`, `UiCaptchaWrapper`, `UiDrawProofPanel`, `UiFeatureTile`, `UiRewardCard` | Spec 3.4 |
@@ -23,7 +23,8 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDialog`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPagination`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
+| `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiActionMenu`, `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDialog`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPagination`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
+| `UiActionMenu` | One "more actions" menu for a table row or card: links and actions, a danger style, drawn above the table so it is never clipped. | `UiButton`, `UiIcon`, `UiLink` | - | UI-DSH-04, UI-A11Y-05 |
 | `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
 | `UiPermissionGate` | Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule. | `UiCopyButton`, `UiIcon` | - | UI-DSH-03, Spec 7.3 |
 
@@ -116,9 +117,9 @@
 
 ## Most reused
 
-- `UiIcon`: used by 28 components
-- `UiButton`: used by 25 components
-- `UiLink`: used by 8 components
+- `UiIcon`: used by 29 components
+- `UiButton`: used by 26 components
+- `UiLink`: used by 9 components
 - `UiBadge`: used by 8 components
 - `UiLiveRegion`: used by 6 components
 - `UiProgress`: used by 5 components

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import UiActionMenu from '../../components/UiActionMenu.vue';
 import UiButton from '../../components/UiButton.vue';
 import UiCopyButton from '../../components/UiCopyButton.vue';
 import UiPermissionGate from '../../components/UiPermissionGate.vue';
@@ -14,6 +15,19 @@ const activated = ref(false);
 </script>
 
 <template>
+  <GalleryBlock name="UiActionMenu">
+    <UiActionMenu
+      label="Actions for Black Friday Quiz"
+      :items="[
+        { id: 'edit', label: 'Edit', icon: 'pencil', to: '/app/campaigns/1' },
+        { id: 'page', label: 'View page', icon: 'external', to: '/c/black-friday' },
+        { id: 'share', label: 'Share link', icon: 'share' },
+        { id: 'pause', label: 'Pause', icon: 'pause', disabled: true },
+        { id: 'delete', label: 'Delete', icon: 'trash', tone: 'danger', separatorBefore: true },
+      ]"
+    />
+  </GalleryBlock>
+
   <GalleryBlock name="UiButton">
     <div class="demo-row">
       <UiButton>Publish campaign</UiButton>

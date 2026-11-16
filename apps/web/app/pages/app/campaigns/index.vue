@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { useToast } from '@imp/ui/app/composables/useToast';
+import type { ActionItem } from '@imp/ui/app/components/UiActionMenu.vue';
 import { t, type AppTextKey } from '../../../i18n';
 import { toApiError } from '../../../modules/auth/errors';
 import BusinessShell from '../../../modules/business/components/BusinessShell.vue';
@@ -153,6 +154,77 @@ const unarchive = (row: { id: string; version: number }) =>
     toast.push(t('cmp.unarchivedDone'), 'info');
   });
 
+type Row = (typeof rows.value)[number];
+
+/** The actions of one row, as the menu lists them: links first, then what changes the campaign. */
+function menuItems(cell: Record<string, unknown>): ActionItem[] {
+  const row = cell as Row;
+  const live = row.status === 'LIVE' || row.status === 'SCHEDULED' || row.status === 'PAUSED';
+  const editable = canManage && row.status === 'DRAFT' && !row.archived;
+  return [
+    {
+      id: 'open',
+      label: editable ? t('cmp.edit') : t('cmp.view'),
+      icon: editable ? 'pencil' : 'eye',
+      to: `/app/campaigns/${row.id}`,
+    },
+    ...(row.slug
+      ? [
+          {
+            id: 'page',
+            label: t('cmp.viewPage'),
+            icon: 'external' as const,
+            to: pagePath(row.slug),
+          },
+          { id: 'share', label: t('cmp.share'), icon: 'share' as const },
+        ]
+      : []),
+    ...(canOperate && live
+      ? [
+          {
+            id: 'pause',
+            label: row.status === 'PAUSED' ? t('cmp.resume') : t('cmp.pause'),
+            icon: (row.status === 'PAUSED' ? 'zap' : 'pause') as 'zap' | 'pause',
+          },
+        ]
+      : []),
+    ...(canManage ? [{ id: 'duplicate', label: t('cmp.duplicate'), icon: 'copy' as const }] : []),
+    ...(canManage && row.archived
+      ? [{ id: 'unarchive', label: t('cmp.unarchive'), icon: 'refresh' as const }]
+      : canManage && row.archivable
+        ? [{ id: 'archive', label: t('cmp.archive'), icon: 'box' as const }]
+        : []),
+    ...(canManage && row.status === 'DRAFT'
+      ? [
+          {
+            id: 'delete',
+            label: t('cmp.delete'),
+            icon: 'trash' as const,
+            tone: 'danger' as const,
+            separatorBefore: true,
+          },
+        ]
+      : []),
+  ];
+}
+
+// One share dialog for the whole table, opened by the "Share link" item of a row.
+const sharing = ref<{ slug: string; title: string } | null>(null);
+const shareOpen = ref(false);
+
+function onAction(id: string, cell: Record<string, unknown>) {
+  const row = cell as Row;
+  const ref = { id: row.id, version: row.version };
+  if (id === 'share' && row.slug) {
+    sharing.value = { slug: row.slug, title: row.name };
+    shareOpen.value = true;
+  } else if (id === 'pause') void togglePause({ ...ref, status: row.status });
+  else if (id === 'duplicate') void copy(row.id);
+  else if (id === 'archive') void archive(ref);
+  else if (id === 'unarchive') void unarchive(ref);
+  else if (id === 'delete') toDelete.value = { id: row.id, name: row.name };
+}
+
 const toDelete = ref<{ id: string; name: string } | null>(null);
 const deleteOpen = computed({
   get: () => toDelete.value !== null,
@@ -227,72 +299,11 @@ const confirmDelete = () =>
           <UiStatusChip vocabulary="campaign" :status="String(row.status)" />
         </template>
         <template #cell-actions="{ row }">
-          <span class="actions">
-            <UiButton :to="`/app/campaigns/${String(row.id)}`" variant="tertiary" size="xs">
-              {{
-                canManage && row.status === 'DRAFT' && !row.archived ? t('cmp.edit') : t('cmp.view')
-              }}
-            </UiButton>
-            <UiButton
-              v-if="row.slug"
-              :to="pagePath(String(row.slug))"
-              variant="tertiary"
-              size="xs"
-              icon="external"
-            >
-              {{ t('cmp.viewPage') }}<span class="ui-sr-only"> {{ row.name }}</span>
-            </UiButton>
-            <ShareCampaign
-              v-if="row.slug"
-              :slug="String(row.slug)"
-              :title="String(row.name)"
-              compact
-            />
-            <UiButton
-              v-if="
-                canOperate &&
-                (row.status === 'LIVE' || row.status === 'SCHEDULED' || row.status === 'PAUSED')
-              "
-              variant="tertiary"
-              size="xs"
-              @click="
-                togglePause({
-                  id: String(row.id),
-                  version: Number(row.version),
-                  status: String(row.status),
-                })
-              "
-            >
-              {{ row.status === 'PAUSED' ? t('cmp.resume') : t('cmp.pause') }}
-            </UiButton>
-            <UiButton
-              v-if="canManage && row.archived"
-              variant="tertiary"
-              size="xs"
-              @click="unarchive({ id: String(row.id), version: Number(row.version) })"
-            >
-              {{ t('cmp.unarchive') }}<span class="ui-sr-only"> {{ row.name }}</span>
-            </UiButton>
-            <UiButton
-              v-else-if="canManage && row.archivable"
-              variant="tertiary"
-              size="xs"
-              @click="archive({ id: String(row.id), version: Number(row.version) })"
-            >
-              {{ t('cmp.archive') }}<span class="ui-sr-only"> {{ row.name }}</span>
-            </UiButton>
-            <UiButton v-if="canManage" variant="tertiary" size="xs" @click="copy(String(row.id))">
-              {{ t('cmp.duplicate') }}
-            </UiButton>
-            <UiButton
-              v-if="canManage && row.status === 'DRAFT'"
-              variant="tertiary"
-              size="xs"
-              @click="toDelete = { id: String(row.id), name: String(row.name) }"
-            >
-              {{ t('cmp.delete') }}
-            </UiButton>
-          </span>
+          <UiActionMenu
+            :label="t('cmp.actions.for', { name: String(row.name) })"
+            :items="menuItems(row)"
+            @select="(id) => onAction(id, row)"
+          />
         </template>
         <template #empty>
           <UiEmptyState
@@ -323,6 +334,14 @@ const confirmDelete = () =>
         </template>
       </UiDataTable>
     </section>
+
+    <ShareCampaign
+      v-if="sharing"
+      v-model:open="shareOpen"
+      :slug="sharing.slug"
+      :title="sharing.title"
+      :trigger="false"
+    />
 
     <UiConfirmDialog
       v-model:open="deleteOpen"

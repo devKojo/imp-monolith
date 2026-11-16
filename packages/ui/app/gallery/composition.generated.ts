@@ -6,6 +6,14 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiActionMenu": {
+    "composes": [
+      "UiButton",
+      "UiIcon",
+      "UiLink"
+    ],
+    "usedBy": []
+  },
   "UiAuthShell": {
     "composes": [
       "UiBreadcrumbs",
@@ -59,6 +67,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiLink"
     ],
     "usedBy": [
+      "UiActionMenu",
       "UiBanner",
       "UiCampaignCard",
       "UiCaptchaWrapper",
@@ -289,6 +298,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [],
     "usedBy": [
       "UiAccordion",
+      "UiActionMenu",
       "UiBadge",
       "UiBanner",
       "UiBreadcrumbs",
@@ -339,6 +349,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiIcon"
     ],
     "usedBy": [
+      "UiActionMenu",
       "UiBreadcrumbs",
       "UiButton",
       "UiConsentGroup",

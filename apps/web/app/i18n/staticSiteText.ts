@@ -572,6 +572,8 @@ export const staticSiteText = {
   'participants.col.type': 'Type',
   'participants.col.actions': 'Actions',
   'participants.view': 'View',
+  'participants.actions.for': 'Actions for {name}',
+  'cmp.actions.for': 'Actions for {name}',
   'participants.passed': 'Passed',
   'participants.notPassed': 'Not passed',
   'participants.dialog.title': 'Participation summary',

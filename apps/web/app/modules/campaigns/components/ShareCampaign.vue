@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { t } from '../../../i18n';
 import { pageUrl } from '../publicPage';
 
@@ -7,7 +7,8 @@ import { pageUrl } from '../publicPage';
  * "Share link" for a running campaign: opens a dialog with the public address, a copy button and, where
  * the device offers one, the system share sheet. Used in the campaign library, the builder and on the
  * public page itself. The address is made in the browser from the site's own origin, so it is always
- * the one the visitor can open.
+ * the one the visitor can open. The dialog can also be opened from elsewhere (a row's actions menu) with
+ * `v-model:open` and `:trigger="false"`.
  */
 const props = withDefaults(
   defineProps<{
@@ -17,19 +18,26 @@ const props = withDefaults(
     size?: 'xs' | 'sm' | 'md' | 'lg';
     /** Shorter label, for a row of actions. */
     compact?: boolean;
+    /** Show the "Share" button. Off when the dialog is opened by something else. */
+    trigger?: boolean;
   }>(),
-  { variant: 'tertiary', size: 'xs', compact: false },
+  { variant: 'tertiary', size: 'xs', compact: false, trigger: true },
 );
 
-const open = ref(false);
+const open = defineModel<boolean>('open', { default: false });
 const url = ref('');
 const canShare = ref(false);
 
-function show() {
-  url.value = pageUrl(window.location.origin, props.slug);
-  canShare.value = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-  open.value = true;
-}
+// The address is made when the dialog opens, from the site's own origin.
+watch(
+  open,
+  (isOpen) => {
+    if (!isOpen) return;
+    url.value = pageUrl(window.location.origin, props.slug);
+    canShare.value = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  },
+  { immediate: true },
+);
 
 async function nativeShare() {
   try {
@@ -45,7 +53,7 @@ async function nativeShare() {
 
 <template>
   <span class="share">
-    <UiButton :variant="variant" :size="size" icon="share" @click="show">
+    <UiButton v-if="trigger" :variant="variant" :size="size" icon="share" @click="open = true">
       {{ compact ? t('cmp.share') : t('pub.share') }}
       <span class="ui-sr-only"> {{ title }}</span>
     </UiButton>

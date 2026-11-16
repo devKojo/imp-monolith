@@ -229,10 +229,11 @@ const started = computed(() => summary.value?.started ?? 0);
             </span>
           </template>
           <template #cell-actions="{ row }">
-            <UiButton variant="tertiary" size="xs" icon="eye" @click="view(String(row.id))">
-              {{ t('participants.view') }}
-              <span class="ui-sr-only">{{ row.name }}</span>
-            </UiButton>
+            <UiActionMenu
+              :label="t('participants.actions.for', { name: String(row.name) })"
+              :items="[{ id: 'view', label: t('participants.view'), icon: 'eye' }]"
+              @select="view(String(row.id))"
+            />
           </template>
           <template #empty>
             <UiEmptyState

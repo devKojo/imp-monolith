@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
+import type { ActionItem } from '@imp/ui/app/components/UiActionMenu.vue';
 import { t, type AppTextKey } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { SIGNIN } from '../../modules/auth/constants';
@@ -10,6 +11,7 @@ import { ROLE_LABELS } from '../../modules/auth/validation';
 import { campaignErrorKey } from '../../modules/campaigns/errors';
 import { browserZone } from '../../modules/campaigns/logic';
 import type { CampaignSummary } from '../../modules/campaigns/types';
+import { isPublicNow, pagePath } from '../../modules/campaigns/publicPage';
 import { useCampaigns } from '../../modules/campaigns/useCampaigns';
 import { CONSOLE_PAGE_SIZE, pageSlice } from '../../utils/paginate';
 import type { ParticipantSummary } from '../../modules/participants/types';
@@ -111,6 +113,7 @@ const rows = computed(() =>
         ? t(`tpl.archetype.${c.template.archetype}` as AppTextKey)
         : t('cmp.noTemplate'),
       status: c.status,
+      slug: isPublicNow(c, new Date()) ? c.slug : null,
       closes: c.endAt ? formatInZone(new Date(c.endAt), zone) : t('cmp.noClose'),
     })),
 );
@@ -120,6 +123,24 @@ watch([query, status], () => (page.value = 1));
 const filtering = computed(() => query.value.trim() !== '' || status.value !== 'all');
 const actionLabel = (s: string) =>
   s === 'DRAFT' ? t('console.table.edit') : t('console.table.view');
+const menuItems = (row: Record<string, unknown>): ActionItem[] => [
+  {
+    id: 'open',
+    label: actionLabel(String(row.status)),
+    icon: row.status === 'DRAFT' ? 'pencil' : 'eye',
+    to: `/app/campaigns/${String(row.id)}`,
+  },
+  ...(row.slug
+    ? [
+        {
+          id: 'page',
+          label: t('cmp.viewPage'),
+          icon: 'external' as const,
+          to: pagePath(String(row.slug)),
+        },
+      ]
+    : []),
+];
 
 // ---- starting a campaign
 const problem = ref('');
@@ -252,9 +273,10 @@ async function onSwitch(membershipId: string) {
             <UiStatusChip vocabulary="campaign" :status="String(row.status)" />
           </template>
           <template #cell-actions="{ row }">
-            <UiButton :to="`/app/campaigns/${row.id}`" variant="tertiary" size="xs">
-              {{ actionLabel(String(row.status)) }}
-            </UiButton>
+            <UiActionMenu
+              :label="t('cmp.actions.for', { name: String(row.name) })"
+              :items="menuItems(row)"
+            />
           </template>
           <template #empty>
             <UiEmptyState

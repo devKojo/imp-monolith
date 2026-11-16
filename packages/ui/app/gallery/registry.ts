@@ -83,6 +83,16 @@ export const registry: ComponentEntry[] = [
     a11y: 'Loading keeps width and sets aria-busy; the disabled reason is visible text, not a tooltip.',
   },
   {
+    name: 'UiActionMenu',
+    category: 'Actions',
+    summary:
+      'One "more actions" menu for a table row or card: links and actions, a danger style, drawn above the table so it is never clipped.',
+    specRefs: ['UI-DSH-04', 'UI-A11Y-05'],
+    states: ['closed', 'open', 'danger item', 'disabled item', 'opens upward'],
+    a11y: 'A button named for what the actions are for, aria-haspopup and aria-expanded; role menu with menuitems; arrows, Home, End, Enter and Escape; focus returns to the button.',
+    origin: 'campaign, overview and participant tables',
+  },
+  {
     name: 'UiCopyButton',
     category: 'Actions',
     summary: 'Copy a value to the clipboard and announce it.',
