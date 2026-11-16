@@ -247,6 +247,8 @@ model Campaign {
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
   launchedAt  DateTime?      @map("launched_at") @db.Timestamptz
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+  /// Set when the business archives the campaign (put away, not deleted); null otherwise.
+  archivedAt  DateTime?      @map("archived_at") @db.Timestamptz
   /// Settings the campaign type uses, e.g. {"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}.
   settings    Json           @default("{}")
 
@@ -260,6 +262,7 @@ model Campaign {
   @@index([tenantId, status])
   @@index([tenantId, updatedAt])
   @@index([tenantId, templateId])
+  @@index([tenantId, archivedAt])
   @@map("campaigns")
 }
 

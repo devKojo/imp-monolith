@@ -70,6 +70,11 @@ export const listQuerySchema = z
   .object({
     status: z.enum(STATUSES).optional(),
     q: z.string().trim().max(LIMITS.titleMax).optional(),
+    /** `true` lists the archived campaigns; by default they are left out. */
+    archived: z
+      .enum(['true', 'false'])
+      .transform((v) => v === 'true')
+      .optional(),
   })
   .strict();
 

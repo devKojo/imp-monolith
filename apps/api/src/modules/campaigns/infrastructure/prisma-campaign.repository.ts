@@ -30,6 +30,7 @@ function summaryOf(
     endAt: iso(r.endAt),
     version: r.version,
     updatedAt: r.updatedAt.toISOString(),
+    archivedAt: iso(r.archivedAt),
     prizeCount: r._count.prizes,
   };
 }
@@ -80,6 +81,7 @@ function detailOf(r: Row): StoredCampaign {
     version: r.version,
     updatedAt: r.updatedAt.toISOString(),
     launchedAt: iso(r.launchedAt),
+    archivedAt: iso(r.archivedAt),
   };
 }
 
@@ -248,6 +250,36 @@ export class PrismaCampaignRepository implements CampaignRepository {
     });
   }
 
+  setArchived(
+    ctx: TenantContext,
+    id: string,
+    expectedVersion: number,
+    archived: boolean,
+  ): Promise<WriteResult> {
+    return withTenant(this.db, ctx, async (tx) => {
+      const updated = await tx.campaign.updateMany({
+        where: {
+          id,
+          tenantId: ctx.tenantId,
+          deletedAt: null,
+          version: expectedVersion,
+          archivedAt: archived ? null : { not: null },
+        },
+        data: { archivedAt: archived ? new Date() : null, version: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        const current = await tx.campaign.findFirst({
+          where: { id, tenantId: ctx.tenantId, deletedAt: null },
+          select: { archivedAt: true },
+        });
+        if (!current) return { kind: 'not_found' };
+        // Already what was asked: say so; otherwise someone changed it since the caller read it.
+        return { kind: (current.archivedAt !== null) === archived ? 'wrong_state' : 'conflict' };
+      }
+      return this.finish(tx, ctx, id, archived ? 'campaign.archived' : 'campaign.unarchived');
+    });
+  }
+
   duplicate(
     ctx: TenantContext,
     id: string,
@@ -318,6 +350,8 @@ export class PrismaCampaignRepository implements CampaignRepository {
       id,
       tenantId: ctx.tenantId,
       deletedAt: null,
+      // An archived campaign is put away: it cannot be edited or launched until it is unarchived.
+      archivedAt: null,
       version,
       status: { in: [...statuses] },
     };
@@ -332,9 +366,10 @@ export class PrismaCampaignRepository implements CampaignRepository {
   ): Promise<WriteResult> {
     const current = await tx.campaign.findFirst({
       where: { id, tenantId: ctx.tenantId, deletedAt: null },
-      select: { status: true },
+      select: { status: true, archivedAt: true },
     });
     if (!current) return { kind: 'not_found' };
+    if (current.archivedAt !== null) return { kind: 'wrong_state' };
     return { kind: allowed.includes(current.status) ? 'conflict' : 'wrong_state' };
   }
 

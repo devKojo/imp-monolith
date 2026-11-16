@@ -69,6 +69,8 @@ export type StoredCampaign = {
   version: number;
   updatedAt: string;
   launchedAt: string | null;
+  /** When it was archived; null if it is not. Archived campaigns are hidden from the default list. */
+  archivedAt: string | null;
 };
 export type StoredSummary = Omit<
   StoredCampaign,

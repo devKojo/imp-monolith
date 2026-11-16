@@ -17,7 +17,7 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
 
   find(query: PublicQuery): Promise<PublicRow[]> {
     const and: Prisma.CampaignWhereInput[] = [
-      { deletedAt: null, slug: { not: null }, endAt: { gt: query.now } },
+      { deletedAt: null, archivedAt: null, slug: { not: null }, endAt: { gt: query.now } },
       { OR: [{ status: 'LIVE' }, { status: 'SCHEDULED', startAt: { lte: query.now } }] },
       { business: { status: { in: ['PENDING', 'ACTIVE'] } } },
     ];
