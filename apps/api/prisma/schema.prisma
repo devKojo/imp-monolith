@@ -376,6 +376,7 @@ model QuizAttempt {
 
   @@unique([tenantId, id])
   @@unique([tenantId, campaignId, userId])
+  @@index([tenantId, userId])
   @@map("quiz_attempts")
 }
 
@@ -413,6 +414,7 @@ model SurveyResponse {
 
   @@unique([tenantId, id])
   @@unique([tenantId, campaignId, userId])
+  @@index([tenantId, userId])
   @@map("survey_responses")
 }
 

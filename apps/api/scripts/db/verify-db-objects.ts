@@ -32,6 +32,7 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['businesses', 'tenant_isolation'],
   ['memberships', 'tenant_isolation'],
   ['users', 'tenant_member_select'],
+  ['users', 'tenant_participant_select'],
   ['outbox_events', 'tenant_insert'],
   ['outbox_events', 'system_all'],
   ['audit_log', 'tenant_select'],

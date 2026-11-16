@@ -8,6 +8,7 @@ import type { CampaignsModule } from '@/modules/campaigns';
 import type { TemplatesModule } from '@/modules/templates';
 import type { QuizModule } from '@/modules/quiz';
 import type { SurveyModule } from '@/modules/survey';
+import type { ParticipantsModule } from '@/modules/participants';
 
 /** Composition root: wires modules together. Register new modules here. */
 export async function createApp(deps: {
@@ -17,6 +18,7 @@ export async function createApp(deps: {
   campaigns?: CampaignsModule;
   quiz?: QuizModule;
   survey?: SurveyModule;
+  participants?: ParticipantsModule;
 }) {
   const app = express();
   app.use(express.json());
@@ -34,6 +36,7 @@ export async function createApp(deps: {
     app.use(deps.quiz.participationBasePath, deps.quiz.participationRouter);
     app.use(deps.quiz.publicBasePath, deps.quiz.publicRouter);
   }
+  if (deps.participants) app.use(deps.participants.basePath, deps.participants.router);
   if (deps.survey) {
     app.use(deps.survey.participationBasePath, deps.survey.participationRouter);
     app.use(deps.survey.publicBasePath, deps.survey.publicRouter);
