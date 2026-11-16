@@ -60,12 +60,14 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
           title: true,
           summary: true,
           endAt: true,
+          startAt: true,
           template: { select: { archetype: true } },
           business: { select: { name: true } },
           prizes: {
             orderBy: { position: 'asc' },
-            take: 1,
-            select: { name: true, valueLabel: true },
+            // The listing shows one prize; a campaign's own page shows every tier.
+            ...(query.slug ? {} : { take: 1 }),
+            select: { name: true, valueLabel: true, winners: true, description: true },
           },
         },
       });
@@ -81,6 +83,8 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
                 archetype: r.template.archetype.toLowerCase(),
                 businessName: r.business.name,
                 prize: r.prizes[0] ?? null,
+                startAt: r.startAt,
+                prizes: r.prizes,
               },
             ]
           : [],

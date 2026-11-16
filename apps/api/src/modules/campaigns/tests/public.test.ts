@@ -14,6 +14,7 @@ import {
   decodeCursor,
   encodeCursor,
   toPublic,
+  toPublicDetail,
   type PublicRow,
 } from '../domain/public';
 
@@ -71,6 +72,19 @@ describe('mapping', () => {
     });
     expect(toPublic(row(1, { prize: { name: '', valueLabel: '' } }))).not.toHaveProperty('prize');
     expect(toPublic(row(1))).not.toHaveProperty('prize');
+  });
+
+  it("adds every prize tier and the start to one campaign's page, and nothing else", () => {
+    const tier = { name: 'Grand', valueLabel: '5,000', winners: 1, description: 'Cash' };
+    const detail = toPublicDetail(
+      row(1, { prizes: [tier], startAt: new Date('2026-11-01T00:00:00Z') }),
+    );
+    expect(detail.prizes).toEqual([tier]);
+    expect(detail.startsAt).toBe('2026-11-01T00:00:00.000Z');
+    expect(toPublicDetail(row(1))).toMatchObject({ prizes: [], startsAt: null });
+    expect(Object.keys(detail).sort()).toEqual(
+      [...Object.keys(toPublic(row(1))), 'prizes', 'startsAt'].sort(),
+    );
   });
 
   it('gives only public fields, with the end as an ISO instant', () => {

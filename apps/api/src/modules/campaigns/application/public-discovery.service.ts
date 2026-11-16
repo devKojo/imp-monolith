@@ -5,8 +5,10 @@ import {
   decodeCursor,
   encodeCursor,
   toPublic,
+  toPublicDetail,
   type Cursor,
   type PublicCampaign,
+  type PublicCampaignDetail,
   type PublicRow,
   type PublicType,
 } from '../domain/public';
@@ -63,9 +65,9 @@ export class PublicDiscoveryService {
   }
 
   /** One running campaign by its address. Anything not public is the same "not found". */
-  async get(slug: string): Promise<PublicCampaign> {
+  async get(slug: string): Promise<PublicCampaignDetail> {
     const [row] = await this.repo.find({ slug, limit: 1, now: this.now() });
     if (!row) throw new NotFoundError('Campaign not found');
-    return toPublic(row);
+    return toPublicDetail(row);
   }
 }
