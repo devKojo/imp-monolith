@@ -11,12 +11,15 @@ import { campaignErrorKey } from '../../modules/campaigns/errors';
 import { browserZone } from '../../modules/campaigns/logic';
 import type { CampaignSummary } from '../../modules/campaigns/types';
 import { useCampaigns } from '../../modules/campaigns/useCampaigns';
+import type { ParticipantSummary } from '../../modules/participants/types';
+import { useParticipants } from '../../modules/participants/useParticipants';
 
 /**
  * Business console (client-rendered, no-store: private data never passes the SSR tier). Who you
  * are, the active business (derived by the server from the session's membership), switching
  * business, signing out and the campaigns shown here are all real, read from the campaigns API.
- * Figures with no backing feature yet (participants, draw health, the next draw) are not shown.
+ * Figures with no backing feature yet (draw health, the next draw) are not shown. The participants
+ * figure comes from the participants API and is shown only to roles that may see participants.
  */
 definePageMeta({ middleware: 'auth', portal: 'business' });
 useHead({ title: t('console.title') });
@@ -24,6 +27,7 @@ useHead({ title: t('console.title') });
 const auth = useAuth();
 const session = auth.session;
 const store = useCampaigns();
+const people = useParticipants();
 const zone = browserZone();
 const failure = ref<AuthFailure | null>(null);
 const switching = ref(false);
@@ -52,7 +56,18 @@ async function load() {
     loading.value = false;
   }
 }
-onMounted(load);
+
+// ---- participants: a headline figure, only for roles that may see them. A failure leaves a dash.
+const participants = ref<ParticipantSummary | null>(null);
+async function loadParticipants() {
+  participants.value = null;
+  if (!people.canView.value) return;
+  participants.value = await people.summary().catch(() => null);
+}
+onMounted(() => {
+  void load();
+  void loadParticipants();
+});
 
 const count = (s: CampaignSummary['status']) => items.value.filter((c) => c.status === s).length;
 const live = computed(() => count('LIVE'));
@@ -124,7 +139,7 @@ async function onSwitch(membershipId: string) {
   switching.value = true;
   try {
     await auth.switchTenant(membershipId);
-    await load(); // the campaigns belong to the business that is now active
+    await Promise.all([load(), loadParticipants()]); // both belong to the business that is now active
   } catch (e) {
     const f = classifyAuthError(toApiError(e));
     if (f.kind === 'unauthenticated') await navigateTo(SIGNIN.business);
@@ -185,6 +200,15 @@ async function onSwitch(membershipId: string) {
         <UiStatCard
           :label="t('console.stat.draftsLabel')"
           :value="loading ? '-' : String(drafts)"
+        />
+        <UiStatCard
+          v-if="people.canView.value"
+          :label="t('console.stat.participants')"
+          :value="participants ? String(participants.participants) : '-'"
+          :suffix="
+            participants ? t('console.stat.participants.suffix', { n: participants.completed }) : ''
+          "
+          icon="users"
         />
       </section>
 
@@ -259,7 +283,7 @@ async function onSwitch(membershipId: string) {
 }
 @media (min-width: 768px) {
   .stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   }
 }
 .table-card {

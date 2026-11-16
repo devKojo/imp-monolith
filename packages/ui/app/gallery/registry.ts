@@ -263,7 +263,7 @@ export const registry: ComponentEntry[] = [
     category: 'Overlays',
     summary: 'Base modal on native <dialog>: focus trap, Escape, focus return.',
     specRefs: ['Spec 5', 'UI-A11Y-03'],
-    states: ['closed', 'open', 'persistent'],
+    states: ['closed', 'open', 'persistent', 'wide'],
     a11y: 'Title is an h2; focus returns to the trigger; no click-outside dismissal.',
   },
   {

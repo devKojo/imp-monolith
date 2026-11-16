@@ -4,6 +4,7 @@ import { SmtpMailer, createIdentityModule } from './modules/identity';
 import { createCampaignsModule } from './modules/campaigns';
 import { createQuizModule } from './modules/quiz';
 import { createSurveyModule } from './modules/survey';
+import { createParticipantsModule } from './modules/participants';
 import { createTemplatesModule } from './modules/templates';
 import { createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
@@ -34,8 +35,9 @@ const identity = createIdentityModule({
 const templates = createTemplatesModule({ db, identity });
 const quiz = createQuizModule({ db, identity });
 const survey = createSurveyModule({ db, identity });
+const participants = createParticipantsModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
-const app = await createApp({ bus, identity, templates, campaigns, quiz, survey });
+const app = await createApp({ bus, identity, templates, campaigns, quiz, survey, participants });
 const server = app.listen(env.PORT, () => console.log(`API listening on :${env.PORT}`));
 
 const shutdown = async () => {
