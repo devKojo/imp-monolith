@@ -342,6 +342,16 @@ export const registry: ComponentEntry[] = [
     a11y: 'aria-expanded buttons inside headings.',
   },
   {
+    name: 'UiCarousel',
+    category: 'Navigation',
+    summary:
+      'A titled section showing one slide at a time, with previous/next buttons and a dot per slide.',
+    specRefs: ['UI-PRT-01', 'UI-A11Y-05'],
+    states: ['one slide', 'several slides'],
+    a11y: 'Labelled section; real buttons with labels; current dot has aria-current; changes announced politely; nothing auto-advances.',
+    origin: 'participant dashboard (available campaigns)',
+  },
+  {
     name: 'UiBreadcrumbs',
     category: 'Navigation',
     summary: 'Breadcrumb trail with the current page marked.',

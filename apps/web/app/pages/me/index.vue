@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
+import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
+import { useOpenCampaigns } from '../../modules/participant/useOpenCampaigns';
 import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.vue';
 
 /**
@@ -16,6 +18,7 @@ useHead({ title: t('me.title') });
 const auth = useAuth();
 const session = auth.session;
 const loggingOut = ref(false);
+const open = useOpenCampaigns();
 
 const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0] ?? '');
 const nav = [
@@ -57,6 +60,12 @@ async function logout() {
       </p>
     </header>
 
+    <section class="open-campaigns">
+      <UiSkeleton v-if="open.pending.value" variant="card" />
+      <UiSystemState v-else-if="open.error.value" kind="generic" @action="open.refresh()" />
+      <CampaignCarousel v-else :campaigns="open.campaigns.value" :now="open.now.value" />
+    </section>
+
     <UiEmptyState :title="t('me.empty.title')" :description="t('me.empty.body')" icon="ticket">
       <UiButton to="/discover">{{ t('me.empty.action') }}</UiButton>
     </UiEmptyState>
@@ -88,6 +97,9 @@ async function logout() {
 }
 .hero__name {
   color: var(--ui-color-action-primary);
+}
+.open-campaigns {
+  margin-block-end: var(--ui-space-8);
 }
 .hero__summary {
   margin: 0;

@@ -10,6 +10,9 @@
  */
 export const en = {
   // generic
+  'carousel.previous': 'Previous slide',
+  'carousel.next': 'Next slide',
+  'carousel.goTo': 'Show slide {n} of {total}',
   'common.required': 'Required',
   'common.optional': 'Optional',
   'common.close': 'Close',
