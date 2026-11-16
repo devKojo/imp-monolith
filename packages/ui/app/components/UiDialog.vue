@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { uiText } from '../composables/useUiText';
 import UiButton from './UiButton.vue';
 
@@ -50,6 +50,10 @@ watch(
   (open) => (open ? show() : hide()),
   { flush: 'post' },
 );
+// A dialog that is mounted already open (for example by a v-if) is shown once it is in the page.
+onMounted(() => {
+  if (props.open) show();
+});
 onBeforeUnmount(() => el.value?.open && hide());
 
 function onCancel(e: Event) {

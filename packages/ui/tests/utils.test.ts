@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatInZone, zonedToInstant } from '../app/utils/datetime';
+import { nextEnabled } from '../app/utils/menu';
 import { formatPhoneForDisplay, maskEmail, maskPhone } from '../app/utils/phone';
 
 describe('phone display helpers (UI-PUB-04, spec 7.4)', () => {
@@ -41,5 +42,24 @@ describe('time zone helpers (UI-BLD-04, UI-I18N-03)', () => {
     const instant = zonedToInstant('2026-11-30', '23:59', 'Africa/Accra')!;
     expect(formatInZone(instant, 'Africa/Accra')).toMatch(/30 Nov.*23:59.*GMT/);
     expect(formatInZone(instant, 'America/New_York')).toMatch(/18:59/);
+  });
+});
+
+describe('menu keyboard movement', () => {
+  const enabled = [true, false, true, true];
+  it('moves through the items and wraps around, skipping disabled ones', () => {
+    expect(nextEnabled(enabled, 0, 'next')).toBe(2);
+    expect(nextEnabled(enabled, 3, 'next')).toBe(0);
+    expect(nextEnabled(enabled, 0, 'previous')).toBe(3);
+    expect(nextEnabled(enabled, 2, 'previous')).toBe(0);
+  });
+  it('jumps to the first and last enabled item', () => {
+    expect(nextEnabled([false, true, true, false], -1, 'first')).toBe(1);
+    expect(nextEnabled([false, true, true, false], -1, 'last')).toBe(2);
+  });
+  it('starts from nothing focused, and handles a menu with nothing to choose', () => {
+    expect(nextEnabled(enabled, -1, 'next')).toBe(0);
+    expect(nextEnabled([false, false], -1, 'next')).toBe(-1);
+    expect(nextEnabled([], -1, 'first')).toBe(-1);
   });
 });
