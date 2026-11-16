@@ -20,6 +20,7 @@ const noStore: RequestHandler = (_req, res, next) => {
  * Read-only, for the signed-in business. Never cached: it holds personal data.
  *
  *   GET /summary   session   counts, and counts per campaign
+ *   GET /activity  session   the whole business over the last 14 days, and quiz outcomes
  *   GET /campaigns/:campaignId   session   how one campaign is going: totals, last 14 days, quiz outcome
  *   GET /          session   participation, newest first (?campaignId=&status=&limit=&offset=)
  */
@@ -30,6 +31,10 @@ export function participantsRouter(service: ParticipantsService, guards: Request
 
   r.get('/summary', requireSession, async (req, res) => {
     res.json(await service.summary(actorOf(req)));
+  });
+
+  r.get('/activity', requireSession, async (req, res) => {
+    res.json(await service.activity(actorOf(req)));
   });
 
   r.get('/campaigns/:campaignId', requireSession, async (req, res) => {

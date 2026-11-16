@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createTenantContext, type TenantContext } from '@/shared/database';
 import {
   AttemptClosedError,
+  AttemptsExhaustedError,
   InvalidAnswerError,
   NoAttemptError,
   ParticipantOnlyError,
@@ -68,6 +69,7 @@ export class QuizService {
       questionCount: def.questions.length,
       timeLimitMinutes: def.settings.timeLimitMinutes,
       passPercent: def.settings.passPercent,
+      maxAttempts: def.settings.maxAttempts,
     };
   }
 
@@ -75,6 +77,8 @@ export class QuizService {
     const finished = row.submittedAt !== null && row.score !== null && row.total !== null;
     return {
       id: row.id,
+      attemptNumber: row.attemptNumber,
+      maxAttempts: def.settings.maxAttempts,
       startedAt: row.startedAt.toISOString(),
       expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
       submittedAt: row.submittedAt ? row.submittedAt.toISOString() : null,
@@ -130,18 +134,39 @@ export class QuizService {
       : row;
   }
 
+  /** The first attempt, or the one the participant already has (resumed, or finished with its result). */
   async start(participant: Participant | null, slug: string): Promise<AttemptView> {
     const { found, ctx, def, userId } = await this.enter(participant, slug);
-    const now = this.now();
     const existing = await this.repo.attempt(ctx, found.campaignId, userId);
     const row =
       existing ??
       (await this.repo.startAttempt(ctx, {
         campaignId: found.campaignId,
         userId,
-        expiresAt: attemptDeadline(now, def.settings, found.endAt),
+        attemptNumber: 1,
+        expiresAt: attemptDeadline(this.now(), def.settings, found.endAt),
       }));
     return this.view(await this.fresh(ctx, found.campaignId, userId, row, def), def);
+  }
+
+  /**
+   * Starts the next attempt after one has been finished, while attempts are left. If the latest attempt is
+   * still open it is returned instead, so a double click never skips ahead. Safe to repeat.
+   */
+  async retake(participant: Participant | null, slug: string): Promise<AttemptView> {
+    const { found, ctx, def, userId } = await this.enter(participant, slug);
+    const latest = await this.repo.attempt(ctx, found.campaignId, userId);
+    if (!latest) throw new NoAttemptError();
+    const current = await this.fresh(ctx, found.campaignId, userId, latest, def);
+    if (!current.submittedAt) return this.view(current, def);
+    if (current.attemptNumber >= def.settings.maxAttempts) throw new AttemptsExhaustedError();
+    const next = await this.repo.startAttempt(ctx, {
+      campaignId: found.campaignId,
+      userId,
+      attemptNumber: current.attemptNumber + 1,
+      expiresAt: attemptDeadline(this.now(), def.settings, found.endAt),
+    });
+    return this.view(next, def);
   }
 
   async current(participant: Participant | null, slug: string): Promise<AttemptView> {

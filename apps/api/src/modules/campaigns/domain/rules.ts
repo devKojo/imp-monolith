@@ -184,7 +184,13 @@ export function normalizeSettings(
   quiz: QuizSettings | null | undefined,
 ) {
   return template?.archetype === 'quiz'
-    ? { quiz: quiz ?? { timeLimitMinutes: null, passPercent: FIELD_LIMITS.defaultPassPercent } }
+    ? {
+        quiz: quiz ?? {
+          timeLimitMinutes: null,
+          passPercent: FIELD_LIMITS.defaultPassPercent,
+          maxAttempts: FIELD_LIMITS.defaultMaxAttempts,
+        },
+      }
     : {};
 }
 

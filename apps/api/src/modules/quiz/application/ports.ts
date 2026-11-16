@@ -12,11 +12,12 @@ export interface QuizRepository {
 
   /** A running quiz campaign by its public address, or null. */
   locate(slug: string, now: Date): Promise<RunnableQuiz | null>;
+  /** The participant's latest attempt (the highest number), or null before the first. */
   attempt(ctx: TenantContext, campaignId: string, userId: string): Promise<AttemptRow | null>;
-  /** Starts the participant's attempt, or returns the one that already exists (never two). */
+  /** Starts attempt number `attemptNumber`, or returns the one that already exists (never two with the same number). */
   startAttempt(
     ctx: TenantContext,
-    input: { campaignId: string; userId: string; expiresAt: Date | null },
+    input: { campaignId: string; userId: string; attemptNumber: number; expiresAt: Date | null },
   ): Promise<AttemptRow>;
   saveAnswer(
     ctx: TenantContext,

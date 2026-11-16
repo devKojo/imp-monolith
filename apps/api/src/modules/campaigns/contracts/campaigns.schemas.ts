@@ -33,6 +33,13 @@ export const settingsSchema = z
       .object({
         timeLimitMinutes: z.number().int().min(1).max(FIELD_LIMITS.timeLimitMax).nullable(),
         passPercent: z.number().int().min(1).max(100),
+        // Optional so a client that does not know about retakes still saves; one attempt then.
+        maxAttempts: z
+          .number()
+          .int()
+          .min(1)
+          .max(FIELD_LIMITS.maxAttemptsMax)
+          .default(FIELD_LIMITS.defaultMaxAttempts),
       })
       .strict()
       .nullable(),

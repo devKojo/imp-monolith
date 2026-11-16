@@ -7,6 +7,7 @@ const DEFAULT_PASS_PERCENT = 70;
 
 type AttemptWithAnswers = {
   id: string;
+  attemptNumber: number;
   startedAt: Date;
   expiresAt: Date | null;
   submittedAt: Date | null;
@@ -18,6 +19,7 @@ type AttemptWithAnswers = {
 
 const toAttempt = (r: AttemptWithAnswers): AttemptRow => ({
   id: r.id,
+  attemptNumber: r.attemptNumber,
   startedAt: r.startedAt,
   expiresAt: r.expiresAt,
   submittedAt: r.submittedAt,
@@ -49,7 +51,7 @@ export class PrismaQuizRepository implements QuizRepository {
       ]);
       const quiz = (
         campaign?.settings as {
-          quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown };
+          quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown; maxAttempts?: unknown };
         } | null
       )?.quiz;
       return {
@@ -58,6 +60,7 @@ export class PrismaQuizRepository implements QuizRepository {
             typeof quiz?.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
           passPercent:
             typeof quiz?.passPercent === 'number' ? quiz.passPercent : DEFAULT_PASS_PERCENT,
+          maxAttempts: typeof quiz?.maxAttempts === 'number' ? quiz.maxAttempts : 1,
         },
         questions: questions.map((q) => ({
           id: q.id,
@@ -105,6 +108,7 @@ export class PrismaQuizRepository implements QuizRepository {
     return withTenant(this.db, ctx, async (tx) => {
       const row = await tx.quizAttempt.findFirst({
         where: { tenantId: ctx.tenantId, campaignId, userId },
+        orderBy: { attemptNumber: 'desc' },
         include: { answers: { select: { questionId: true, choiceIndex: true } } },
       });
       return row ? toAttempt(row) : null;
@@ -113,23 +117,25 @@ export class PrismaQuizRepository implements QuizRepository {
 
   startAttempt(
     ctx: TenantContext,
-    input: { campaignId: string; userId: string; expiresAt: Date | null },
+    input: { campaignId: string; userId: string; attemptNumber: number; expiresAt: Date | null },
   ): Promise<AttemptRow> {
     return withTenant(this.db, ctx, async (tx) => {
-      // The unique (business, campaign, participant) key makes a double click or a second tab return the
-      // attempt that already exists instead of creating another.
+      // The unique (business, campaign, participant, number) key makes a double click or a second tab return
+      // the attempt that already exists instead of creating another with the same number.
       const row = await tx.quizAttempt.upsert({
         where: {
-          tenantId_campaignId_userId: {
+          tenantId_campaignId_userId_attemptNumber: {
             tenantId: ctx.tenantId,
             campaignId: input.campaignId,
             userId: input.userId,
+            attemptNumber: input.attemptNumber,
           },
         },
         create: {
           tenantId: ctx.tenantId,
           campaignId: input.campaignId,
           userId: input.userId,
+          attemptNumber: input.attemptNumber,
           expiresAt: input.expiresAt,
         },
         update: {},

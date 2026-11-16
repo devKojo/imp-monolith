@@ -269,7 +269,9 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
       templateId: SEEDED.quiz,
     });
     const id = created.body.id as string;
-    expect(created.body.settings).toEqual({ quiz: { timeLimitMinutes: null, passPercent: 70 } });
+    expect(created.body.settings).toEqual({
+      quiz: { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
+    });
 
     const question = (label: string, options: string[], correctIndex: number | null) =>
       field('quiz_question', { label, options, correctIndex, required: true });
@@ -277,7 +279,7 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
       content(SEEDED.quiz, {
         title: 'Tech quiz',
         prizes: [],
-        settings: { quiz: { timeLimitMinutes: 20, passPercent: 60 } },
+        settings: { quiz: { timeLimitMinutes: 20, passPercent: 60, maxAttempts: 1 } },
         fields,
         ...over,
       });
@@ -303,7 +305,9 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
       ]),
     });
     expect(finished.status).toBe(200);
-    expect(finished.body.settings).toEqual({ quiz: { timeLimitMinutes: 20, passPercent: 60 } });
+    expect(finished.body.settings).toEqual({
+      quiz: { timeLimitMinutes: 20, passPercent: 60, maxAttempts: 1 },
+    });
     expect(
       finished.body.fields
         .filter((f: { kind: string }) => f.kind === 'quiz_question')

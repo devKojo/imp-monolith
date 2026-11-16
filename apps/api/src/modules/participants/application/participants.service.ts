@@ -7,6 +7,7 @@ import {
 } from '../domain/errors';
 import type {
   Actor,
+  BusinessActivity,
   CampaignActivity,
   ListQuery,
   ParticipantSummary,
@@ -41,6 +42,10 @@ export class ParticipantsService {
 
   async list(actor: Actor | null, query: ListQuery): Promise<ParticipationPage> {
     return this.repo.list(this.scope(actor), query);
+  }
+
+  async activity(actor: Actor | null): Promise<BusinessActivity> {
+    return this.repo.activity(this.scope(actor), this.now());
   }
 
   async campaign(actor: Actor | null, campaignId: string): Promise<CampaignActivity> {

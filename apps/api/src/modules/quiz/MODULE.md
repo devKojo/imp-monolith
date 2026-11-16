@@ -13,7 +13,7 @@ Not here: the campaign, its questions and settings (`campaigns`), accounts and s
 
 ## Data (tenant tables, RLS forced)
 
-`quiz_attempts` (one per participant per campaign, unique key) and `quiz_answers` (one per question per
+`quiz_attempts` (numbered per participant per campaign, 1 up to the quiz's attempts allowed; unique key on the number) and `quiz_answers` (one per question per
 attempt; a question is a `campaign_fields` row of kind `QUIZ_QUESTION`). Composite FKs keep every row inside one
 business. Attempts and answers are never deleted by the runtime role.
 
@@ -25,13 +25,14 @@ business. Attempts and answers are never deleted by the runtime role.
 
 ## API
 
-| Route                                         | Who                | Notes                                            |
-| --------------------------------------------- | ------------------ | ------------------------------------------------ |
-| `GET /api/v1/public/quiz/:slug`               | public, cacheable  | title, business, counts, rules; never a question |
-| `POST /api/v1/quiz/:slug/attempt`             | participant + csrf | start, or return the existing attempt            |
-| `GET /api/v1/quiz/:slug/attempt`              | participant        | state, questions without answers, saved choices  |
-| `PUT /api/v1/quiz/:slug/attempt/answers/:qid` | participant + csrf | `{ choiceIndex }`; can change until finished     |
-| `POST /api/v1/quiz/:slug/attempt/submit`      | participant + csrf | scores; repeating returns the same result        |
+| Route                                         | Who                | Notes                                                                  |
+| --------------------------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| `GET /api/v1/public/quiz/:slug`               | public, cacheable  | title, business, counts, rules; never a question                       |
+| `POST /api/v1/quiz/:slug/attempt`             | participant + csrf | start, or return the latest attempt                                    |
+| `POST /api/v1/quiz/:slug/attempt/retake`      | participant + csrf | the next attempt once one is finished; `NO_ATTEMPTS_LEFT` at the limit |
+| `GET /api/v1/quiz/:slug/attempt`              | participant        | state, questions without answers, saved choices                        |
+| `PUT /api/v1/quiz/:slug/attempt/answers/:qid` | participant + csrf | `{ choiceIndex }`; can change until finished                           |
+| `POST /api/v1/quiz/:slug/attempt/submit`      | participant + csrf | scores; repeating returns the same result                              |
 
 ## Rules worth knowing
 
@@ -48,9 +49,20 @@ business. Attempts and answers are never deleted by the runtime role.
   read-only public scope, and the business scope is then set from that campaign (never from the request).
   Only that participant's own attempt is read or written.
 
+## Retakes
+
+- The business sets **attempts allowed** on the quiz (1 to 5, `campaigns.settings.quiz.maxAttempts`, default 1, so a
+  quiz made before retakes stays single-attempt). A participant can retake once the latest attempt is finished
+  (submitted, or out of time) and attempts remain; each attempt is its own numbered row with its own answers, time
+  limit and score, and every one is kept.
+- `start` and `GET attempt` always work on the **latest** attempt; only `retake` begins a new one. A retake while the
+  latest attempt is still open returns that attempt, so a double click never skips ahead, and the unique key on the
+  attempt number stops two tabs creating the same attempt twice.
+- A retake needs the campaign to still be running, like any other call here.
+
 ## Not built yet
 
 - Rate limiting on starting attempts and saving answers.
-- Retakes, per-question timers, shuffled order, explanations, results shown to the business.
+- Per-question timers, shuffled order, explanations, results shown to the business.
 - Participant verification beyond the signed-in account (one-time codes), and prizes or draws from a quiz.
 - Events (identifiers only, R-EVT-12) once the outbox publisher exists.

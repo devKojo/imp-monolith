@@ -38,20 +38,32 @@ describe('the clock', () => {
   const campaignEnd = new Date('2026-11-14T10:30:00Z');
 
   it('is the time limit from the moment the attempt started', () => {
-    expect(attemptDeadline(start, { timeLimitMinutes: 10, passPercent: 70 }, campaignEnd)).toEqual(
-      new Date('2026-11-14T10:10:00Z'),
-    );
+    expect(
+      attemptDeadline(
+        start,
+        { timeLimitMinutes: 10, passPercent: 70, maxAttempts: 1 },
+        campaignEnd,
+      ),
+    ).toEqual(new Date('2026-11-14T10:10:00Z'));
   });
 
   it('never runs past the end of the campaign', () => {
-    expect(attemptDeadline(start, { timeLimitMinutes: 60, passPercent: 70 }, campaignEnd)).toEqual(
-      campaignEnd,
-    );
+    expect(
+      attemptDeadline(
+        start,
+        { timeLimitMinutes: 60, passPercent: 70, maxAttempts: 1 },
+        campaignEnd,
+      ),
+    ).toEqual(campaignEnd);
   });
 
   it('has no deadline of its own when untimed', () => {
     expect(
-      attemptDeadline(start, { timeLimitMinutes: null, passPercent: 70 }, campaignEnd),
+      attemptDeadline(
+        start,
+        { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
+        campaignEnd,
+      ),
     ).toBeNull();
   });
 

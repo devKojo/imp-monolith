@@ -3,6 +3,7 @@ import { withTenant, type TenantContext } from '@/shared/database';
 import type { ParticipantsRepository } from '../application/ports';
 import {
   ACTIVITY_DAYS,
+  type BusinessActivity,
   type CampaignActivity,
   type CampaignParticipation,
   type ListQuery,
@@ -76,6 +77,74 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
         started: campaigns.reduce((n, c) => n + c.started, 0),
         completed: campaigns.reduce((n, c) => n + c.completed, 0),
         campaigns,
+      };
+    });
+  }
+
+  activity(ctx: TenantContext, today: Date): Promise<BusinessActivity> {
+    return withTenant(this.db, ctx, async (tx) => {
+      const day = (d: Date) => d.toISOString().slice(0, 10);
+      const end = new Date(
+        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+      );
+      const since = new Date(end.getTime() - (ACTIVITY_DAYS - 1) * 86_400_000);
+      const where = { tenantId: ctx.tenantId };
+
+      type DayRow = { day: string; n: number };
+      const [quizStarted, quizDone, surveyStarted, surveyDone] = await Promise.all([
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM quiz_attempts
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND started_at >= ${since}
+          GROUP BY 1`,
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM quiz_attempts
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND submitted_at >= ${since}
+          GROUP BY 1`,
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM survey_responses
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND started_at >= ${since}
+          GROUP BY 1`,
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM survey_responses
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND submitted_at >= ${since}
+          GROUP BY 1`,
+      ]);
+      const sum = (...lists: DayRow[][]) => {
+        const by = new Map<string, number>();
+        for (const r of lists.flat()) by.set(r.day, (by.get(r.day) ?? 0) + r.n);
+        return by;
+      };
+      const startedBy = sum(quizStarted, surveyStarted);
+      const completedBy = sum(quizDone, surveyDone);
+      const daily = Array.from({ length: ACTIVITY_DAYS }, (_, i) => {
+        const date = day(new Date(since.getTime() + i * 86_400_000));
+        return { date, started: startedBy.get(date) ?? 0, completed: completedBy.get(date) ?? 0 };
+      });
+
+      const [passed, failed, sums] = await Promise.all([
+        tx.quizAttempt.count({ where: { ...where, passed: true } }),
+        tx.quizAttempt.count({ where: { ...where, passed: false } }),
+        tx.quizAttempt.aggregate({
+          where: { ...where, submittedAt: { not: null } },
+          _sum: { score: true, total: true },
+        }),
+      ]);
+      const total = sums._sum.total ?? 0;
+      return {
+        daily,
+        quiz:
+          passed + failed > 0
+            ? {
+                passed,
+                failed,
+                correctPercent:
+                  total > 0 ? Math.round(((sums._sum.score ?? 0) / total) * 100) : null,
+              }
+            : null,
       };
     });
   }
@@ -223,6 +292,7 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
           name: a.user.name,
           campaignId: a.campaign.id,
           campaignTitle: a.campaign.title,
+          attempt: a.attemptNumber,
           status: a.submittedAt ? ('completed' as const) : ('in_progress' as const),
           startedAt: a.startedAt.toISOString(),
           completedAt: a.submittedAt ? a.submittedAt.toISOString() : null,
@@ -238,6 +308,7 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
           name: s.user.name,
           campaignId: s.campaign.id,
           campaignTitle: s.campaign.title,
+          attempt: 1,
           status: s.submittedAt ? ('completed' as const) : ('in_progress' as const),
           startedAt: s.startedAt.toISOString(),
           completedAt: s.submittedAt ? s.submittedAt.toISOString() : null,

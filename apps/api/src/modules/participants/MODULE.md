@@ -8,6 +8,7 @@ module writes nothing and owns no table.
 
 - A summary: different people, how many participations started and completed, and the same per campaign.
 - A list of participation, newest first, filterable by campaign and by status, paged.
+- How the whole business is going over the last days, for the overview charts.
 - How one campaign is going (totals, 14 days of activity, quiz outcome), for the participation summary.
 
 Not here: taking a quiz or survey (`quiz`, `survey`), accounts (`identity`), the campaigns themselves
@@ -39,6 +40,7 @@ active membership, never from the request. Participant accounts and visitors can
 | ------------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/v1/participants/summary`               | business, role above | `participants`, `started`, `completed`, `campaigns[]`                                                                                                          |
 | `GET /api/v1/participants`                       | business, role above | `?campaignId=&status=in_progress\|completed&limit=&offset=` (limit up to 100, default 50); `{ items, total }`                                                  |
+| `GET /api/v1/participants/activity`              | business, role above | the whole business over the last 14 days (UTC) started and completed per day, and quiz passed / failed; for the overview charts                                |
 | `GET /api/v1/participants/campaigns/:campaignId` | business, role above | one campaign's totals, the last 14 days (UTC) started and completed per day, and for a quiz passed / failed and the overall share answered correctly; no names |
 
 All are `Cache-Control: no-store`.

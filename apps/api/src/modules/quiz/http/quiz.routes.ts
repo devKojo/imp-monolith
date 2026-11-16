@@ -17,6 +17,7 @@ const noStore: RequestHandler = (_req, res, next) => {
  * Taking a quiz (a participant). The business is found from the campaign's public address.
  *
  *   POST /:slug/attempt                        session + csrf   start, or resume
+ *   POST /:slug/attempt/retake                 session + csrf   the next attempt, once one is finished
  *   GET  /:slug/attempt                        session
  *   PUT  /:slug/attempt/answers/:questionId    session + csrf
  *   POST /:slug/attempt/submit                 session + csrf
@@ -28,6 +29,10 @@ export function quizParticipationRouter(service: QuizService, guards: RequestHan
   r.post('/:slug/attempt', requireSession, requireCsrfToken, async (req, res) => {
     const { slug } = parse(slugParamSchema, req.params);
     res.json(await service.start(participantOf(req), slug));
+  });
+  r.post('/:slug/attempt/retake', requireSession, requireCsrfToken, async (req, res) => {
+    const { slug } = parse(slugParamSchema, req.params);
+    res.json(await service.retake(participantOf(req), slug));
   });
   r.get('/:slug/attempt', requireSession, async (req, res) => {
     const { slug } = parse(slugParamSchema, req.params);

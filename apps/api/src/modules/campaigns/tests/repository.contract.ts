@@ -193,7 +193,7 @@ export function repositoryContract(
         1,
         content({
           fields,
-          settings: { quiz: { timeLimitMinutes: 12, passPercent: 80 } },
+          settings: { quiz: { timeLimitMinutes: 12, passPercent: 80, maxAttempts: 1 } },
         }),
       );
       expect(saved.kind).toBe('ok');
@@ -206,7 +206,9 @@ export function repositoryContract(
       ]);
       expect(saved.campaign.fields[2]).toMatchObject({ options: ['A', 'B', 'C'], correctIndex: 2 });
       expect(saved.campaign.fields[0]).toMatchObject({ options: [], correctIndex: null });
-      expect(saved.campaign.settings).toEqual({ quiz: { timeLimitMinutes: 12, passPercent: 80 } });
+      expect(saved.campaign.settings).toEqual({
+        quiz: { timeLimitMinutes: 12, passPercent: 80, maxAttempts: 1 },
+      });
       expect(saved.campaign.fields.every((f) => f.id.length > 0)).toBe(true);
 
       const again = await w.repo.saveDraft(
