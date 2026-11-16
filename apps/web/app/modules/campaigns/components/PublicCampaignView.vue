@@ -203,6 +203,10 @@ const hasSections = computed(() => ({
 <style scoped>
 .view {
   display: flex;
+  inline-size: 100%;
+  max-inline-size: 72rem;
+  margin-inline: auto;
+  padding-inline: var(--ui-space-4);
   flex-direction: column;
   gap: var(--ui-space-8);
   margin-block: var(--ui-space-6) var(--ui-space-12);

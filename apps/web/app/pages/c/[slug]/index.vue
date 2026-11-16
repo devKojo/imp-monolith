@@ -89,6 +89,7 @@ const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
 
 <template>
   <UiPublicShell
+    wide
     :brand-name="BRAND_NAME"
     :footer-tagline="footer.tagline"
     :footer-columns="footer.columns"
