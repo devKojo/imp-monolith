@@ -46,6 +46,7 @@ async function logout() {
     :user-name="session.user.name"
     :user-status="session.user.emailVerified ? t('me.verified') : undefined"
     :sign-out-label="loggingOut ? t('me.loggingOut') : t('me.logout')"
+    :portal-label="t('portal.participant')"
     @sign-out="logout"
   >
     <VerifyEmailPrompt class="gap-after" />

@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   durationParts,
   activitySeries,
-  appendPage,
   busiestDay,
   campaignChoices,
   completionPercent,
   dayLabel,
   funnelPoints,
   minutesBetween,
+  outcomePoints,
 } from './logic';
 import { canViewParticipants } from './permissions';
 
@@ -35,16 +35,6 @@ describe('campaignChoices', () => {
       { value: '', label: 'All campaigns' },
       { value: 'a', label: 'A' },
       { value: 'b', label: 'B' },
-    ]);
-  });
-});
-
-describe('appendPage', () => {
-  it('adds new rows after the ones shown and skips any already shown', () => {
-    expect(appendPage([{ id: '1' }, { id: '2' }], [{ id: '2' }, { id: '3' }])).toEqual([
-      { id: '1' },
-      { id: '2' },
-      { id: '3' },
     ]);
   });
 });
@@ -106,5 +96,28 @@ describe('chart helpers', () => {
     expect(durationParts(135)).toEqual({ unit: 'hours', a: 2, b: 15 });
     expect(durationParts(1440)).toEqual({ unit: 'days', a: 1, b: 0 });
     expect(durationParts(3000)).toEqual({ unit: 'days', a: 2, b: 2 });
+  });
+});
+
+describe('outcomePoints', () => {
+  const labels = {
+    completed: 'Completed',
+    passed: 'Passed',
+    notPassed: 'Not passed',
+    inProgress: 'In progress',
+  };
+  it('splits a quiz into passed, not passed and still in progress', () => {
+    const quiz = { passed: 2, failed: 1, correctPercent: 60 };
+    expect(outcomePoints({ started: 5, completed: 3, quiz }, labels)).toEqual([
+      { label: 'Passed', value: 2 },
+      { label: 'Not passed', value: 1 },
+      { label: 'In progress', value: 2 },
+    ]);
+  });
+  it('splits a survey into completed and still in progress', () => {
+    expect(outcomePoints({ started: 4, completed: 1, quiz: null }, labels)).toEqual([
+      { label: 'Completed', value: 1 },
+      { label: 'In progress', value: 3 },
+    ]);
   });
 });

@@ -5,13 +5,14 @@ import { t, type AppTextKey } from '../../i18n';
 import BusinessShell from '../../modules/business/components/BusinessShell.vue';
 import { browserZone } from '../../modules/campaigns/logic';
 import ParticipationSummaryDialog from '../../modules/participants/components/ParticipationSummaryDialog.vue';
-import { appendPage, campaignChoices, completionPercent } from '../../modules/participants/logic';
+import { campaignChoices, completionPercent } from '../../modules/participants/logic';
 import type {
   ParticipantSummary,
   Participation,
   ParticipationFilter,
 } from '../../modules/participants/types';
 import { useParticipants } from '../../modules/participants/useParticipants';
+import { CONSOLE_PAGE_SIZE } from '../../utils/paginate';
 
 /**
  * Participants (client-rendered, no-store: personal data never passes the SSR tier). Who took part in
@@ -28,7 +29,8 @@ const summary = ref<ParticipantSummary | null>(null);
 const rows = ref<Participation[]>([]);
 const total = ref(0);
 const loading = ref(true);
-const loadingMore = ref(false);
+const loadingPage = ref(false);
+const page = ref(1);
 const failed = ref(false);
 const filter = ref<ParticipationFilter>({ campaignId: '', status: 'all' });
 
@@ -36,9 +38,13 @@ async function loadSummary() {
   summary.value = await store.summary();
 }
 async function loadRows() {
-  const page = await store.list(filter.value, 0);
-  rows.value = page.items;
-  total.value = page.total;
+  const result = await store.list(
+    filter.value,
+    (page.value - 1) * CONSOLE_PAGE_SIZE,
+    CONSOLE_PAGE_SIZE,
+  );
+  rows.value = result.items;
+  total.value = result.total;
 }
 async function load() {
   loading.value = true;
@@ -56,32 +62,22 @@ onMounted(() => {
   else loading.value = false;
 });
 
-// A new filter starts the list again from the top; the counts above do not depend on it.
-watch(filter, async () => {
+// A new filter starts the list again from the first page; the counts above do not depend on it. Both
+// changes land in the same tick, so one request is made. The page that was open is kept when only the page
+// changes.
+watch(filter, () => (page.value = 1));
+watch([filter, page], async () => {
   if (loading.value) return;
-  loadingMore.value = true;
+  loadingPage.value = true;
   failed.value = false;
   try {
     await loadRows();
   } catch {
     failed.value = true;
   } finally {
-    loadingMore.value = false;
+    loadingPage.value = false;
   }
 });
-
-async function loadMore() {
-  loadingMore.value = true;
-  try {
-    const page = await store.list(filter.value, rows.value.length);
-    rows.value = appendPage(rows.value, page.items);
-    total.value = page.total;
-  } catch {
-    failed.value = true;
-  } finally {
-    loadingMore.value = false;
-  }
-}
 
 const campaignOptions = computed(() =>
   campaignChoices(summary.value?.campaigns ?? [], t('participants.filter.allCampaigns')),
@@ -203,11 +199,16 @@ const started = computed(() => summary.value?.started ?? 0);
           :columns="columns"
           :rows="tableRows"
           row-key="id"
-          :total="total"
-          :loading="loadingMore"
-          :has-more="rows.length < total"
-          @load-more="loadMore"
+          :loading="loadingPage"
         >
+          <template #foot>
+            <UiPagination
+              v-model:page="page"
+              :total="total"
+              :page-size="CONSOLE_PAGE_SIZE"
+              :label="t('participants.list.title')"
+            />
+          </template>
           <template #cell-name="{ row }">
             <strong class="ui-text-label">{{ row.name }}</strong>
           </template>

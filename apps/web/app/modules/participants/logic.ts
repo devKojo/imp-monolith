@@ -15,17 +15,31 @@ export function campaignChoices(
   ];
 }
 
-/** Appends a freshly loaded page, ignoring rows already shown (a row can move between pages while people join). */
-export function appendPage<T extends { id: string }>(shown: readonly T[], page: readonly T[]): T[] {
-  const seen = new Set(shown.map((r) => r.id));
-  return [...shown, ...page.filter((r) => !seen.has(r.id))];
-}
-
 /** "16 Nov" for a UTC date like 2026-11-16, the same on every device. */
 export const dayLabel = (isoDate: string): string =>
   new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
     new Date(`${isoDate}T00:00:00Z`),
   );
+
+/**
+ * How everyone who started a campaign is spread: a quiz splits those who finished into passed and not
+ * passed, a survey just counts those who finished; the rest are still in progress.
+ */
+export function outcomePoints(
+  a: Pick<CampaignActivity, 'started' | 'completed' | 'quiz'>,
+  labels: { completed: string; passed: string; notPassed: string; inProgress: string },
+): Array<{ label: string; value: number }> {
+  const inProgress = Math.max(0, a.started - a.completed);
+  return [
+    ...(a.quiz
+      ? [
+          { label: labels.passed, value: a.quiz.passed },
+          { label: labels.notPassed, value: a.quiz.failed },
+        ]
+      : [{ label: labels.completed, value: a.completed }]),
+    { label: labels.inProgress, value: inProgress },
+  ];
+}
 
 /** The funnel of a campaign: started, completed and, for a quiz, passed. */
 export function funnelPoints(

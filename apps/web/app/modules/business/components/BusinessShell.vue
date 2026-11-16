@@ -48,6 +48,7 @@ async function logout() {
     :nav-label="t('console.nav.label')"
     :user-name="session.user.name"
     :user-role="userRole"
+    :portal-label="t('portal.business')"
   >
     <template v-if="$slots.search" #search><slot name="search" /></template>
     <template #actions>

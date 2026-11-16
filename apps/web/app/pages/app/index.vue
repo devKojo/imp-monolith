@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t, type AppTextKey } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
@@ -11,6 +11,7 @@ import { campaignErrorKey } from '../../modules/campaigns/errors';
 import { browserZone } from '../../modules/campaigns/logic';
 import type { CampaignSummary } from '../../modules/campaigns/types';
 import { useCampaigns } from '../../modules/campaigns/useCampaigns';
+import { CONSOLE_PAGE_SIZE, pageSlice } from '../../utils/paginate';
 import type { ParticipantSummary } from '../../modules/participants/types';
 import { useParticipants } from '../../modules/participants/useParticipants';
 
@@ -113,6 +114,9 @@ const rows = computed(() =>
       closes: c.endAt ? formatInZone(new Date(c.endAt), zone) : t('cmp.noClose'),
     })),
 );
+const page = ref(1);
+const pageRows = computed(() => pageSlice(rows.value, page.value));
+watch([query, status], () => (page.value = 1));
 const filtering = computed(() => query.value.trim() !== '' || status.value !== 'all');
 const actionLabel = (s: string) =>
   s === 'DRAFT' ? t('console.table.edit') : t('console.table.view');
@@ -230,9 +234,17 @@ async function onSwitch(membershipId: string) {
           flush
           :name="t('console.table.title')"
           :columns="columns"
-          :rows="rows"
+          :rows="pageRows"
           row-key="id"
         >
+          <template #foot>
+            <UiPagination
+              v-model:page="page"
+              :total="rows.length"
+              :page-size="CONSOLE_PAGE_SIZE"
+              :label="t('console.table.title')"
+            />
+          </template>
           <template #cell-name="{ row }">
             <strong class="ui-text-label">{{ row.name }}</strong>
           </template>

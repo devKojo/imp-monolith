@@ -49,8 +49,48 @@ const current = computed(() => items.value[Math.min(index.value, items.value.len
 </script>
 
 <template>
+  <!-- Exactly two open campaigns: no carousel, the first is the feature card and the second a card of the
+       same size as the instant-win card, side by side. -->
+  <section v-if="items.length === 2" class="pair" aria-labelledby="pair-title">
+    <div class="pair__head">
+      <h2 id="pair-title" class="ui-text-h2">{{ t('me.carousel.title') }}</h2>
+      <UiBadge tone="info" shape="pill">{{ t('me.carousel.count', { n: 2 }) }}</UiBadge>
+    </div>
+    <p class="ui-text-body-s ui-text-hint pair__sub">{{ t('me.carousel.subtitle') }}</p>
+    <div class="pair__grid">
+      <UiClaimCard
+        :eyebrow="items[0]!.typeLabel"
+        :meta="items[0]!.timeLeft"
+        :amount="items[0]!.prize?.value"
+        :title="items[0]!.title"
+        :description="items[0]!.summary"
+        :note="t('me.carousel.by', { business: items[0]!.businessName })"
+      >
+        <template #action>
+          <UiButton :to="`/c/${items[0]!.slug}`" icon-trailing="arrow-right">
+            {{ t('me.carousel.enter') }}
+          </UiButton>
+        </template>
+      </UiClaimCard>
+      <UiInstantWinCard
+        :tag="items[1]!.typeLabel"
+        :reference="items[1]!.timeLeft"
+        :title="items[1]!.title"
+        :description="items[1]!.summary"
+        :panel-title="items[1]!.prize?.value ?? t('me.pair.open')"
+        :panel-text="t('me.carousel.by', { business: items[1]!.businessName })"
+      >
+        <template #action>
+          <UiButton block :to="`/c/${items[1]!.slug}`" icon-trailing="arrow-right">
+            {{ t('me.carousel.enter') }}
+          </UiButton>
+        </template>
+      </UiInstantWinCard>
+    </div>
+  </section>
+
   <UiCarousel
-    v-if="current"
+    v-else-if="current"
     v-model="index"
     :title="t('me.carousel.title')"
     :subtitle="t('me.carousel.subtitle')"
@@ -94,6 +134,28 @@ const current = computed(() => items.value[Math.min(index.value, items.value.len
 </template>
 
 <style scoped>
+.pair__head {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+}
+.pair__head h2,
+.pair__sub {
+  margin: 0;
+}
+.pair__sub {
+  margin-block-end: var(--ui-space-4);
+}
+.pair__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ui-space-6);
+}
+@media (min-width: 1024px) {
+  .pair__grid {
+    grid-template-columns: 1.45fr 1fr;
+  }
+}
 .slide {
   display: grid;
   grid-template-columns: 1fr;
