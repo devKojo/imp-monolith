@@ -13,8 +13,10 @@ const props = withDefaults(
     title: string;
     description?: string;
     persistent?: boolean;
+    /** `lg` is for content that needs room, such as charts. */
+    size?: 'md' | 'lg';
   }>(),
-  { persistent: false },
+  { persistent: false, size: 'md' },
 );
 
 const emit = defineEmits<{ 'update:open': [open: boolean]; close: [] }>();
@@ -60,6 +62,7 @@ function request() {
   <dialog
     ref="el"
     class="ui-dialog"
+    :data-size="size"
     :aria-labelledby="titleId"
     :aria-describedby="description ? descId : undefined"
     @cancel="onCancel"
@@ -82,6 +85,11 @@ function request() {
   border: 1px solid var(--ui-color-border-strong);
   border-radius: var(--ui-radius-xl);
   box-shadow: var(--ui-elevation-3);
+}
+.ui-dialog[data-size='lg'] {
+  inline-size: min(calc(100% - var(--ui-space-8)), calc(var(--ui-space-12) * 16));
+  max-block-size: calc(100dvh - var(--ui-space-8));
+  overflow-y: auto;
 }
 .ui-dialog::backdrop {
   background: color-mix(in srgb, var(--ui-color-overlay) 60%, transparent);

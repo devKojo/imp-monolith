@@ -30,6 +30,11 @@ const plotW = W - M.start - M.end;
 const plotH = H - M.top - M.bottom;
 
 const labels = computed(() => props.series[0]?.points.map((p) => p.label) ?? []);
+// Many labels would overlap, so the axis names every n-th one; the data table below lists them all.
+const axisLabels = computed(() => {
+  const step = Math.max(1, Math.ceil(labels.value.length / 8));
+  return labels.value.map((l, i) => ({ l, i })).filter(({ i }) => i % step === 0);
+});
 const max = computed(() => {
   const m = Math.max(1, ...props.series.flatMap((s) => s.points.map((p) => p.value)));
   const pow = 10 ** Math.floor(Math.log10(m));
@@ -112,8 +117,8 @@ const statusText = computed(() =>
           </text>
         </g>
         <text
-          v-for="(l, i) in labels"
-          :key="l"
+          v-for="{ l, i } in axisLabels"
+          :key="i"
           :x="x(i)"
           :y="H - 12"
           text-anchor="middle"
