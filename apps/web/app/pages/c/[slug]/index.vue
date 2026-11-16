@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { useAuth } from '../../../modules/auth/composables/useAuth';
@@ -8,6 +7,7 @@ import { toApiError } from '../../../modules/auth/errors';
 import { quizErrorKey } from '../../../modules/quiz/errors';
 import { useQuiz } from '../../../modules/quiz/useQuiz';
 import type { PublicCampaignPage, QuizInfo } from '../../../modules/quiz/types';
+import PublicCampaignView from '../../../modules/campaigns/components/PublicCampaignView.vue';
 import { siteFooter } from '../../../modules/site/footer';
 
 /**
@@ -74,16 +74,6 @@ async function start() {
 }
 
 const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-const rules = computed(() => {
-  const i = info.value;
-  if (!i) return [];
-  return [
-    t('quiz.rules.questions', { n: i.questionCount }),
-    i.timeLimitMinutes ? t('quiz.rules.time', { n: i.timeLimitMinutes }) : t('quiz.rules.untimed'),
-    t('quiz.rules.pass', { n: i.passPercent }),
-    t('quiz.rules.ends', { date: formatInZone(new Date(i.endsAt), zone) }),
-  ];
-});
 const action = computed(
   () =>
     ({
@@ -94,7 +84,7 @@ const action = computed(
       business: '',
     })[standing.value],
 );
-const signinTo = computed(() => ({ path: '/signin', query: { next: `/c/${slug}` } }));
+const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
 </script>
 
 <template>
@@ -106,6 +96,10 @@ const signinTo = computed(() => ({ path: '/signin', query: { next: `/c/${slug}` 
   >
     <template #nav>
       <UiLink to="/discover">{{ t('nav.discover') }}</UiLink>
+      <template v-if="state === 'ready' && campaign">
+        <UiLink v-if="campaign.prizes.length > 0" to="#prizes">{{ t('pub.nav.prizes') }}</UiLink>
+        <UiLink v-if="info" to="#details">{{ t('pub.nav.details') }}</UiLink>
+      </template>
     </template>
     <template #actions>
       <UiButton to="/signin" variant="tertiary" size="xs">{{ t('nav.signin') }}</UiButton>
@@ -123,82 +117,17 @@ const signinTo = computed(() => ({ path: '/signin', query: { next: `/c/${slug}` 
 
     <UiSystemState v-else-if="state === 'error' || !campaign" kind="generic" @action="load" />
 
-    <UiCard v-else as="article" aria-labelledby="campaign-title" class="page">
-      <UiBadge tone="info" shape="pill">{{
-        t(`type.${campaign.type}.one` as 'type.quiz.one')
-      }}</UiBadge>
-      <h1 id="campaign-title" class="ui-text-h1">{{ campaign.title }}</h1>
-      <p class="ui-text-caption ui-text-hint">
-        {{ t('quiz.by', { business: campaign.businessName }) }}
-      </p>
-      <p v-if="campaign.summary" class="ui-text-body">{{ campaign.summary }}</p>
-
-      <template v-if="info">
-        <ul class="rules">
-          <li v-for="r in rules" :key="r">
-            <UiBadge shape="pill">{{ r }}</UiBadge>
-          </li>
-        </ul>
-        <UiBanner v-if="info.questionCount === 0" tone="info">{{ t('quiz.empty') }}</UiBanner>
-        <template v-else>
-          <UiBanner v-if="standing === 'business'" tone="info">
-            {{ t('quiz.businessAccount') }}
-          </UiBanner>
-          <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
-          <div v-if="standing !== 'business'" class="page__action">
-            <UiButton
-              v-if="standing === 'signedOut'"
-              :to="signinTo"
-              size="xs"
-              icon-trailing="arrow-right"
-            >
-              {{ action }}
-            </UiButton>
-            <UiButton
-              v-else
-              size="xs"
-              icon-trailing="arrow-right"
-              :loading="starting"
-              :loading-label="t('quiz.saving')"
-              @click="start"
-            >
-              {{ action }}
-            </UiButton>
-            <p v-if="standing === 'signedOut'" class="ui-text-caption ui-text-hint">
-              {{ t('quiz.signin.hint') }}
-            </p>
-          </div>
-        </template>
-      </template>
-      <UiBanner v-else tone="info">{{ t('quiz.notQuiz') }}</UiBanner>
-    </UiCard>
+    <PublicCampaignView
+      v-else
+      :campaign="campaign"
+      :info="info"
+      :action-label="action"
+      :action-to="standing === 'signedOut' ? signinTo : null"
+      :starting="starting"
+      :problem="problem"
+      :business-account="standing === 'business'"
+      :zone="zone"
+      @action="start"
+    />
   </UiPublicShell>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-4);
-  align-items: flex-start;
-  margin-block: var(--ui-space-8);
-}
-.page h1,
-.page p {
-  margin: 0;
-}
-.rules {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ui-space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.page__action {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--ui-space-3);
-}
-</style>
