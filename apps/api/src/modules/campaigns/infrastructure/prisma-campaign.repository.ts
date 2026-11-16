@@ -249,7 +249,9 @@ export class PrismaCampaignRepository implements CampaignRepository {
         data: { status: change.to, version: { increment: 1 } },
       });
       if (updated.count === 0) return this.whyNotWritten(tx, ctx, id, change.from);
-      const action = { PAUSED: 'paused', CANCELLED: 'cancelled' }[change.to as string] ?? 'resumed';
+      const action = change.from.includes('CANCELLED')
+        ? 'republished'
+        : ({ PAUSED: 'paused', CANCELLED: 'cancelled' }[change.to as string] ?? 'resumed');
       return this.finish(tx, ctx, id, `campaign.${action}`);
     });
   }

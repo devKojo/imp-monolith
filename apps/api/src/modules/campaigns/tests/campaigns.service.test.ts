@@ -390,6 +390,37 @@ describe('running', () => {
   });
 });
 
+describe('publishing a cancelled campaign again', () => {
+  it('puts it back live at the same address, keeping its version history moving', async () => {
+    const c = await launched();
+    const cancelled = await service.cancel(owner, c.id, c.version);
+    const again = await service.republish(owner, c.id, cancelled.version);
+    expect(again.status).toBe('LIVE');
+    expect(again.slug).toBe(c.slug);
+    expect(again.version).toBe(cancelled.version + 1);
+  });
+
+  it('refuses one that is not cancelled, or whose end date has passed', async () => {
+    const c = await launched({ endAt: hours(2) });
+    await expect(service.republish(owner, c.id, c.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+    const cancelled = await service.cancel(owner, c.id, c.version);
+    now = new Date(NOW.getTime() + 3 * 3_600_000);
+    await expect(service.republish(owner, c.id, cancelled.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+  });
+
+  it('is for managers only', async () => {
+    const c = await launched();
+    const cancelled = await service.cancel(owner, c.id, c.version);
+    await expect(service.republish(operator, c.id, cancelled.version)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+});
+
 describe('archiving', () => {
   const ids = async (archived?: boolean) =>
     (await service.list(owner, archived === undefined ? {} : { archived })).map((x) => x.id);

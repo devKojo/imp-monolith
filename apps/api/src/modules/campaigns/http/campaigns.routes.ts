@@ -36,6 +36,7 @@ const noStore: RequestHandler = (_req, res, next) => {
  *   POST   /:id/pause           session + csrf   (operate)
  *   POST   /:id/resume          session + csrf   (operate)
  *   POST   /:id/cancel          session + csrf   (manage)
+ *   POST   /:id/republish       session + csrf   (manage)
  *   POST   /:id/archive         session + csrf   (manage)
  *   POST   /:id/unarchive       session + csrf   (manage)
  *   POST   /:id/duplicate       session + csrf   (manage)
@@ -77,6 +78,7 @@ export function campaignsRouter(service: CampaignsService, guards: RequestHandle
   versioned('/:id/pause', (a, id, v) => service.pause(a, id, v));
   versioned('/:id/resume', (a, id, v) => service.resume(a, id, v));
   versioned('/:id/cancel', (a, id, v) => service.cancel(a, id, v));
+  versioned('/:id/republish', (a, id, v) => service.republish(a, id, v));
   versioned('/:id/archive', (a, id, v) => service.archive(a, id, v));
   versioned('/:id/unarchive', (a, id, v) => service.unarchive(a, id, v));
 

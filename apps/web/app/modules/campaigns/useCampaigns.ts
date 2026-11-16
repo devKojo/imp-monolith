@@ -45,6 +45,7 @@ export function useCampaigns() {
     pause: (c: { id: string; version: number }) => run(() => api.pause(c.id, c.version, csrf())),
     resume: (c: { id: string; version: number }) => run(() => api.resume(c.id, c.version, csrf())),
     cancel: (c: Campaign) => run(() => api.cancel(c.id, c.version, csrf())),
+    republish: (c: Campaign) => run(() => api.republish(c.id, c.version, csrf())),
     archive: (c: { id: string; version: number }) =>
       run(() => api.archive(c.id, c.version, csrf())),
     unarchive: (c: { id: string; version: number }) =>

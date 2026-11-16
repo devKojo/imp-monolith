@@ -231,6 +231,33 @@ export class CampaignsService {
   }
 
   /**
+   * Publishes a cancelled campaign again, as it was (same address, content and prizes). Only while its
+   * end date is still ahead; otherwise it would end the moment it started, so it must be duplicated.
+   */
+  async republish(
+    actor: Actor | null,
+    id: string,
+    expectedVersion: number,
+  ): Promise<CampaignDetail> {
+    const ctx = this.scope(actor, 'manage');
+    const current = await this.running(
+      ctx,
+      id,
+      ['CANCELLED'],
+      'Only a cancelled campaign can be published again',
+    );
+    const now = this.now();
+    const startAt = current.startAt ? new Date(current.startAt) : null;
+    const endAt = current.endAt ? new Date(current.endAt) : null;
+    if (!endAt || endAt.getTime() <= now.getTime()) {
+      throw new CampaignStateError(
+        'The end date has passed. Duplicate the campaign to run it again',
+      );
+    }
+    return this.moved(ctx, id, expectedVersion, ['CANCELLED'], runningStatusFor(startAt, now));
+  }
+
+  /**
    * Puts a campaign away. Only one that is not running: a draft, or one that has ended or been
    * cancelled (a running or paused one must be ended first, so a public page never vanishes quietly).
    */

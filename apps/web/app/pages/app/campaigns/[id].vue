@@ -268,10 +268,18 @@ const unarchive = () =>
   });
 
 const cancelOpen = ref(false);
-const cancel = () =>
-  attempt(async () => {
+const cancel = async () => {
+  // The dialog stays open while it works (its button shows busy); it closes once the call is done.
+  await attempt(async () => {
     adopt(await store.cancel(draft.value!));
     toast.push(t('cmp.cancelled'), 'info');
+  });
+  cancelOpen.value = false;
+};
+const republish = () =>
+  attempt(async () => {
+    adopt(await store.republish(draft.value!));
+    toast.push(t('cmp.republished'));
   });
 
 const discardOpen = ref(false);
@@ -383,6 +391,15 @@ const crumbs = computed(() => [
               @click="resume"
             >
               {{ t('cmp.resume') }}
+            </UiButton>
+            <UiButton
+              v-if="canManage && draft.status === 'CANCELLED' && !isArchived"
+              variant="secondary"
+              size="xs"
+              :disabled="busy"
+              @click="republish"
+            >
+              {{ t('cmp.republish') }}
             </UiButton>
             <UiButton
               v-if="canManage && (runningStatus || draft.status === 'PAUSED')"
@@ -540,6 +557,7 @@ const crumbs = computed(() => [
         :title="t('cmp.cancel.title')"
         :consequence="t('cmp.cancel.consequence')"
         :confirm-label="t('cmp.cancel')"
+        :loading="busy"
         @confirm="cancel"
       />
     </template>

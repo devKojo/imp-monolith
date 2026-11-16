@@ -380,6 +380,8 @@ export const staticSiteText = {
   'cmp.cancel.title': 'Cancel this campaign?',
   'cmp.cancel.consequence': 'It stops for good and cannot be restarted.',
   'cmp.cancelled': 'Campaign cancelled',
+  'cmp.republish': 'Publish again',
+  'cmp.republished': 'Campaign published again',
   'cmp.close': 'Close',
   'cmp.discard': 'Discard',
   'cmp.discard.title': 'Discard changes?',

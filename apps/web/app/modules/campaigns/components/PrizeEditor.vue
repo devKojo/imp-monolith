@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { t } from '../../../i18n';
 import { LIMITS } from '../logic';
 import type { Prize } from '../types';
@@ -16,9 +17,19 @@ const emit = defineEmits<{
   remove: [id: string];
 }>();
 
-/** Winners is a whole number from 1; anything else typed is brought back into range. */
-const winnersFrom = (value: string) =>
-  Math.min(LIMITS.winners, Math.max(1, Math.floor(Number(value)) || 1));
+/**
+ * Winners is a whole number from 1. What is typed is kept as typed, so a field can be cleared and
+ * retyped; the prize only takes a value that is valid, and the field settles on it when it loses focus.
+ */
+const typed = reactive<Record<string, string>>({});
+function onWinners(id: string, text: string) {
+  typed[id] = text;
+  const n = Number(text);
+  if (text.trim() === '' || !Number.isFinite(n) || n < 1) return;
+  if (n > LIMITS.winners) typed[id] = String(LIMITS.winners);
+  emit('update', id, { winners: Math.min(LIMITS.winners, Math.floor(n)) });
+}
+const settle = (id: string) => delete typed[id];
 </script>
 
 <template>
@@ -99,10 +110,11 @@ const winnersFrom = (value: string) =>
             :id="`prize-winners-${p.id}`"
             type="number"
             inputmode="numeric"
-            :model-value="String(p.winners)"
+            :model-value="typed[p.id] ?? String(p.winners)"
             :label="t('cmp.prize.winners')"
             :readonly="readonly"
-            @update:model-value="emit('update', p.id, { winners: winnersFrom($event) })"
+            @update:model-value="onWinners(p.id, $event)"
+            @focusout="settle(p.id)"
           />
         </div>
         <UiTextInput

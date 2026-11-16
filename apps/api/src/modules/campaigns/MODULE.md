@@ -11,6 +11,7 @@ quiz's time limit and pass mark). The template only says which kinds of field a 
 - Keep a campaign editable only while it is a draft; a launched campaign is fixed.
 - Decide, on the server, whether a campaign can launch (pre-flight checks) and give it its public address.
 - Run the lifecycle: launch, pause, resume, cancel; the schedule moves a campaign to live and completed.
+- Publish again: a cancelled campaign whose end date is still ahead can be published again, as it was.
 - Archive and unarchive: a draft or a finished (completed or cancelled) campaign can be put away and brought
   back exactly as it was. Archiving is a timestamp (`archived_at`), not a status; a running or paused campaign
   must be ended first. An archived campaign is left out of the default list, cannot be edited or launched, and
@@ -60,7 +61,8 @@ Writes need the session cookie, the `X-CSRF-Token` header and a permitted Origin
 | `POST /:id/resume`    | `{ expectedVersion }` from paused -> `LIVE` or `SCHEDULED` by the start time                                                                                                                                                                      |
 | `POST /:id/archive`   | `{ expectedVersion }` for a draft, completed or cancelled campaign -> `archivedAt` set; `409 CAMPAIGN_STATE` if it is running, paused or already archived                                                                                         |
 | `POST /:id/unarchive` | `{ expectedVersion }` -> `archivedAt` null, status as it was; `409 CAMPAIGN_STATE` if it is not archived                                                                                                                                          |
-| `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (final)                                                                                                                                                                       |
+| `POST /:id/republish` | `{ expectedVersion }` from `CANCELLED` -> live or scheduled again (same address); `409 CAMPAIGN_STATE` if it is not cancelled or its end date has passed |
+| `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (can be published again while its end date is ahead)                                                                                                                                                                       |
 | `POST /:id/duplicate` | `{ title? }` -> `201` new draft (own ids, no schedule, no address), default title "`<title> (copy)`"                                                                                                                                              |
 | `DELETE /:id`         | Soft delete of a draft -> `204`; `409 CAMPAIGN_LOCKED` otherwise                                                                                                                                                                                  |
 
@@ -120,7 +122,7 @@ allowed statuses in the `UPDATE ... WHERE`, so the check and the write are one a
 
 ## Audit
 
-`campaign.created`, `.updated`, `.launched`, `.paused`, `.resumed`, `.cancelled`, `.duplicated`, `.deleted`,
+`campaign.created`, `.updated`, `.launched`, `.paused`, `.resumed`, `.cancelled`, `.republished`, `.duplicated`, `.deleted`,
 with the campaign id (and version or source id) as metadata. No titles or prize text (R-PRV-06).
 
 ## Public listing (`GET /api/v1/public/campaigns`, no session)
