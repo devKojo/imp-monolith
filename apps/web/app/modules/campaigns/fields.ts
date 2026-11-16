@@ -22,6 +22,8 @@ export const FIELD_LIMITS = {
   content: 50,
   timeLimitMax: 240,
   defaultPassPercent: 70,
+  maxAttemptsMax: 5,
+  defaultMaxAttempts: 1,
 } as const;
 
 const CONTENT: ReadonlySet<FieldKind> = new Set([
@@ -104,12 +106,20 @@ export function fitToTemplate(
 }
 
 export const defaultSettingsFor = (template: TemplateRef | null): CampaignSettings =>
-  template?.archetype === 'quiz'
-    ? { quiz: { timeLimitMinutes: null, passPercent: FIELD_LIMITS.defaultPassPercent } }
-    : {};
+  template?.archetype === 'quiz' ? { quiz: { ...DEFAULT_QUIZ } } : {};
 
-export const quizSettingsOf = (settings: CampaignSettings): QuizSettings =>
-  settings.quiz ?? { timeLimitMinutes: null, passPercent: FIELD_LIMITS.defaultPassPercent };
+/** A quiz as it starts: untimed, the usual pass mark, one attempt. */
+const DEFAULT_QUIZ: QuizSettings = {
+  timeLimitMinutes: null,
+  passPercent: FIELD_LIMITS.defaultPassPercent,
+  maxAttempts: FIELD_LIMITS.defaultMaxAttempts,
+};
+
+/** The quiz settings of a campaign, filling in what an older campaign does not have. */
+export const quizSettingsOf = (settings: CampaignSettings): QuizSettings => ({
+  ...DEFAULT_QUIZ,
+  ...settings.quiz,
+});
 
 export const addField = (fields: readonly CampaignField[], field: CampaignField) => [
   ...fields,
@@ -194,6 +204,13 @@ export function parseTimeLimit(text: string): number | null {
   const n = Math.floor(Number(text.trim()));
   if (text.trim() === '' || !Number.isFinite(n) || n < 1) return null;
   return Math.min(n, FIELD_LIMITS.timeLimitMax);
+}
+
+/** Attempts allowed, from what was typed or chosen: a whole number from 1 to the limit. */
+export function parseMaxAttempts(text: string, fallback: number): number {
+  const n = Math.floor(Number(text.trim()));
+  if (text.trim() === '' || !Number.isFinite(n)) return fallback;
+  return Math.min(FIELD_LIMITS.maxAttemptsMax, Math.max(1, n));
 }
 
 export function parsePassPercent(text: string, fallback: number): number {

@@ -13,6 +13,7 @@ import {
   maxOptions,
   moveField,
   newField,
+  parseMaxAttempts,
   parsePassPercent,
   parseTimeLimit,
   quizSettingsOf,
@@ -77,6 +78,11 @@ const problemText = (f: CampaignField, problem: FieldProblem) =>
 const quiz = computed(() => quizSettingsOf(props.settings));
 const timeText = ref(String(quiz.value.timeLimitMinutes ?? ''));
 const passText = ref(String(quiz.value.passPercent));
+const attemptOptions = Array.from({ length: FIELD_LIMITS.maxAttemptsMax }, (_, i) => ({
+  value: String(i + 1),
+  label:
+    i === 0 ? t('quiz.settings.attempts.one') : t('quiz.settings.attempts.other', { n: i + 1 }),
+}));
 watch(
   () => quiz.value.timeLimitMinutes,
   (v) => parseTimeLimit(timeText.value) !== v && (timeText.value = String(v ?? '')),
@@ -91,6 +97,8 @@ const onTime = (text: string) => {
   timeText.value = text;
   setQuiz({ timeLimitMinutes: parseTimeLimit(text) });
 };
+const onAttempts = (text: string) =>
+  setQuiz({ maxAttempts: parseMaxAttempts(text, quiz.value.maxAttempts) });
 const onPass = (text: string) => {
   passText.value = text;
   setQuiz({ passPercent: parsePassPercent(text, quiz.value.passPercent) });
@@ -186,6 +194,15 @@ const onPass = (text: string) => {
           :label="t('quiz.settings.pass')"
           :readonly="readonly"
           @update:model-value="onPass"
+        />
+        <UiSelect
+          id="quiz-attempts"
+          :model-value="String(quiz.maxAttempts)"
+          :label="t('quiz.settings.attempts')"
+          :hint="t('quiz.settings.attemptsHint')"
+          :options="attemptOptions"
+          :disabled="readonly"
+          @update:model-value="onAttempts"
         />
       </div>
 

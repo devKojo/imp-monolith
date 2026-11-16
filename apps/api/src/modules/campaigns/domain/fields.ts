@@ -53,6 +53,9 @@ export const FIELD_LIMITS = {
   contentMax: 50,
   timeLimitMax: 240,
   defaultPassPercent: 70,
+  /** Attempts a participant may make at a quiz, at most; one means no retake. */
+  maxAttemptsMax: 5,
+  defaultMaxAttempts: 1,
 } as const;
 
 /** What the client sends for one field; the machine `key` is made by the server. */
@@ -75,6 +78,8 @@ export type QuizSettings = {
   /** Minutes for the whole attempt; null means untimed. */
   timeLimitMinutes: number | null;
   passPercent: number;
+  /** Attempts a participant may make (1 to 5); one means no retake. */
+  maxAttempts: number;
 };
 /** Settings the campaign type uses; `quiz` is only set for a quiz campaign. */
 export type CampaignSettings = { quiz?: QuizSettings };
@@ -82,4 +87,5 @@ export type CampaignSettings = { quiz?: QuizSettings };
 export const DEFAULT_QUIZ_SETTINGS: QuizSettings = {
   timeLimitMinutes: null,
   passPercent: FIELD_LIMITS.defaultPassPercent,
+  maxAttempts: FIELD_LIMITS.defaultMaxAttempts,
 };

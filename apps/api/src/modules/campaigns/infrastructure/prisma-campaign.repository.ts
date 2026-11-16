@@ -37,13 +37,17 @@ function summaryOf(
 
 /** The settings column is JSON written by this module; read it defensively anyway. */
 function settingsOf(value: unknown): CampaignSettings {
-  const quiz = (value as { quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown } } | null)
-    ?.quiz;
+  const quiz = (
+    value as {
+      quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown; maxAttempts?: unknown };
+    } | null
+  )?.quiz;
   if (!quiz || typeof quiz.passPercent !== 'number') return {};
   return {
     quiz: {
       timeLimitMinutes: typeof quiz.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
       passPercent: quiz.passPercent,
+      maxAttempts: typeof quiz.maxAttempts === 'number' ? quiz.maxAttempts : 1,
     },
   };
 }

@@ -163,7 +163,12 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
   /** Writes the questions and settings on the campaign, as the builder does. */
   async function saveQuiz(
     c: { id: string; version: number },
-    over: { timeLimitMinutes?: number | null; passPercent?: number; questions?: unknown[] } = {},
+    over: {
+      timeLimitMinutes?: number | null;
+      passPercent?: number;
+      maxAttempts?: number;
+      questions?: unknown[];
+    } = {},
   ) {
     const res = await write(people.owner, 'put', `campaigns/${c.id}`, {
       expectedVersion: c.version,
@@ -182,6 +187,7 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
         quiz: {
           timeLimitMinutes: over.timeLimitMinutes ?? null,
           passPercent: over.passPercent ?? 60,
+          maxAttempts: over.maxAttempts ?? 1,
         },
       },
     });
@@ -230,6 +236,7 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
       questionCount: 3,
       timeLimitMinutes: 10,
       passPercent: 80,
+      maxAttempts: 1,
     });
     expect(JSON.stringify(info.body)).not.toContain('Capital of Ghana');
     expect((await read(null, `public/quiz/no-such-quiz-aaaaaa`)).status).toBe(404);
@@ -335,5 +342,76 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
         })
       ).status,
     ).toBe(409);
+  });
+
+  it('lets a participant retake as many times as the quiz allows, each attempt on its own', async () => {
+    const { slug } = await launched('Try again', { maxAttempts: 2 });
+    expect((await read(null, `public/quiz/${slug}`)).body.maxAttempts).toBe(2);
+    const ama = people.ama;
+
+    // No attempt yet: there is nothing to retake.
+    expect((await write(ama, 'post', `quiz/${slug}/attempt/retake`)).body.error.code).toBe(
+      'NO_ATTEMPT',
+    );
+
+    const first = (await write(ama, 'post', `quiz/${slug}/attempt`)).body;
+    expect(first).toMatchObject({ attemptNumber: 1, maxAttempts: 2 });
+
+    // Still open: a retake returns the same attempt instead of starting another.
+    const open = await write(ama, 'post', `quiz/${slug}/attempt/retake`);
+    expect(open.status).toBe(200);
+    expect(open.body.id).toBe(first.id);
+
+    const [q1] = first.questions as Array<{ id: string }>;
+    await write(ama, 'put', `quiz/${slug}/attempt/answers/${q1!.id}`, { choiceIndex: 1 });
+    const done1 = (await write(ama, 'post', `quiz/${slug}/attempt/submit`)).body;
+    expect(done1.result).toMatchObject({ score: 0, total: 3, passed: false });
+
+    // Starting "the quiz" again still shows the finished attempt; only a retake begins a new one.
+    expect((await write(ama, 'post', `quiz/${slug}/attempt`)).body.id).toBe(first.id);
+
+    const second = (await write(ama, 'post', `quiz/${slug}/attempt/retake`)).body;
+    expect(second).toMatchObject({ attemptNumber: 2, maxAttempts: 2, answers: {}, result: null });
+    expect(second.id).not.toBe(first.id);
+    // A double click does not skip to a third.
+    expect((await write(ama, 'post', `quiz/${slug}/attempt/retake`)).body.id).toBe(second.id);
+    // The current attempt is the new one, and answering it leaves the first alone.
+    expect((await read(ama, `quiz/${slug}/attempt`)).body.id).toBe(second.id);
+    await write(ama, 'put', `quiz/${slug}/attempt/answers/${q1!.id}`, { choiceIndex: 0 });
+    const done2 = (await write(ama, 'post', `quiz/${slug}/attempt/submit`)).body;
+    expect(done2.result).toMatchObject({ score: 1, total: 3 });
+
+    // Attempts used up.
+    const third = await write(ama, 'post', `quiz/${slug}/attempt/retake`);
+    expect(third.status).toBe(409);
+    expect(third.body.error.code).toBe('NO_ATTEMPTS_LEFT');
+
+    // Both attempts are kept, numbered 1 and 2.
+    const rows = await platform.quizAttempt.findMany({
+      where: { id: { in: [first.id, second.id] } },
+      orderBy: { attemptNumber: 'asc' },
+    });
+    expect(rows.map((r) => [r.attemptNumber, r.score])).toEqual([
+      [1, 0],
+      [2, 1],
+    ]);
+  });
+
+  it('keeps a quiz to one attempt unless the business allows more', async () => {
+    const { slug } = await launched('Once only');
+    expect((await read(null, `public/quiz/${slug}`)).body.maxAttempts).toBe(1);
+    const ama = people.ama;
+    const attempt = (await write(ama, 'post', `quiz/${slug}/attempt`)).body;
+    expect(attempt).toMatchObject({ attemptNumber: 1, maxAttempts: 1 });
+    await write(ama, 'post', `quiz/${slug}/attempt/submit`);
+    const again = await write(ama, 'post', `quiz/${slug}/attempt/retake`);
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('NO_ATTEMPTS_LEFT');
+  });
+
+  it('only lets a participant account retake', async () => {
+    const { slug } = await launched('Who retakes', { maxAttempts: 2 });
+    expect((await write(people.owner, 'post', `quiz/${slug}/attempt/retake`)).status).toBe(403);
+    expect((await read(null, `quiz/${slug}/attempt`)).status).toBe(401);
   });
 });

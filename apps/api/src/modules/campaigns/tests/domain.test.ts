@@ -202,15 +202,17 @@ describe('fields', () => {
   });
 
   it('only keeps settings for a quiz', () => {
-    expect(normalizeSettings(giveawayTemplate, { timeLimitMinutes: 5, passPercent: 50 })).toEqual(
-      {},
-    );
+    expect(
+      normalizeSettings(giveawayTemplate, { timeLimitMinutes: 5, passPercent: 50, maxAttempts: 1 }),
+    ).toEqual({});
     expect(normalizeSettings(null, null)).toEqual({});
     expect(normalizeSettings(quizTemplate, null)).toEqual({
-      quiz: { timeLimitMinutes: null, passPercent: 70 },
+      quiz: { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
     });
-    expect(normalizeSettings(quizTemplate, { timeLimitMinutes: 5, passPercent: 50 })).toEqual({
-      quiz: { timeLimitMinutes: 5, passPercent: 50 },
+    expect(
+      normalizeSettings(quizTemplate, { timeLimitMinutes: 5, passPercent: 50, maxAttempts: 1 }),
+    ).toEqual({
+      quiz: { timeLimitMinutes: 5, passPercent: 50, maxAttempts: 1 },
     });
   });
 

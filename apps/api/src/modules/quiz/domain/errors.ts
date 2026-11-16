@@ -41,3 +41,10 @@ export class InvalidAnswerError extends AppError {
     super('That answer does not belong to this question', 422, 'INVALID_ANSWER');
   }
 }
+
+/** The participant has used every attempt this quiz allows. */
+export class AttemptsExhaustedError extends AppError {
+  constructor() {
+    super('You have used every attempt this quiz allows', 409, 'NO_ATTEMPTS_LEFT');
+  }
+}

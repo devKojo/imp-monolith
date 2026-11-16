@@ -105,4 +105,6 @@ export const quizQuestion = (over: Partial<FieldDraft> = {}): FieldDraft =>
     ...over,
   });
 
-export const quizSettings = { quiz: { timeLimitMinutes: null, passPercent: 70 } };
+export const quizSettings = {
+  quiz: { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
+};

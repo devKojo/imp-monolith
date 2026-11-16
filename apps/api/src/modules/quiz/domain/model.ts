@@ -9,6 +9,8 @@ export type QuizSettings = {
   /** Minutes for the whole attempt; null means untimed. */
   timeLimitMinutes: number | null;
   passPercent: number;
+  /** Attempts a participant may make; one means no retake. */
+  maxAttempts: number;
 };
 export type QuizDefinition = { settings: QuizSettings; questions: Question[] };
 
@@ -20,6 +22,8 @@ export type AttemptResult = { score: number; total: number; passed: boolean; pas
 /** An attempt as stored, with the choices made so far (question id to option index). */
 export type AttemptRow = {
   id: string;
+  /** 1 for the first attempt, 2 for the first retake, and so on. */
+  attemptNumber: number;
   startedAt: Date;
   expiresAt: Date | null;
   submittedAt: Date | null;
@@ -32,6 +36,9 @@ export type AttemptRow = {
 /** What the participant app renders. `serverTime` lets the client correct for a wrong device clock. */
 export type AttemptView = {
   id: string;
+  attemptNumber: number;
+  /** Attempts allowed in all; a retake is possible while `attemptNumber` is below it. */
+  maxAttempts: number;
   startedAt: string;
   expiresAt: string | null;
   submittedAt: string | null;
@@ -58,6 +65,7 @@ export type QuizInfo = {
   questionCount: number;
   timeLimitMinutes: number | null;
   passPercent: number;
+  maxAttempts: number;
 };
 
 /** The signed-in participant. */

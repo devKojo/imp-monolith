@@ -6,6 +6,7 @@ import { participantsRouter } from './http/participants.routes';
 import { PrismaParticipantsRepository } from './infrastructure/prisma-participants.repository';
 
 export type {
+  BusinessActivity,
   CampaignActivity,
   CampaignParticipation,
   ParticipantSummary,

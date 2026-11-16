@@ -158,7 +158,9 @@ describe('fields', () => {
       ['consent', 'consent', 'I agree to the rules and the privacy notice', true],
     ]);
     const quiz = await service.create(owner, { title: 'Q', templateId: quizTemplate.id });
-    expect(quiz.settings).toEqual({ quiz: { timeLimitMinutes: null, passPercent: 70 } });
+    expect(quiz.settings).toEqual({
+      quiz: { timeLimitMinutes: null, passPercent: 70, maxAttempts: 1 },
+    });
     expect((await service.create(owner, { title: 'None' })).fields).toEqual([]);
   });
 
@@ -231,10 +233,12 @@ describe('fields', () => {
         templateId: quizTemplate.id,
         prizes: [],
         fields: [],
-        settings: { quiz: { timeLimitMinutes: 15, passPercent: 80 } },
+        settings: { quiz: { timeLimitMinutes: 15, passPercent: 80, maxAttempts: 1 } },
       }),
     });
-    expect(asQuiz.settings).toEqual({ quiz: { timeLimitMinutes: 15, passPercent: 80 } });
+    expect(asQuiz.settings).toEqual({
+      quiz: { timeLimitMinutes: 15, passPercent: 80, maxAttempts: 1 },
+    });
   });
 
   it('copies fields and settings when duplicating', async () => {

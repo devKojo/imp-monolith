@@ -10,6 +10,10 @@ const repo: ParticipantsRepository = {
     seen.push(ctx.tenantId);
     return empty;
   },
+  activity: async (ctx) => {
+    seen.push(ctx.tenantId);
+    return { daily: [], quiz: null };
+  },
   campaign: async (ctx, id) => {
     seen.push(ctx.tenantId);
     return id === 'known'
@@ -88,5 +92,11 @@ describe('ParticipantsService', () => {
     await expect(service.campaign(actor('MODERATOR'), 'known')).rejects.toMatchObject({
       status: 403,
     });
+  });
+
+  it('shows the business activity to a role that may see participants, and refuses the rest', async () => {
+    await expect(service.activity(actor('ANALYST'))).resolves.toEqual({ daily: [], quiz: null });
+    await expect(service.activity(actor('MODERATOR'))).rejects.toMatchObject({ status: 403 });
+    await expect(service.activity(null)).rejects.toMatchObject({ code: 'NO_ACTIVE_BUSINESS' });
   });
 });

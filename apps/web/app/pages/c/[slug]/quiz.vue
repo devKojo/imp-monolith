@@ -39,6 +39,7 @@ const problem = ref('');
 const confirmOpen = ref(false);
 const submitting = ref(false);
 const timeUp = ref(false);
+const retaking = ref(false);
 
 useHead({ title: t('quiz.page.title') });
 
@@ -122,6 +123,22 @@ function toggleFlag() {
   flagged.value = next;
 }
 
+/** Starts the next attempt and begins at its first question. */
+async function retake() {
+  retaking.value = true;
+  problem.value = '';
+  try {
+    adopt(await quiz.retake(slug));
+    index.value = resumeIndex(view.value!);
+    flagged.value = new Set();
+    timeUp.value = false;
+  } catch (e) {
+    problem.value = t(quizErrorKey(toApiError(e)));
+  } finally {
+    retaking.value = false;
+  }
+}
+
 const go = (to: number) => {
   if (view.value) index.value = Math.min(Math.max(0, to), view.value.questions.length - 1);
 };
@@ -167,7 +184,15 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />
 
     <div v-else-if="view.result" class="wrap solo">
-      <QuizResult :result="view.result" :time-up="timeUp" />
+      <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
+      <QuizResult
+        :result="view.result"
+        :time-up="timeUp"
+        :attempt="view.attemptNumber"
+        :max-attempts="view.maxAttempts"
+        :retaking="retaking"
+        @retake="retake"
+      />
     </div>
 
     <div v-else-if="question" class="wrap screen">

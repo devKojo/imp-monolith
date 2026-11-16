@@ -117,6 +117,7 @@ const tableRows = computed(() =>
     campaign: r.campaignTitle,
     type: typeLabel(r.kind),
     status: r.status,
+    attempt: r.attempt,
     result: r.result,
     startedAt: when(r.startedAt),
     finishedAt: when(r.completedAt),
@@ -219,6 +220,9 @@ const started = computed(() => summary.value?.started ?? 0);
             >
               {{ t(`participants.status.${row.status}` as AppTextKey) }}
             </UiBadge>
+            <span v-if="Number(row.attempt) > 1" class="ui-text-caption ui-text-hint result">
+              {{ t('participants.attempt', { n: Number(row.attempt) }) }}
+            </span>
             <span v-if="row.result" class="ui-text-caption ui-text-hint result">
               {{
                 t('participants.result', {

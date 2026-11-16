@@ -195,7 +195,7 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
       SEEDED.quiz,
       'Participants quiz',
       [field('quiz_question', '2 + 2?', { options: ['3', '4'], correctIndex: 1 })],
-      { quiz: { timeLimitMinutes: null, passPercent: 50 } },
+      { quiz: { timeLimitMinutes: null, passPercent: 50, maxAttempts: 1 } },
     );
     survey = await launched(
       people.owner,
@@ -298,6 +298,27 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
     const s = await read(people.owner, `participants/campaigns/${survey.id}`);
     expect(s.body).toMatchObject({ kind: 'survey', started: 2, completed: 1, quiz: null });
     expect(s.body.daily.at(-1)).toEqual({ date: today, started: 2, completed: 1 });
+  });
+
+  it('summarises the whole business: activity over the last days and quiz outcomes', async () => {
+    const res = await read(people.owner, 'participants/activity');
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.daily).toHaveLength(14);
+    const today = new Date().toISOString().slice(0, 10);
+    // Ama finished the quiz and the survey and Kofi started the survey: three starts, two finishes.
+    expect(res.body.daily.at(-1)).toEqual({ date: today, started: 3, completed: 2 });
+    expect(res.body.quiz).toEqual({ passed: 1, failed: 0, correctPercent: 100 });
+    expect((await read(people.outsider, 'participants/activity')).body).toMatchObject({
+      quiz: null,
+    });
+    expect((await read(people.ama, 'participants/activity')).status).toBe(403);
+    expect((await read(null, 'participants/activity')).status).toBe(401);
+  });
+
+  it('numbers each participation, a survey always as attempt 1', async () => {
+    const list = await read(people.owner, 'participants');
+    expect(list.body.items.every((i: { attempt: number }) => i.attempt === 1)).toBe(true);
   });
 
   it('does not show a campaign of another business, or an unknown one', async () => {
