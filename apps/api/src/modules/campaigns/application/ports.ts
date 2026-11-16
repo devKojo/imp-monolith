@@ -65,6 +65,16 @@ export interface CampaignRepository {
     expectedVersion: number,
     change: { from: CampaignStatus[]; to: CampaignStatus },
   ): Promise<WriteResult>;
+  /**
+   * Archives or unarchives at `expectedVersion`. `wrong_state` if it already is what was asked (so a
+   * double click is harmless and says so).
+   */
+  setArchived(
+    ctx: TenantContext,
+    id: string,
+    expectedVersion: number,
+    archived: boolean,
+  ): Promise<WriteResult>;
   /** A new DRAFT copy (own ids, no schedule, no address), or null if the source does not exist. */
   duplicate(
     ctx: TenantContext,

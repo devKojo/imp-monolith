@@ -133,6 +133,26 @@ describe('campaigns HTTP', () => {
     expect((await owner.get('/?status=CANCELLED')).body.items).toHaveLength(1);
   });
 
+  it('archives and unarchives, listing archived campaigns apart', async () => {
+    const app = build();
+    const owner = api(app);
+    const { body } = await owner.write('post', '/', { title: 'Old' });
+    const archived = await owner.write('post', `/${body.id}/archive`, { expectedVersion: 1 });
+    expect(archived.status).toBe(200);
+    expect(archived.body.archivedAt).not.toBeNull();
+    expect((await owner.get('/')).body.items).toHaveLength(0);
+    expect((await owner.get('/?archived=true')).body.items).toHaveLength(1);
+    expect((await owner.get('/?archived=maybe')).status).toBe(400);
+    const again = await owner.write('post', `/${body.id}/archive`, { expectedVersion: 2 });
+    expect(again.status).toBe(409);
+    const back = await owner.write('post', `/${body.id}/unarchive`, { expectedVersion: 2 });
+    expect(back.body.archivedAt).toBeNull();
+    expect((await owner.get('/')).body.items).toHaveLength(1);
+    const operator = api(app, 'CAMPAIGN_OPERATOR');
+    const denied = await operator.write('post', `/${body.id}/archive`, { expectedVersion: 3 });
+    expect(denied.status).toBe(403);
+  });
+
   it('explains why a launch failed', async () => {
     const app = build();
     const owner = api(app);

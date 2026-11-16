@@ -80,6 +80,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       version: 1,
       updatedAt: new Date().toISOString(),
       launchedAt: null,
+      archivedAt: null,
     };
     this.rows.push(row);
     return this.strip(row);
@@ -93,7 +94,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
   ): Promise<WriteResult> {
     const row = this.live(ctx, id);
     if (!row) return { kind: 'not_found' };
-    if (row.status !== 'DRAFT') return { kind: 'wrong_state' };
+    if (row.status !== 'DRAFT' || row.archivedAt) return { kind: 'wrong_state' };
     if (row.version !== expectedVersion) return { kind: 'conflict' };
     row.title = content.title;
     row.summary = content.summary;
@@ -115,7 +116,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
   ): Promise<WriteResult> {
     const row = this.live(ctx, id);
     if (!row) return { kind: 'not_found' };
-    if (row.status !== 'DRAFT') return { kind: 'wrong_state' };
+    if (row.status !== 'DRAFT' || row.archivedAt) return { kind: 'wrong_state' };
     if (row.version !== expectedVersion) return { kind: 'conflict' };
     if (this.takenSlugs.has(input.slug)) throw new ConflictError('Resource already exists');
     this.takenSlugs.add(input.slug);
@@ -134,9 +135,24 @@ export class InMemoryCampaignRepository implements CampaignRepository {
   ): Promise<WriteResult> {
     const row = this.live(ctx, id);
     if (!row) return { kind: 'not_found' };
-    if (!change.from.includes(row.status)) return { kind: 'wrong_state' };
+    if (!change.from.includes(row.status) || row.archivedAt) return { kind: 'wrong_state' };
     if (row.version !== expectedVersion) return { kind: 'conflict' };
     row.status = change.to;
+    this.touch(row);
+    return { kind: 'ok', campaign: this.strip(row) };
+  }
+
+  async setArchived(
+    ctx: TenantContext,
+    id: string,
+    expectedVersion: number,
+    archived: boolean,
+  ): Promise<WriteResult> {
+    const row = this.live(ctx, id);
+    if (!row) return { kind: 'not_found' };
+    if ((row.archivedAt !== null) === archived) return { kind: 'wrong_state' };
+    if (row.version !== expectedVersion) return { kind: 'conflict' };
+    row.archivedAt = archived ? new Date().toISOString() : null;
     this.touch(row);
     return { kind: 'ok', campaign: this.strip(row) };
   }
@@ -154,6 +170,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       endAt: null,
       version: 1,
       launchedAt: null,
+      archivedAt: null,
       updatedAt: new Date().toISOString(),
     };
     copy.prizes = copy.prizes.map((p) => ({ ...p, id: randomUUID() }));

@@ -11,6 +11,10 @@ quiz's time limit and pass mark). The template only says which kinds of field a 
 - Keep a campaign editable only while it is a draft; a launched campaign is fixed.
 - Decide, on the server, whether a campaign can launch (pre-flight checks) and give it its public address.
 - Run the lifecycle: launch, pause, resume, cancel; the schedule moves a campaign to live and completed.
+- Archive and unarchive: a draft or a finished (completed or cancelled) campaign can be put away and brought
+  back exactly as it was. Archiving is a timestamp (`archived_at`), not a status; a running or paused campaign
+  must be ended first. An archived campaign is left out of the default list, cannot be edited or launched, and
+  is never public.
 - Detect two people changing the same campaign at once (version check) and refuse the later write.
 - Keep a campaign's fields within what its template allows (kinds and how many), and start a new campaign with
   the fields its type begins with (for example the email field).
@@ -18,11 +22,11 @@ quiz's time limit and pass mark). The template only says which kinds of field a 
 
 ## Data (tenant tables, RLS forced)
 
-| Table             | Notes                                                                                                                                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `campaigns`       | `tenant_id`, optional `template_id` (a built-in type, global), `title`, `summary`, `slug` (unique across businesses, null until launch), `status`, `start_at`, `end_at`, `settings` (JSON, e.g. `{"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}`), `version`, `launched_at`, `deleted_at` |
-| `campaign_prizes` | Composite FK `(tenant_id, campaign_id)`; `position`, `name`, `value_label` (free text), `winners` (1 to 100000), `description`                                                                                                                                                                   |
-| `campaign_fields` | Composite FK `(tenant_id, campaign_id)`; `position`, `kind`, `key` (snake_case, unique in the campaign), `label`, `helper`, `required`, `options`, `correct_index` (only a quiz question; checked in the database)                                                                               |
+| Table             | Notes                                                                                                                                                                                                                                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `campaigns`       | `tenant_id`, optional `template_id` (a built-in type, global), `title`, `summary`, `slug` (unique across businesses, null until launch), `status`, `start_at`, `end_at`, `settings` (JSON, e.g. `{"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}`), `version`, `launched_at`, `archived_at`, `deleted_at` |
+| `campaign_prizes` | Composite FK `(tenant_id, campaign_id)`; `position`, `name`, `value_label` (free text), `winners` (1 to 100000), `description`                                                                                                                                                                                  |
+| `campaign_fields` | Composite FK `(tenant_id, campaign_id)`; `position`, `kind`, `key` (snake_case, unique in the campaign), `label`, `helper`, `required`, `options`, `correct_index` (only a quiz question; checked in the database)                                                                                              |
 
 - Same fail-closed `tenant_isolation` policy as every tenant table. `app_runtime` can `SELECT/INSERT/UPDATE`
   campaigns (no `DELETE`: deletion is `deleted_at`) and also `DELETE` prizes and fields (replaced as a set on save).
@@ -35,11 +39,11 @@ quiz's time limit and pass mark). The template only says which kinds of field a 
 The role comes from the session's active membership, never from the request. A participant account (no active
 business) gets `403 NO_ACTIVE_BUSINESS`.
 
-| Action                                          | Roles                                                                         |
-| ----------------------------------------------- | ----------------------------------------------------------------------------- |
-| List and read                                   | owner, administrator, campaign manager, campaign operator, analyst, moderator |
-| Pause and resume                                | owner, administrator, campaign manager, campaign operator                     |
-| Create, edit, launch, cancel, duplicate, delete | owner, administrator, campaign manager                                        |
+| Action                                                   | Roles                                                                         |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| List and read                                            | owner, administrator, campaign manager, campaign operator, analyst, moderator |
+| Pause and resume                                         | owner, administrator, campaign manager, campaign operator                     |
+| Create, edit, launch, cancel, archive, duplicate, delete | owner, administrator, campaign manager                                        |
 
 ## API (`/api/v1/campaigns`, JSON, `Cache-Control: no-store`)
 
@@ -47,13 +51,15 @@ Writes need the session cookie, the `X-CSRF-Token` header and a permitted Origin
 
 | Route                 | Notes                                                                                                                                                                                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /`               | `{ items: CampaignSummary[] }`, newest first, with the template. Query: `status=` (the effective status), `q=` (title contains)                                                                                                                   |
+| `GET /`               | `{ items: CampaignSummary[] }`, newest first, with the template. Query: `status=` (the effective status), `q=` (title contains), `archived=true` (the archived ones; they are left out otherwise)                                                 |
 | `GET /:id`            | `CampaignDetail` with `prizes` in order; `404` if missing, deleted or another business's                                                                                                                                                          |
 | `POST /`              | `{ title, templateId? }` -> `201` draft at `version: 1`; `422 CAMPAIGN_INVALID` if the template is not available; a new campaign starts with the type's default fields and settings                                                               |
 | `PUT /:id`            | `{ expectedVersion, title, summary, templateId, startAt, endAt, prizes[], fields[], settings }` replaces a draft; `412 VERSION_CONFLICT` if stale; `409 CAMPAIGN_LOCKED` if not a draft; `422 CAMPAIGN_INVALID` if the end is not after the start |
 | `POST /:id/launch`    | `{ expectedVersion }`; runs the checks; `422 PREFLIGHT_FAILED` with `error.details.failed`; goes `LIVE`, or `SCHEDULED` if the start is ahead                                                                                                     |
 | `POST /:id/pause`     | `{ expectedVersion }` from scheduled or live -> `PAUSED`; `409 CAMPAIGN_STATE` otherwise (including one that has ended)                                                                                                                           |
 | `POST /:id/resume`    | `{ expectedVersion }` from paused -> `LIVE` or `SCHEDULED` by the start time                                                                                                                                                                      |
+| `POST /:id/archive`   | `{ expectedVersion }` for a draft, completed or cancelled campaign -> `archivedAt` set; `409 CAMPAIGN_STATE` if it is running, paused or already archived                                                                                         |
+| `POST /:id/unarchive` | `{ expectedVersion }` -> `archivedAt` null, status as it was; `409 CAMPAIGN_STATE` if it is not archived                                                                                                                                          |
 | `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (final)                                                                                                                                                                       |
 | `POST /:id/duplicate` | `{ title? }` -> `201` new draft (own ids, no schedule, no address), default title "`<title> (copy)`"                                                                                                                                              |
 | `DELETE /:id`         | Soft delete of a draft -> `204`; `409 CAMPAIGN_LOCKED` otherwise                                                                                                                                                                                  |

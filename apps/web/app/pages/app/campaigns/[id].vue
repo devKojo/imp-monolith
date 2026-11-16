@@ -17,6 +17,7 @@ import {
   browserZone,
   clone,
   fromParts,
+  isArchivable,
   isLaunchable,
   movePrize,
   newPrize,
@@ -72,7 +73,9 @@ useHead({ title: computed(() => draft.value?.title || t('cmp.title')) });
 const canManage = store.canManage;
 const canOperate = store.canOperate;
 const isDraft = computed(() => draft.value?.status === 'DRAFT');
-const readonly = computed(() => !isDraft.value || !canManage.value);
+const isArchived = computed(() => Boolean(draft.value?.archivedAt));
+const archivable = computed(() => !!draft.value && isArchivable(draft.value.status));
+const readonly = computed(() => !isDraft.value || !canManage.value || isArchived.value);
 const titleProblem = computed(() =>
   draft.value && draft.value.title.trim() === '' ? t('cmp.title.required') : undefined,
 );
@@ -253,6 +256,17 @@ const resume = () =>
     toast.push(t('cmp.resumed'), 'info');
   });
 
+const archive = () =>
+  attempt(async () => {
+    adopt(await store.archive(draft.value!));
+    toast.push(t('cmp.archivedDone'), 'info');
+  });
+const unarchive = () =>
+  attempt(async () => {
+    adopt(await store.unarchive(draft.value!));
+    toast.push(t('cmp.unarchivedDone'), 'info');
+  });
+
 const cancelOpen = ref(false);
 const cancel = () =>
   attempt(async () => {
@@ -318,7 +332,25 @@ const crumbs = computed(() => [
             </UiButton>
             <ShareCampaign :slug="publicSlug" :title="draft.title" variant="secondary" compact />
           </template>
-          <template v-if="canManage && isDraft">
+          <UiButton
+            v-if="canManage && isArchived"
+            variant="secondary"
+            size="xs"
+            :disabled="busy"
+            @click="unarchive"
+          >
+            {{ t('cmp.unarchive') }}
+          </UiButton>
+          <UiButton
+            v-else-if="canManage && archivable"
+            variant="tertiary"
+            size="xs"
+            :disabled="busy || dirty"
+            @click="archive"
+          >
+            {{ t('cmp.archive') }}
+          </UiButton>
+          <template v-if="canManage && isDraft && !isArchived">
             <UiButton
               variant="secondary"
               size="xs"
@@ -366,7 +398,13 @@ const crumbs = computed(() => [
       </header>
 
       <p v-if="readonly" class="ui-text-caption ui-text-hint">
-        {{ !canManage ? t('cmp.readonly.role') : t('cmp.readonly.launched') }}
+        {{
+          !canManage
+            ? t('cmp.readonly.role')
+            : isArchived
+              ? t('cmp.readonly.archived')
+              : t('cmp.readonly.launched')
+        }}
       </p>
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
       <UiBanner v-if="conflict" tone="warning" role="alert" :title="t('cmp.error.conflict')">

@@ -15,6 +15,10 @@ export const LIMITS = {
   winners: 100_000,
 } as const;
 
+/** The statuses a campaign can be archived from: not running, so no public page disappears quietly. */
+export const isArchivable = (status: string): boolean =>
+  status === 'DRAFT' || status === 'COMPLETED' || status === 'CANCELLED';
+
 export const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export const newPrize = (id: string): Prize => ({

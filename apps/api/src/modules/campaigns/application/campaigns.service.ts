@@ -98,6 +98,7 @@ export class CampaignsService {
         ...withEffectiveStatus(r, now),
         template: r.templateId ? (refs.get(r.templateId) ?? null) : null,
       }))
+      .filter((r) => (r.archivedAt !== null) === (query.archived ?? false))
       .filter((r) => !query.status || r.status === query.status)
       .filter((r) => !needle || r.title.toLowerCase().includes(needle));
   }
@@ -227,6 +228,42 @@ export class CampaignsService {
       'Only a campaign that has not ended can be cancelled',
     );
     return this.moved(ctx, id, expectedVersion, ['SCHEDULED', 'LIVE', 'PAUSED'], 'CANCELLED');
+  }
+
+  /**
+   * Puts a campaign away. Only one that is not running: a draft, or one that has ended or been
+   * cancelled (a running or paused one must be ended first, so a public page never vanishes quietly).
+   */
+  async archive(actor: Actor | null, id: string, expectedVersion: number): Promise<CampaignDetail> {
+    const ctx = this.scope(actor, 'manage');
+    await this.running(
+      ctx,
+      id,
+      ['DRAFT', 'COMPLETED', 'CANCELLED'],
+      'A running campaign cannot be archived. Cancel it first, or wait for it to end',
+    );
+    return this.detail(
+      ctx,
+      this.settle(
+        await this.repo.setArchived(ctx, id, expectedVersion, true),
+        () => new CampaignStateError('The campaign is already archived'),
+      ),
+    );
+  }
+
+  async unarchive(
+    actor: Actor | null,
+    id: string,
+    expectedVersion: number,
+  ): Promise<CampaignDetail> {
+    const ctx = this.scope(actor, 'manage');
+    return this.detail(
+      ctx,
+      this.settle(
+        await this.repo.setArchived(ctx, id, expectedVersion, false),
+        () => new CampaignStateError('The campaign is not archived'),
+      ),
+    );
   }
 
   async duplicate(actor: Actor | null, id: string, title?: string): Promise<CampaignDetail> {

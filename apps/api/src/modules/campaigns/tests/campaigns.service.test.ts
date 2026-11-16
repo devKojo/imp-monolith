@@ -386,6 +386,81 @@ describe('running', () => {
   });
 });
 
+describe('archiving', () => {
+  const ids = async (archived?: boolean) =>
+    (await service.list(owner, archived === undefined ? {} : { archived })).map((x) => x.id);
+
+  it('puts a draft away, hides it from the default list and brings it back as it was', async () => {
+    const d = await draft();
+    const archived = await service.archive(owner, d.id, d.version);
+    expect(archived.archivedAt).not.toBeNull();
+    expect(archived.status).toBe('DRAFT');
+    expect(await ids()).toEqual([]);
+    expect(await ids(true)).toEqual([d.id]);
+    const back = await service.unarchive(owner, d.id, archived.version);
+    expect(back).toMatchObject({ archivedAt: null, status: 'DRAFT' });
+    expect(await ids()).toEqual([d.id]);
+    expect(await ids(true)).toEqual([]);
+  });
+
+  it('archives a cancelled campaign and one that has ended', async () => {
+    const a = await launched();
+    const cancelled = await service.cancel(owner, a.id, a.version);
+    expect((await service.archive(owner, a.id, cancelled.version)).status).toBe('CANCELLED');
+
+    const b = await launched({ endAt: hours(2) });
+    now = new Date(NOW.getTime() + 3 * 3_600_000);
+    const done = await service.archive(owner, b.id, b.version);
+    expect(done.status).toBe('COMPLETED');
+    expect(done.archivedAt).not.toBeNull();
+  });
+
+  it('refuses to archive a running or paused campaign', async () => {
+    const c = await launched();
+    await expect(service.archive(owner, c.id, c.version)).rejects.toMatchObject({
+      status: 409,
+      code: 'CAMPAIGN_STATE',
+    });
+    const paused = await service.pause(owner, c.id, c.version);
+    await expect(service.archive(owner, c.id, paused.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+  });
+
+  it('refuses a stale version, a repeat, and unarchiving one that is not archived', async () => {
+    const d = await draft();
+    await expect(service.archive(owner, d.id, 1)).rejects.toMatchObject({ status: 412 });
+    await expect(service.unarchive(owner, d.id, d.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+    const archived = await service.archive(owner, d.id, d.version);
+    await expect(service.archive(owner, d.id, archived.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+  });
+
+  it('is for managers only', async () => {
+    const d = await draft();
+    for (const who of [operator, analyst]) {
+      await expect(service.archive(who, d.id, d.version)).rejects.toMatchObject({ status: 403 });
+    }
+    const archived = await service.archive(owner, d.id, d.version);
+    await expect(service.unarchive(operator, d.id, archived.version)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it('keeps an archived draft from being edited, and its copy starts unarchived', async () => {
+    const d = await draft();
+    const archived = await service.archive(owner, d.id, d.version);
+    await expect(
+      service.update(owner, d.id, { expectedVersion: archived.version, ...body() }),
+    ).rejects.toMatchObject({ status: 409 });
+    const copy = await service.duplicate(owner, d.id);
+    expect(copy.archivedAt).toBeNull();
+  });
+});
+
 describe('duplicating and deleting', () => {
   it('copies as a draft without schedule or address', async () => {
     const c = await launched();

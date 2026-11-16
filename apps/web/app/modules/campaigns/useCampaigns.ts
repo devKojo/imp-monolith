@@ -36,7 +36,7 @@ export function useCampaigns() {
     canManage: computed(() => canManageCampaigns(role())),
     /** Whether the active role may pause and resume (the server still decides). */
     canOperate: computed(() => canOperateCampaigns(role())),
-    list: () => run(() => api.list()),
+    list: (archived = false) => run(() => api.list(archived)),
     get: (id: string) => run(() => api.get(id)),
     create: (title: string, templateId?: string | null) =>
       run(() => api.create({ title, templateId: templateId ?? null }, csrf())),
@@ -45,6 +45,10 @@ export function useCampaigns() {
     pause: (c: { id: string; version: number }) => run(() => api.pause(c.id, c.version, csrf())),
     resume: (c: { id: string; version: number }) => run(() => api.resume(c.id, c.version, csrf())),
     cancel: (c: Campaign) => run(() => api.cancel(c.id, c.version, csrf())),
+    archive: (c: { id: string; version: number }) =>
+      run(() => api.archive(c.id, c.version, csrf())),
+    unarchive: (c: { id: string; version: number }) =>
+      run(() => api.unarchive(c.id, c.version, csrf())),
     duplicate: (id: string) => run(() => api.duplicate(id, csrf())),
     remove: (id: string) => run(() => api.remove(id, csrf())),
   };

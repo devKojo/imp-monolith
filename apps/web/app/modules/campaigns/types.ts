@@ -99,6 +99,8 @@ export type Campaign = {
   version: number;
   updatedAt: string;
   launchedAt: string | null;
+  /** When it was archived; null if it is not. Archived campaigns are left out of the default list. */
+  archivedAt: string | null;
 };
 
 /** One row of the campaign library. */

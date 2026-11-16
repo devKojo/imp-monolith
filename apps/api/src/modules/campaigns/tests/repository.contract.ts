@@ -270,6 +270,43 @@ export function repositoryContract(
       expect(await w.repo.softDelete(a, c.id)).toBe('not_found');
     });
 
+    it('archives and unarchives at the right version, and says when it already is', async () => {
+      const c = await make('Put away');
+      const archived = await w.repo.setArchived(a, c.id, c.version, true);
+      expect(archived.kind).toBe('ok');
+      if (archived.kind !== 'ok') return;
+      expect(archived.campaign.archivedAt).not.toBeNull();
+      expect(archived.campaign.version).toBe(c.version + 1);
+      expect((await w.repo.list(a)).find((x) => x.id === c.id)?.archivedAt).not.toBeNull();
+      expect(await w.repo.setArchived(a, c.id, archived.campaign.version, true)).toEqual({
+        kind: 'wrong_state',
+      });
+      expect(await w.repo.setArchived(a, c.id, 1, false)).toEqual({ kind: 'conflict' });
+      const back = await w.repo.setArchived(a, c.id, archived.campaign.version, false);
+      expect(back).toMatchObject({ kind: 'ok', campaign: { archivedAt: null, status: 'DRAFT' } });
+      expect(await w.repo.setArchived(a, randomUUID(), 1, true)).toEqual({ kind: 'not_found' });
+    });
+
+    it('does not let an archived draft be edited or launched until it is unarchived', async () => {
+      const c = await make('Frozen');
+      const saved = await w.repo.saveDraft(a, c.id, c.version, content({ title: 'Frozen' }));
+      if (saved.kind !== 'ok') throw new Error('save failed');
+      const archived = await w.repo.setArchived(a, c.id, saved.campaign.version, true);
+      if (archived.kind !== 'ok') throw new Error('archive failed');
+      const v = archived.campaign.version;
+      expect((await w.repo.saveDraft(a, c.id, v, content({ title: 'Nope' }))).kind).toBe(
+        'wrong_state',
+      );
+      expect((await w.repo.launch(a, c.id, v, { status: 'LIVE', slug: slug() })).kind).toBe(
+        'wrong_state',
+      );
+    });
+
+    it('does not archive across businesses', async () => {
+      const c = await make('Mine');
+      expect(await w.repo.setArchived(b, c.id, c.version, true)).toEqual({ kind: 'not_found' });
+    });
+
     it('lists newest first with a prize count', async () => {
       const c = await make(`List-${randomUUID().slice(0, 6)}`);
       await w.repo.saveDraft(a, c.id, 1, content({ title: c.title }));
