@@ -4,7 +4,7 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-65 components.
+66 components.
 
 ## Foundation
 
@@ -47,6 +47,7 @@
 | `UiFilterChips` | Single-select filter chips (campaign type, status) as toggle buttons. | `UiIcon` | - | UI-DSH-04, Spec 5 |
 | `UiSearchField` | Search form with icon, clear button and a visible Search button. | `UiButton`, `UiTextInput` | - | UI-A11Y-04, UI-DSH-04 |
 | `UiSegmentedControl` | Compact single-choice switch for views of the same data (All / Live / Scheduled). | - | - | UI-DSH-04, UI-A11Y-01 |
+| `UiRatingMatrix` | Statements rated on one shared scale: a row per statement, a radio per scale point, number keys pick a point. | - | - | UI-FRM-01, UI-A11Y-05 |
 
 ## Feedback
 

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import UiCaptchaWrapper from '../../components/UiCaptchaWrapper.vue';
 import UiCheckbox from '../../components/UiCheckbox.vue';
 import UiChoiceGroup from '../../components/UiChoiceGroup.vue';
+import UiRatingMatrix from '../../components/UiRatingMatrix.vue';
 import UiConsentGroup, { type ConsentValue } from '../../components/UiConsentGroup.vue';
 import UiDateTimeField, { type DateTimeValue } from '../../components/UiDateTimeField.vue';
 import UiErrorSummary from '../../components/UiErrorSummary.vue';
@@ -20,6 +21,7 @@ import UiSegmentedControl from '../../components/UiSegmentedControl.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
 const name = ref('');
+const matrix = ref<Record<string, number | undefined>>({ a: 3 });
 const about = ref('x'.repeat(70));
 const phone = ref('0241234567');
 const country = ref('GH');
@@ -173,6 +175,21 @@ const segmented = ref('all');
 
   <GalleryBlock name="UiSwitch">
     <UiSwitch v-model="live" label="Show remaining prizes" />
+  </GalleryBlock>
+
+  <GalleryBlock name="UiRatingMatrix">
+    <UiRatingMatrix
+      legend="How strongly do you agree with these statements?"
+      statement-label="Statement"
+      :scale="['Strongly disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly agree']"
+      :rows="[
+        { id: 'a', label: 'The sign-up was easy.' },
+        { id: 'b', label: 'I understood the prizes.' },
+        { id: 'c', label: 'I would recommend this campaign.' },
+      ]"
+      :model-value="matrix"
+      @select="(id, i) => (matrix = { ...matrix, [id]: i })"
+    />
   </GalleryBlock>
 
   <GalleryBlock name="UiChoiceGroup">

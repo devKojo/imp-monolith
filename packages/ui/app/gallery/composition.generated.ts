@@ -425,6 +425,10 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     ],
     "usedBy": []
   },
+  "UiRatingMatrix": {
+    "composes": [],
+    "usedBy": []
+  },
   "UiReorderableList": {
     "composes": [
       "UiButton"

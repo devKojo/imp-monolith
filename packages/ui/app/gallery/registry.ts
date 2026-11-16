@@ -548,6 +548,16 @@ export const registry: ComponentEntry[] = [
     origin: 'business dashboard (campaign table filter)',
   },
   {
+    name: 'UiRatingMatrix',
+    category: 'Forms',
+    summary:
+      'Statements rated on one shared scale: a row per statement, a radio per scale point, number keys pick a point.',
+    specRefs: ['UI-FRM-01', 'UI-A11Y-05'],
+    states: ['unanswered', 'answered', 'narrow screen'],
+    a11y: 'A group with one labelled radio group per row; native radios so arrow keys work; the scale label is announced on every radio; number keys are a shortcut, never the only way.',
+    origin: 'survey taker (matrix question)',
+  },
+  {
     name: 'UiClaimCard',
     category: 'Domain',
     summary: 'Feature card for the next action a participant should take (claim a reward).',
