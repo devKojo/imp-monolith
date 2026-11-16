@@ -31,7 +31,31 @@ export type PublicRow = {
   archetype: string;
   businessName: string;
   prize: { name: string; valueLabel: string } | null;
+  /** Every prize tier, in order; only read for one campaign's page, not for the listing. */
+  prizes?: PublicPrizeTier[];
+  startAt?: Date | null;
 };
+
+export type PublicPrizeTier = {
+  name: string;
+  valueLabel: string;
+  winners: number;
+  description: string;
+};
+
+/** One campaign's page: the listing entry plus what the page itself shows. Still public content only. */
+export type PublicCampaignDetail = PublicCampaign & {
+  startsAt: string | null;
+  prizes: PublicPrizeTier[];
+};
+
+export function toPublicDetail(row: PublicRow): PublicCampaignDetail {
+  return {
+    ...toPublic(row),
+    startsAt: row.startAt ? row.startAt.toISOString() : null,
+    prizes: row.prizes ?? [],
+  };
+}
 
 export const PAGE_SIZE = 60;
 

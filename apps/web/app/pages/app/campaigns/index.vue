@@ -7,6 +7,8 @@ import { toApiError } from '../../../modules/auth/errors';
 import BusinessShell from '../../../modules/business/components/BusinessShell.vue';
 import { campaignErrorKey } from '../../../modules/campaigns/errors';
 import { browserZone } from '../../../modules/campaigns/logic';
+import ShareCampaign from '../../../modules/campaigns/components/ShareCampaign.vue';
+import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
 import type { CampaignSummary } from '../../../modules/campaigns/types';
 import { useCampaigns } from '../../../modules/campaigns/useCampaigns';
 
@@ -92,6 +94,7 @@ const rows = computed(() =>
       ? t(`tpl.archetype.${c.template.archetype}` as AppTextKey)
       : t('cmp.noTemplate'),
     status: c.status,
+    slug: isPublicNow(c, new Date()) ? c.slug : null,
     closes: c.endAt ? formatInZone(new Date(c.endAt), zone) : t('cmp.noClose'),
     prizes: c.prizeCount,
   })),
@@ -195,6 +198,21 @@ const confirmDelete = () =>
             <UiButton :to="`/app/campaigns/${String(row.id)}`" variant="tertiary" size="xs">
               {{ canManage && row.status === 'DRAFT' ? t('cmp.edit') : t('cmp.view') }}
             </UiButton>
+            <UiButton
+              v-if="row.slug"
+              :to="pagePath(String(row.slug))"
+              variant="tertiary"
+              size="xs"
+              icon="external"
+            >
+              {{ t('cmp.viewPage') }}<span class="ui-sr-only"> {{ row.name }}</span>
+            </UiButton>
+            <ShareCampaign
+              v-if="row.slug"
+              :slug="String(row.slug)"
+              :title="String(row.name)"
+              compact
+            />
             <UiButton
               v-if="
                 canOperate &&

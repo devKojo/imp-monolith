@@ -10,7 +10,7 @@ import { PrismaCampaignRepository } from './infrastructure/prisma-campaign.repos
 import { PrismaPublicCampaignRepository } from './infrastructure/prisma-public-campaigns.repository';
 
 export type { CampaignDetail, CampaignStatus, CampaignSummary } from './domain/model';
-export type { PublicCampaign, PublicType } from './domain/public';
+export type { PublicCampaign, PublicCampaignDetail, PublicType } from './domain/public';
 export type { TemplateLookup } from './application/ports';
 export type { CampaignField, FieldKind } from './domain/fields';
 export { canManageCampaigns, canOperateCampaigns, canReadCampaigns } from './domain/permissions';

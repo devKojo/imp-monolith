@@ -7,6 +7,7 @@ import BusinessShell from '../../../modules/business/components/BusinessShell.vu
 import CampaignChecks from '../../../modules/campaigns/components/CampaignChecks.vue';
 import CampaignPagePreview from '../../../modules/campaigns/components/CampaignPagePreview.vue';
 import ContentEditor from '../../../modules/campaigns/components/ContentEditor.vue';
+import ShareCampaign from '../../../modules/campaigns/components/ShareCampaign.vue';
 import PrizeEditor from '../../../modules/campaigns/components/PrizeEditor.vue';
 import { campaignErrorKey } from '../../../modules/campaigns/errors';
 import { defaultSettingsFor, fitToTemplate } from '../../../modules/campaigns/fields';
@@ -32,6 +33,7 @@ import type {
   Prize,
   TemplateRef,
 } from '../../../modules/campaigns/types';
+import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
 import { useCampaigns } from '../../../modules/campaigns/useCampaigns';
 import { useTemplates } from '../../../modules/templates/useTemplates';
 
@@ -81,6 +83,11 @@ const launchable = computed(
 );
 const runningStatus = computed(
   () => draft.value?.status === 'LIVE' || draft.value?.status === 'SCHEDULED',
+);
+
+/** The public page is open now: offer to view and share it. */
+const publicSlug = computed(() =>
+  draft.value && isPublicNow(draft.value, new Date()) ? draft.value.slug : null,
 );
 
 // ---- schedule: the fields keep what is typed; the campaign gets an instant once it is complete
@@ -305,6 +312,12 @@ const crumbs = computed(() => [
           <UiButton variant="tertiary" size="xs" @click="close">
             {{ dirty ? t('cmp.discard') : t('cmp.close') }}
           </UiButton>
+          <template v-if="publicSlug">
+            <UiButton :to="pagePath(publicSlug)" variant="secondary" size="xs" icon="external">
+              {{ t('cmp.viewPage') }}
+            </UiButton>
+            <ShareCampaign :slug="publicSlug" :title="draft.title" variant="secondary" compact />
+          </template>
           <template v-if="canManage && isDraft">
             <UiButton
               variant="secondary"

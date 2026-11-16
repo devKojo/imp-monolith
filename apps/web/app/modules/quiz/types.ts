@@ -28,6 +28,14 @@ export type QuizInfo = {
   passPercent: number;
 };
 
+/** One prize tier as the public page shows it. */
+export type PublicPrizeTier = {
+  name: string;
+  valueLabel: string;
+  winners: number;
+  description: string;
+};
+
 /** The public face of a running campaign, for its page (/c/{slug}). */
 export type PublicCampaignPage = {
   id: string;
@@ -37,4 +45,6 @@ export type PublicCampaignPage = {
   businessName: string;
   type: string;
   endsAt: string;
+  startsAt: string | null;
+  prizes: PublicPrizeTier[];
 };
