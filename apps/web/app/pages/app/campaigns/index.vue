@@ -245,9 +245,6 @@ const confirmDelete = () =>
 
 <template>
   <BusinessShell current="campaigns">
-    <template #search>
-      <UiSearchField v-model="query" :label="t('cmp.search')" />
-    </template>
     <template v-if="canManage" #actions>
       <UiButton
         size="xs"
@@ -277,7 +274,7 @@ const confirmDelete = () =>
         <UiSegmentedControl v-model="status" :label="t('cmp.filter')" :options="statusOptions" />
       </div>
       <div class="table-card__search">
-        <UiSearchField v-model="query" :label="t('cmp.search')" />
+        <UiSearchField v-model="query" compact :label="t('cmp.search')" />
       </div>
       <UiDataTable
         flush
@@ -387,11 +384,8 @@ const confirmDelete = () =>
   margin: 0;
 }
 .table-card__search {
-  padding: var(--ui-space-3) var(--ui-space-6);
+  padding: var(--ui-space-2) var(--ui-space-6);
   border-block-end: 1px solid var(--ui-color-border);
-}
-.table-card__search > * {
-  max-inline-size: 28rem;
 }
 .actions {
   display: inline-flex;
