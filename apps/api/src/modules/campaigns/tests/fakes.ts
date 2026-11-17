@@ -44,7 +44,11 @@ export class InMemoryCampaignRepository implements CampaignRepository {
           deleted: _d,
           ...rest
         } = r;
-        return { ...rest, prizeCount: prizes.length };
+        return {
+          ...rest,
+          prizeCount: prizes.length,
+          maxParticipants: _set.pool?.maxParticipants ?? null,
+        };
       });
   }
 
@@ -81,6 +85,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       updatedAt: new Date().toISOString(),
       launchedAt: null,
       archivedAt: null,
+      participantCount: 0,
     };
     this.rows.push(row);
     return this.strip(row);
@@ -171,6 +176,7 @@ export class InMemoryCampaignRepository implements CampaignRepository {
       version: 1,
       launchedAt: null,
       archivedAt: null,
+      participantCount: 0,
       updatedAt: new Date().toISOString(),
     };
     copy.prizes = copy.prizes.map((p) => ({ ...p, id: randomUUID() }));

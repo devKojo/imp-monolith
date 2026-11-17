@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { claimSeat } from '@/modules/campaigns';
 import type { QuizRepository } from '../application/ports';
 import type { AttemptResult, AttemptRow, QuizDefinition, RunnableQuiz } from '../domain/model';
 
@@ -80,7 +81,13 @@ export class PrismaQuizRepository implements QuizRepository {
           slug,
           deletedAt: null,
           endAt: { gt: now },
-          OR: [{ status: 'LIVE' }, { status: 'SCHEDULED', startAt: { lte: now } }],
+          // COMPLETED here (with the end date still ahead) means a prize pool campaign that is full: people
+          // already in can finish; a new person is refused when they try to take a seat.
+          OR: [
+            { status: 'LIVE' },
+            { status: 'SCHEDULED', startAt: { lte: now } },
+            { status: 'COMPLETED' },
+          ],
           business: { status: { in: ['PENDING', 'ACTIVE'] } },
           template: { archetype: 'QUIZ' },
         },
@@ -120,6 +127,17 @@ export class PrismaQuizRepository implements QuizRepository {
     input: { campaignId: string; userId: string; attemptNumber: number; expiresAt: Date | null },
   ): Promise<AttemptRow> {
     return withTenant(this.db, ctx, async (tx) => {
+      // A person's first attempt takes a seat on the campaign (a prize pool campaign has a limited number);
+      // a retake, or a double click that finds the attempt already there, does not.
+      const existing = await tx.quizAttempt.findFirst({
+        where: {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+        },
+        select: { id: true },
+      });
+      if (!existing) await claimSeat(tx, ctx.tenantId, input.campaignId);
       // The unique (business, campaign, participant, number) key makes a double click or a second tab return
       // the attempt that already exists instead of creating another with the same number.
       const row = await tx.quizAttempt.upsert({

@@ -36,6 +36,13 @@ export class CampaignLockedError extends AppError {
   }
 }
 
+/** A prize pool campaign has taken its last participant: it is closed to anyone new. */
+export class CampaignFullError extends AppError {
+  constructor() {
+    super('This campaign has reached its participant limit', 409, 'CAMPAIGN_FULL');
+  }
+}
+
 /** The action does not fit the campaign's state (for example pausing one that has ended). */
 export class CampaignStateError extends AppError {
   constructor(message: string) {

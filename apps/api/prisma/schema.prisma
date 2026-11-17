@@ -250,6 +250,9 @@ model Campaign {
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
   /// Set when the business archives the campaign (put away, not deleted); null otherwise.
   archivedAt  DateTime?      @map("archived_at") @db.Timestamptz
+  /// Participants admitted so far (counted once each, when they first join). A prize pool campaign closes
+  /// when this reaches its limit.
+  participantCount Int          @default(0) @map("participant_count")
   /// Settings the campaign type uses, e.g. {"quiz": {"timeLimitMinutes": 10, "passPercent": 70}}.
   settings    Json           @default("{}")
 

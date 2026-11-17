@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { claimSeat } from '@/modules/campaigns';
 import type { SurveyRepository } from '../application/ports';
 import type {
   AnswerValue,
@@ -75,7 +76,13 @@ export class PrismaSurveyRepository implements SurveyRepository {
           slug,
           deletedAt: null,
           endAt: { gt: now },
-          OR: [{ status: 'LIVE' }, { status: 'SCHEDULED', startAt: { lte: now } }],
+          // COMPLETED here (with the end date still ahead) means a prize pool campaign that is full: people
+          // already in can finish; a new person is refused when they try to take a seat.
+          OR: [
+            { status: 'LIVE' },
+            { status: 'SCHEDULED', startAt: { lte: now } },
+            { status: 'COMPLETED' },
+          ],
           business: { status: { in: ['PENDING', 'ACTIVE'] } },
           template: { archetype: 'SURVEY' },
         },
@@ -114,6 +121,17 @@ export class PrismaSurveyRepository implements SurveyRepository {
     input: { campaignId: string; userId: string },
   ): Promise<ResponseRow> {
     return withTenant(this.db, ctx, async (tx) => {
+      // Joining takes a seat on the campaign (a prize pool campaign has a limited number); a double click that
+      // finds the response already there does not.
+      const existing = await tx.surveyResponse.findFirst({
+        where: {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+        },
+        select: { id: true },
+      });
+      if (!existing) await claimSeat(tx, ctx.tenantId, input.campaignId);
       // The unique (business, campaign, participant) key makes a double click or a second tab return the
       // response that already exists instead of creating another.
       const row = await tx.surveyResponse.upsert({

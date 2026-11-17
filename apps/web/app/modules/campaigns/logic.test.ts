@@ -56,6 +56,7 @@ const campaign = (over: Record<string, unknown> = {}) => ({
   endAt: hours(48) as string | null,
   prizes: [prize('p1')],
   fields: details(),
+  settings: {},
   ...over,
 });
 const passes = (over: Record<string, unknown> = {}) =>
@@ -120,6 +121,15 @@ describe('launch checks', () => {
     expect(passes({ template: quiz(), prizes: [] }).prizes).toBe(true);
     expect(passes({ template: quiz(), prizes: [prize('p', ' ')] }).prizes).toBe(false);
     expect(passes({ prizes: [{ ...prize('p'), winners: 0 }] }).prizes).toBe(false);
+  });
+
+  it('is met by a complete prize pool in place of prize tiers, and not by an unfinished one', () => {
+    const pool = { kind: 'POINTS', amount: 1000, currency: null, maxParticipants: 10 };
+    expect(passes({ prizes: [], settings: { pool } }).prizes).toBe(true);
+    expect(passes({ prizes: [], settings: { pool: { ...pool, amount: 0 } } }).prizes).toBe(false);
+    expect(passes({ prizes: [], settings: { pool: { ...pool, maxParticipants: 0 } } }).prizes).toBe(
+      false,
+    );
   });
 });
 

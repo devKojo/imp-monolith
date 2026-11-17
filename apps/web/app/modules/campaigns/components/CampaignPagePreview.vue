@@ -3,7 +3,8 @@ import { computed } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
 import { winnersLabelKey } from '../logic';
-import type { CampaignField, Prize } from '../types';
+import { formatAmount, poolProblem, poolShare } from '../pool';
+import type { CampaignField, Prize, PrizePool } from '../types';
 import ParticipantPreview from './ParticipantPreview.vue';
 
 /**
@@ -17,6 +18,8 @@ const props = defineProps<{
   summary: string;
   endAt: string | null;
   prizes: Prize[];
+  /** A prize pool shown in place of the tiers. */
+  pool: PrizePool | null;
   /** Short label above the headline, for example the kind of campaign. */
   kicker: string;
   blocks: CampaignField[];
@@ -43,7 +46,25 @@ const headline = computed(() => props.title || t('cmp.preview.headline'));
       <p v-if="summary" class="hero__text ui-text-body-s">{{ summary }}</p>
     </header>
 
-    <section v-if="prizes.length > 0" class="section" aria-labelledby="preview-prizes">
+    <section
+      v-if="pool && poolProblem(pool) === null"
+      class="section"
+      aria-labelledby="preview-pool"
+    >
+      <h3 id="preview-pool" class="ui-text-h3">{{ t('cmp.preview.pool') }}</h3>
+      <div class="tier" data-top="true">
+        <p class="tier__value">{{ formatAmount(pool, pool.amount) }}</p>
+        <p class="ui-text-caption ui-text-hint">
+          {{ t('cmp.preview.poolEach', { share: formatAmount(pool, poolShare(pool).share) }) }}
+        </p>
+      </div>
+    </section>
+
+    <section
+      v-else-if="!pool && prizes.length > 0"
+      class="section"
+      aria-labelledby="preview-prizes"
+    >
       <h3 id="preview-prizes" class="ui-text-h3">{{ t('cmp.preview.prizes') }}</h3>
       <ul class="tiers">
         <li v-for="(p, i) in prizes" :key="p.id" class="tier" :data-top="i === 0">

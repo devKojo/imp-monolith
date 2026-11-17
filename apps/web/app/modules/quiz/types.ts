@@ -41,6 +41,15 @@ export type PublicPrizeTier = {
   description: string;
 };
 
+/** A prize pool as the public page shows it: the total, each participant's share and the places left. */
+export type PublicPool = {
+  label: string;
+  shareLabel: string;
+  maxParticipants: number;
+  joined: number;
+  spotsLeft: number;
+};
+
 /** The public face of a running campaign, for its page (/c/{slug}). */
 export type PublicCampaignPage = {
   id: string;
@@ -52,4 +61,6 @@ export type PublicCampaignPage = {
   endsAt: string;
   startsAt: string | null;
   prizes: PublicPrizeTier[];
+  /** Set instead of prize tiers when the campaign shares a pool among a limited number of people. */
+  pool?: PublicPool | null;
 };

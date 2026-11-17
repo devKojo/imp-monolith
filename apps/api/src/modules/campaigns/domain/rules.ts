@@ -5,8 +5,10 @@ import {
   type FieldDraft,
   type FieldInput,
   type FieldKind,
+  type CampaignSettings,
   type QuizSettings,
 } from './fields';
+import { poolProblem, type PrizePool } from './pool';
 import type {
   CampaignStatus,
   PreflightCheck,
@@ -80,6 +82,8 @@ export type PreflightInput = {
   endAt: Date | null;
   prizes: readonly PrizeInput[];
   fields: readonly FieldInput[];
+  /** A prize pool replaces prize tiers: when set, it is what has to be complete. */
+  pool?: PrizePool | null;
 };
 
 /**
@@ -102,7 +106,12 @@ export function preflight(input: PreflightInput, now: Date): PreflightCheck[] {
         input.endAt > now &&
         (input.startAt === null || input.startAt < input.endAt),
     },
-    { id: 'prizes', pass: prizesComplete && (!needsPrizes || input.prizes.length > 0) },
+    {
+      id: 'prizes',
+      pass: input.pool
+        ? poolProblem(input.pool) === null
+        : prizesComplete && (!needsPrizes || input.prizes.length > 0),
+    },
     // Someone must be reachable, and agree to the rules.
     { id: 'details', pass: contact && consent },
     {
@@ -182,16 +191,20 @@ export function defaultFields(template: TemplateRef): FieldDraft[] {
 export function normalizeSettings(
   template: TemplateRef | null,
   quiz: QuizSettings | null | undefined,
-) {
-  return template?.archetype === 'quiz'
-    ? {
-        quiz: quiz ?? {
-          timeLimitMinutes: null,
-          passPercent: FIELD_LIMITS.defaultPassPercent,
-          maxAttempts: FIELD_LIMITS.defaultMaxAttempts,
-        },
-      }
-    : {};
+  pool?: PrizePool | null,
+): CampaignSettings {
+  return {
+    ...(template?.archetype === 'quiz'
+      ? {
+          quiz: quiz ?? {
+            timeLimitMinutes: null,
+            passPercent: FIELD_LIMITS.defaultPassPercent,
+            maxAttempts: FIELD_LIMITS.defaultMaxAttempts,
+          },
+        }
+      : {}),
+    ...(pool ? { pool } : {}),
+  };
 }
 
 /**

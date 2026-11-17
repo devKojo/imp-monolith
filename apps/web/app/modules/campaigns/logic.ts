@@ -1,3 +1,4 @@
+import { poolProblem } from './pool';
 import { zonedToInstant } from '@imp/ui/app/utils/datetime';
 import { fieldProblem, fieldsOf } from './fields';
 import type { Campaign, PreflightCheck, Prize } from './types';
@@ -61,7 +62,7 @@ export const winnersLabelKey = (
  * The server runs them again and has the last word.
  */
 export function preflight(
-  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields'>,
+  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields' | 'settings'>,
   now: Date,
 ): PreflightCheck[] {
   const needsPrizes = c.template?.requiresPrizes ?? false;
@@ -74,7 +75,12 @@ export function preflight(
     { id: 'title', pass: c.title.trim() !== '' },
     { id: 'template', pass: c.template !== null },
     { id: 'schedule', pass: end !== null && end > now && (start === null || start < end) },
-    { id: 'prizes', pass: prizesComplete && (!needsPrizes || c.prizes.length > 0) },
+    {
+      id: 'prizes',
+      pass: c.settings.pool
+        ? poolProblem(c.settings.pool) === null
+        : prizesComplete && (!needsPrizes || c.prizes.length > 0),
+    },
     { id: 'details', pass: contact && consent },
     {
       id: 'content',
@@ -86,7 +92,7 @@ export function preflight(
 }
 
 export const isLaunchable = (
-  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields'>,
+  c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields' | 'settings'>,
   now: Date,
 ): boolean => preflight(c, now).every((p) => p.pass);
 

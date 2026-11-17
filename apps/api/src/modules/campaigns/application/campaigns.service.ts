@@ -24,6 +24,7 @@ import type {
   TemplateRef,
 } from '../domain/model';
 import { LIMITS } from '../domain/model';
+import { toPoolView } from '../domain/pool';
 import { canManageCampaigns, canOperateCampaigns, canReadCampaigns } from '../domain/permissions';
 import {
   defaultFields,
@@ -81,6 +82,7 @@ export class CampaignsService {
     return {
       ...withEffectiveStatus(row, this.now()),
       template: row.templateId ? (refs.get(row.templateId) ?? null) : null,
+      pool: row.settings.pool ? toPoolView(row.settings.pool) : null,
     };
   }
 
@@ -144,9 +146,10 @@ export class CampaignsService {
       templateId: input.templateId,
       startAt,
       endAt,
-      prizes: normalizePrizes(input.prizes),
+      // A prize pool replaces prize tiers, so a campaign has one or the other, never both.
+      prizes: input.settings.pool ? [] : normalizePrizes(input.prizes),
       fields,
-      settings: normalizeSettings(template, input.settings.quiz),
+      settings: normalizeSettings(template, input.settings.quiz, input.settings.pool),
     });
     return this.detail(
       ctx,
@@ -177,6 +180,7 @@ export class CampaignsService {
         endAt: current.endAt ? new Date(current.endAt) : null,
         prizes: current.prizes,
         fields: current.fields,
+        pool: current.settings.pool ?? null,
       },
       now,
     );

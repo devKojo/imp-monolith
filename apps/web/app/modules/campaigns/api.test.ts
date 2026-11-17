@@ -48,6 +48,8 @@ const campaign: Campaign = {
   updatedAt: '2026-11-14T10:00:00.000Z',
   launchedAt: null,
   archivedAt: null,
+  participantCount: 0,
+  pool: null,
 };
 
 function client(reply: unknown = campaign, fails = false) {
@@ -76,13 +78,19 @@ describe('save body', () => {
         correctIndex: null,
       },
     ]);
-    expect(body.settings).toEqual({ quiz: null });
+    expect(body.settings).toEqual({ quiz: null, pool: null });
+    // A prize pool replaces the prize tiers in what is sent.
+    const pool = { kind: 'POINTS' as const, amount: 1000, currency: null, maxParticipants: 10 };
+    const withPool = toUpdateBody({ ...campaign, settings: { pool } });
+    expect(withPool.prizes).toEqual([]);
+    expect(withPool.settings).toEqual({ quiz: null, pool });
     const quiz = toUpdateBody({
       ...campaign,
       settings: { quiz: { timeLimitMinutes: 10, passPercent: 80, maxAttempts: 3 } },
     });
     expect(quiz.settings).toEqual({
       quiz: { timeLimitMinutes: 10, passPercent: 80, maxAttempts: 3 },
+      pool: null,
     });
   });
 

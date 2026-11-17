@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { uuidSchema } from '@/shared/uuid';
 import { FIELD_KINDS, FIELD_LIMITS } from '../domain/fields';
+import { POOL_CURRENCIES, POOL_KINDS, POOL_LIMITS } from '../domain/pool';
 import { LIMITS } from '../domain/model';
 
 /** Request shapes (R-API-02: validate every input at the edge; unknown keys are rejected). */
@@ -43,6 +44,17 @@ export const settingsSchema = z
       })
       .strict()
       .nullable(),
+    // A draft may hold a pool that is not finished yet (it is checked in full to launch).
+    pool: z
+      .object({
+        kind: z.enum(POOL_KINDS),
+        amount: z.number().int().min(0).max(POOL_LIMITS.amountMax),
+        currency: z.enum(POOL_CURRENCIES).nullable(),
+        maxParticipants: z.number().int().min(0).max(POOL_LIMITS.participantsMax),
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
   .strict();
 

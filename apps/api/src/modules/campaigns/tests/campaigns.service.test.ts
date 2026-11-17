@@ -421,6 +421,61 @@ describe('publishing a cancelled campaign again', () => {
   });
 });
 
+describe('prize pools', () => {
+  const pool = {
+    kind: 'MONEY' as const,
+    amount: 500_000,
+    currency: 'GHS' as const,
+    maxParticipants: 200,
+  };
+  const withPool = (over: Record<string, unknown> = {}) =>
+    body({ prizes: [], settings: { quiz: null, pool }, ...over });
+
+  it('keeps a pool instead of prize tiers and works out each share', async () => {
+    const d = await draft({ ...withPool(), prizes: [prize] });
+    expect(d.prizes).toEqual([]);
+    expect(d.pool).toMatchObject({
+      amount: 500_000,
+      share: 2500,
+      remainder: 0,
+      label: expect.stringContaining('5,000'),
+    });
+    expect(d.pool?.shareLabel).toContain('25.00');
+  });
+
+  it('launches with a complete pool and no prize tiers', async () => {
+    const c = await launched(withPool());
+    expect(c.status).toBe('LIVE');
+    expect(c.participantCount).toBe(0);
+  });
+
+  it('refuses to launch an unfinished pool, but lets a draft hold one', async () => {
+    const half = { ...pool, amount: 0 };
+    const d = await draft(withPool({ settings: { quiz: null, pool: half } }));
+    await expect(service.launch(owner, d.id, d.version)).rejects.toMatchObject({
+      code: 'PREFLIGHT_FAILED',
+    });
+  });
+
+  it('can go back to prize tiers by dropping the pool', async () => {
+    const d = await draft(withPool());
+    const back = await service.update(owner, d.id, {
+      expectedVersion: d.version,
+      ...body({ prizes: [prize] }),
+    });
+    expect(back.pool).toBeNull();
+    expect(back.prizes).toHaveLength(1);
+  });
+
+  it('lists how many seats a pool campaign has', async () => {
+    await draft(withPool());
+    expect((await service.list(owner, {}))[0]).toMatchObject({
+      maxParticipants: 200,
+      participantCount: 0,
+    });
+  });
+});
+
 describe('archiving', () => {
   const ids = async (archived?: boolean) =>
     (await service.list(owner, archived === undefined ? {} : { archived })).map((x) => x.id);

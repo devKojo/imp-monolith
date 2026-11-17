@@ -4,6 +4,8 @@ import type { ApiError } from '../auth/errors';
 /** The line shown for a failed survey call. Codes come from the API's problem envelope. */
 export function surveyErrorKey(err: ApiError): AppTextKey {
   switch (err.code) {
+    case 'CAMPAIGN_FULL':
+      return 'quiz.error.full';
     case 'RESPONSE_CLOSED':
       return 'survey.error.closed';
     case 'ANSWERS_REQUIRED':

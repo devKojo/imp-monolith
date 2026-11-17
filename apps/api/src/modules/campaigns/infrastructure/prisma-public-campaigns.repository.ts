@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { poolOf } from '../domain/pool';
 import { withPublic } from '@/shared/database';
 import type {
   PublicCampaignRepository,
@@ -61,6 +62,8 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
           summary: true,
           endAt: true,
           startAt: true,
+          settings: true,
+          participantCount: true,
           template: { select: { archetype: true } },
           business: { select: { name: true } },
           prizes: {
@@ -85,6 +88,8 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
                 prize: r.prizes[0] ?? null,
                 startAt: r.startAt,
                 prizes: r.prizes,
+                pool: poolOf(r.settings),
+                participantCount: r.participantCount,
               },
             ]
           : [],

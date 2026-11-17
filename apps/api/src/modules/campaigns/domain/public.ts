@@ -1,4 +1,5 @@
 import { AppError } from '@/shared/errors';
+import { toPoolView, type PoolView, type PrizePool } from './pool';
 
 /**
  * The public listing of running campaigns (docs/frontend/discovery-contract.md). Everything here is
@@ -34,6 +35,9 @@ export type PublicRow = {
   /** Every prize tier, in order; only read for one campaign's page, not for the listing. */
   prizes?: PublicPrizeTier[];
   startAt?: Date | null;
+  /** A prize pool instead of prize tiers, and how many have joined so far. */
+  pool?: PrizePool | null;
+  participantCount?: number;
 };
 
 export type PublicPrizeTier = {
@@ -47,6 +51,8 @@ export type PublicPrizeTier = {
 export type PublicCampaignDetail = PublicCampaign & {
   startsAt: string | null;
   prizes: PublicPrizeTier[];
+  /** Set instead of prize tiers when the campaign shares a pool among a limited number of people. */
+  pool: (PoolView & { joined: number; spotsLeft: number }) | null;
 };
 
 export function toPublicDetail(row: PublicRow): PublicCampaignDetail {
@@ -54,6 +60,13 @@ export function toPublicDetail(row: PublicRow): PublicCampaignDetail {
     ...toPublic(row),
     startsAt: row.startAt ? row.startAt.toISOString() : null,
     prizes: row.prizes ?? [],
+    pool: row.pool
+      ? {
+          ...toPoolView(row.pool),
+          joined: row.participantCount ?? 0,
+          spotsLeft: Math.max(0, row.pool.maxParticipants - (row.participantCount ?? 0)),
+        }
+      : null,
   };
 }
 
@@ -85,14 +98,16 @@ export function toPublic(row: PublicRow): PublicCampaign {
     type: ARCHETYPE_TYPE[row.archetype] ?? 'giveaway',
     endsAt: row.endAt.toISOString(),
     timeZone: 'UTC',
-    ...(row.prize && prizeText
-      ? {
-          prize: {
-            label: row.prize.valueLabel ? row.prize.name || 'Prize' : 'Prize',
-            value: prizeText,
-          },
-        }
-      : {}),
+    ...(row.pool
+      ? { prize: { label: 'Prize pool', value: toPoolView(row.pool).label } }
+      : row.prize && prizeText
+        ? {
+            prize: {
+              label: row.prize.valueLabel ? row.prize.name || 'Prize' : 'Prize',
+              value: prizeText,
+            },
+          }
+        : {}),
   };
 }
 

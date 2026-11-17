@@ -83,8 +83,21 @@ describe('mapping', () => {
     expect(detail.startsAt).toBe('2026-11-01T00:00:00.000Z');
     expect(toPublicDetail(row(1))).toMatchObject({ prizes: [], startsAt: null });
     expect(Object.keys(detail).sort()).toEqual(
-      [...Object.keys(toPublic(row(1))), 'prizes', 'startsAt'].sort(),
+      [...Object.keys(toPublic(row(1))), 'pool', 'prizes', 'startsAt'].sort(),
     );
+  });
+
+  it('shows a prize pool with each share and the seats left, and lists it as the prize', () => {
+    const pool = { kind: 'POINTS' as const, amount: 10_000, currency: null, maxParticipants: 100 };
+    const r = row(1, { pool, participantCount: 40 });
+    expect(toPublicDetail(r).pool).toMatchObject({
+      label: '10,000 points',
+      shareLabel: '100 points',
+      joined: 40,
+      spotsLeft: 60,
+    });
+    expect(toPublic(r).prize).toEqual({ label: 'Prize pool', value: '10,000 points' });
+    expect(toPublicDetail(row(1)).pool).toBeNull();
   });
 
   it('gives only public fields, with the end as an ISO instant', () => {

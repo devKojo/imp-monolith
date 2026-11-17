@@ -13,6 +13,9 @@ export type { CampaignDetail, CampaignStatus, CampaignSummary } from './domain/m
 export type { PublicCampaign, PublicCampaignDetail, PublicType } from './domain/public';
 export type { TemplateLookup } from './application/ports';
 export type { CampaignField, FieldKind } from './domain/fields';
+export { CampaignFullError } from './domain/errors';
+export { claimSeat } from './infrastructure/participant-seats';
+export { poolOf } from './domain/pool';
 export { canManageCampaigns, canOperateCampaigns, canReadCampaigns } from './domain/permissions';
 
 export type CampaignsConfig = {
