@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { uiText } from '../composables/useUiText';
 import UiAvatar from './UiAvatar.vue';
 import UiBadge from './UiBadge.vue';
@@ -10,7 +10,8 @@ import UiSkipLink from './UiSkipLink.vue';
 /**
  * Business console frame: a fixed-width sidebar (brand, navigation, account card) and a slim header
  * (search, actions) above one <main> landmark. Below lg the sidebar becomes a drawer. It sets the
- * dashboard control size (32 px) for everything inside. Compare UiDashboardShell, which follows the
+ * dashboard control size (32 px) for everything inside. At lg and up the sidebar collapses to an icon
+ * rail; the choice is remembered in this browser (a display preference, never personal data). Compare UiDashboardShell, which follows the
  * spec's top-bar wireframe; this one follows the console design reference (ADR-F013).
  */
 defineProps<{
@@ -27,6 +28,24 @@ defineProps<{
 
 const emit = defineEmits<{ account: [] }>();
 const drawer = ref(false);
+const KEY = 'imp.sidebar.collapsed';
+const collapsed = ref(false);
+// Read after mount so the server and first browser render agree; storage can be blocked, so it is optional.
+onMounted(() => {
+  try {
+    collapsed.value = localStorage.getItem(KEY) === '1';
+  } catch {
+    /* the preference just is not remembered */
+  }
+});
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value;
+  try {
+    localStorage.setItem(KEY, collapsed.value ? '1' : '0');
+  } catch {
+    /* the preference just is not remembered */
+  }
+}
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') drawer.value = false;
 }
@@ -35,19 +54,38 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div class="ui-console" data-portal="business" @keydown="onKey">
     <UiSkipLink />
-    <aside class="ui-console__side" :data-open="drawer">
+    <aside class="ui-console__side" :data-open="drawer" :data-collapsed="collapsed">
       <div class="ui-console__brand">
         <slot name="brand">
           <strong class="ui-text-h3">{{ brandName }}</strong>
         </slot>
         <span v-if="brandTag" class="ui-console__tag ui-text-caption">{{ brandTag }}</span>
+        <UiButton
+          variant="tertiary"
+          size="xs"
+          icon="sidebar"
+          class="ui-console__collapse"
+          :aria-expanded="!collapsed"
+          :title="collapsed ? uiText('nav.expand') : uiText('nav.collapse')"
+          @click="toggleCollapsed"
+        >
+          <span class="ui-sr-only">{{
+            collapsed ? uiText('nav.expand') : uiText('nav.collapse')
+          }}</span>
+        </UiButton>
       </div>
       <p v-if="portalLabel" class="ui-console__portal">
         <UiBadge icon="building" shape="pill" variant="outline">{{ portalLabel }}</UiBadge>
       </p>
-      <UiSidebarNav :items="nav" :label="navLabel" />
+      <UiSidebarNav :items="nav" :label="navLabel" :collapsed="collapsed" />
       <div class="ui-console__account">
-        <UiButton variant="tertiary" block class="ui-console__account-btn" @click="emit('account')">
+        <UiButton
+          variant="tertiary"
+          block
+          class="ui-console__account-btn"
+          :title="collapsed ? userName : undefined"
+          @click="emit('account')"
+        >
           <span class="ui-console__account-inner">
             <UiAvatar :name="userName" size="sm" tone="soft" />
             <span class="ui-console__who">
@@ -97,8 +135,10 @@ function onKey(e: KeyboardEvent) {
   flex: none;
   flex-direction: column;
   gap: var(--ui-space-4);
-  inline-size: 240px;
+  inline-size: 248px;
   block-size: 100vh;
+  overflow: hidden;
+  transition: inline-size 0.2s ease;
   padding: var(--ui-space-3);
   background: var(--ui-color-surface);
   border-inline-end: 1px solid var(--ui-color-border);
@@ -113,6 +153,25 @@ function onKey(e: KeyboardEvent) {
 @media (min-width: 1024px) {
   .ui-console__side {
     display: flex;
+  }
+  .ui-console__side[data-collapsed='true'] {
+    inline-size: 72px;
+    align-items: stretch;
+  }
+  /* Collapsed: the brand name, portal badge and account text give way to the icons and the avatar. */
+  .ui-console__side[data-collapsed='true'] :is(.ui-console__tag, .ui-console__portal, .ui-console__who) {
+    display: none;
+  }
+  .ui-console__side[data-collapsed='true'] .ui-console__brand {
+    flex-direction: column-reverse;
+    padding-inline: 0;
+  }
+  .ui-console__side[data-collapsed='true'] .ui-console__brand :is(strong, .ui-console__tag) {
+    display: none;
+  }
+  .ui-console__side[data-collapsed='true'] .ui-console__account-btn,
+  .ui-console__side[data-collapsed='true'] .ui-console__account-inner {
+    justify-content: center;
   }
   .ui-console__menu {
     display: none;
@@ -198,6 +257,17 @@ function onKey(e: KeyboardEvent) {
 }
 .ui-console__main:focus {
   outline: none;
+}
+/* The collapse control only makes sense beside a sidebar that is always shown. */
+@media (max-width: 1023px) {
+  .ui-console__collapse {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-console__side {
+    transition: none;
+  }
 }
 @media (max-width: 767px) {
   .ui-console__header {

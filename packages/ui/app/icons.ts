@@ -48,6 +48,7 @@ export const icons = {
     'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
   ),
   menu: stroke('M4 6h16M4 12h16M4 18h16'),
+  sidebar: stroke('M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z', 'M9 4v16'),
   trash: stroke('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6'),
   globe: stroke(
     'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',

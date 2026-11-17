@@ -167,6 +167,8 @@ export const en = {
 
   // navigation / layout
   'nav.main': 'Main navigation',
+  'nav.collapse': 'Collapse sidebar',
+  'nav.expand': 'Expand sidebar',
   'nav.primary': 'Primary navigation',
   'divider.or': 'or',
   'password.label': 'Password',

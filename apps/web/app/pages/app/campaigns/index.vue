@@ -276,6 +276,9 @@ const confirmDelete = () =>
         </h2>
         <UiSegmentedControl v-model="status" :label="t('cmp.filter')" :options="statusOptions" />
       </div>
+      <div class="table-card__search">
+        <UiSearchField v-model="query" :label="t('cmp.search')" />
+      </div>
       <UiDataTable
         flush
         :name="t('cmp.title')"
@@ -382,6 +385,13 @@ const confirmDelete = () =>
 }
 .table-card__head h2 {
   margin: 0;
+}
+.table-card__search {
+  padding: var(--ui-space-3) var(--ui-space-6);
+  border-block-end: 1px solid var(--ui-color-border);
+}
+.table-card__search > * {
+  max-inline-size: 28rem;
 }
 .actions {
   display: inline-flex;
