@@ -62,6 +62,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; search: [query:
   border-color: var(--ui-color-focus-ring);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-focus-ring) 18%, transparent);
 }
+/* The browser draws its own clear button in a search input; this field has its own, so hide that one. */
+.ui-search__field :deep(input[type='search']::-webkit-search-cancel-button) {
+  display: none;
+  appearance: none;
+}
 /* Compact: a flat, small field with a hairline edge that only strengthens on focus. */
 .ui-search[data-compact='true'] {
   --ui-control-target: calc(var(--ui-space-6) + var(--ui-space-1));
