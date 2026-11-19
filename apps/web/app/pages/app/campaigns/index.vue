@@ -345,6 +345,7 @@ const confirmDelete = () =>
       variant="destructive"
       :title="t('cmp.delete.title')"
       :consequence="t('cmp.delete.consequence', { name: toDelete?.name ?? '' })"
+      :typed-phrase="toDelete?.name.trim()"
       :confirm-label="t('cmp.delete')"
       @confirm="confirmDelete"
     />

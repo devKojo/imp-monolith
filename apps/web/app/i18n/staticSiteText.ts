@@ -254,6 +254,7 @@ export const staticSiteText = {
   'console.nav.overview': 'Overview',
   'console.nav.campaigns': 'Campaigns',
   'console.nav.participants': 'Participants',
+  'console.nav.rewards': 'Rewards',
   'console.nav.analytics': 'Analytics',
   'tpl.archetype.giveaway': 'Giveaway',
   'tpl.archetype.quiz': 'Quiz',
@@ -301,7 +302,8 @@ export const staticSiteText = {
   'cmp.duplicate': 'Duplicate',
   'cmp.delete': 'Delete',
   'cmp.delete.title': 'Delete campaign?',
-  'cmp.delete.consequence': '{name} will be removed. This cannot be undone.',
+  'cmp.delete.consequence':
+    '{name} will be removed for good, with its content and prizes. This cannot be undone.',
   'cmp.duplicated': 'Campaign duplicated',
   'cmp.deleted': 'Campaign deleted',
   'cmp.empty.title': 'No campaigns yet',
