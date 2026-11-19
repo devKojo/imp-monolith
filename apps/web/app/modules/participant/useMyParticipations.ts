@@ -12,7 +12,7 @@ export type MyParticipation = {
 };
 
 /** Rows per page on the participant hub. */
-export const PARTICIPATION_PAGE_SIZE = 10;
+export const PARTICIPATION_PAGE_SIZE = 5;
 
 /**
  * What the signed-in person has taken part in, from the API (newest first), one page at a time.
