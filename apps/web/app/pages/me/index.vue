@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
-import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
+import ParticipantShell from '../../modules/participant/components/ParticipantShell.vue';
 import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
 import MyParticipations from '../../modules/participant/components/MyParticipations.vue';
 import { useMyParticipations } from '../../modules/participant/useMyParticipations';
@@ -15,43 +15,18 @@ import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.v
  * not shown yet, and the page never shows made-up figures.
  */
 definePageMeta({ middleware: 'auth', portal: 'participant' });
-useHead({ title: t('me.title') });
+useHead({ title: t('me.home.title') });
 
 const auth = useAuth();
 const session = auth.session;
-const loggingOut = ref(false);
 const open = useOpenCampaigns();
 const mine = useMyParticipations();
 
 const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0] ?? '');
-const nav = [
-  { label: t('me.nav.rewards'), to: '/me', current: true },
-  { label: t('me.nav.discover'), to: '/discover' },
-];
-
-async function logout() {
-  loggingOut.value = true;
-  try {
-    await auth.logout();
-  } finally {
-    loggingOut.value = false;
-  }
-  await navigateTo(SIGNIN.participant);
-}
 </script>
 
 <template>
-  <UiPortalShell
-    v-if="session"
-    :brand-name="BRAND_NAME"
-    :nav="nav"
-    :nav-label="t('me.nav.label')"
-    :user-name="session.user.name"
-    :user-status="session.user.emailVerified ? t('me.verified') : undefined"
-    :sign-out-label="loggingOut ? t('me.loggingOut') : t('me.logout')"
-    :portal-label="t('portal.participant')"
-    @sign-out="logout"
-  >
+  <ParticipantShell current="home">
     <VerifyEmailPrompt class="gap-after" />
     <header class="hero">
       <UiBadge shape="pill" tone="info">{{ t('me.eyebrow') }}</UiBadge>
@@ -81,12 +56,7 @@ async function logout() {
     >
       <UiButton to="/discover">{{ t('me.empty.action') }}</UiButton>
     </UiEmptyState>
-
-    <template #footer>
-      <span>© {{ t('me.footer') }}</span>
-    </template>
-  </UiPortalShell>
-  <UiSkeleton v-else variant="card" />
+  </ParticipantShell>
 </template>
 
 <style scoped>
