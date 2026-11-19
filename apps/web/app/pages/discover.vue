@@ -4,6 +4,7 @@ import { formatInZone } from '@imp/ui/app/utils/datetime';
 import type { IconName } from '@imp/ui/app/icons';
 import { t, type AppTextKey } from '../i18n';
 import { useDiscovery } from '../modules/discovery/composables/useDiscovery';
+import { useAuth } from '../modules/auth/composables/useAuth';
 import SessionActions from '../modules/auth/components/SessionActions.vue';
 import { BRAND_NAME } from '../modules/auth/constants';
 import { siteFooter } from '../modules/site/footer';
@@ -17,6 +18,10 @@ import { isCampaignType, type CampaignType } from '../modules/discovery/types';
  * enter, they verify per campaign.
  */
 useHead({ title: t('discover.title') });
+
+// The server renders the link for everyone (cached HTML); SessionActions checks the session after
+// hydration and this hides it for a signed-in participant.
+const isParticipant = computed(() => useAuth().session.value?.user.accountType === 'PARTICIPANT');
 
 const discovery = useDiscovery();
 const { query, campaigns, pending, error } = discovery;
@@ -115,7 +120,7 @@ const resultCount = computed(() => (pending.value ? '' : countText(campaigns.val
   >
     <template #nav>
       <UiLink to="/discover" aria-current="page">{{ t('nav.discover') }}</UiLink>
-      <UiLink to="/business">{{ t('nav.forBusinesses') }}</UiLink>
+      <UiLink v-if="!isParticipant" to="/business">{{ t('nav.forBusinesses') }}</UiLink>
     </template>
     <template #actions>
       <SessionActions />
