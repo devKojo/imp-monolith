@@ -310,8 +310,14 @@ export const staticSiteText = {
   'cmp.noMatch.title': 'No campaigns match',
   'cmp.noMatch.body': 'Try a different search or filter.',
   'cmp.readonly.role': 'View only. Your role cannot change campaigns.',
-  'cmp.readonly.launched':
-    'Launched. To change it, return it to draft (possible until someone takes part) or duplicate it.',
+  'cmp.frozen.title': 'This campaign cannot be edited',
+  'cmp.frozen.live':
+    'It is live, so its form is locked. Return it to draft to make changes (possible until someone takes part), or duplicate it.',
+  'cmp.frozen.responses':
+    'People have already responded, so its form is locked to keep their answers valid. Duplicate it to make changes.',
+  'cmp.frozen.cancelled':
+    'It was cancelled, so its form is locked. Return it to draft (possible until someone takes part), or duplicate it.',
+  'cmp.frozen.ended': 'It has ended, so its form is locked. Duplicate it to run it again with changes.',
   'cmp.field.title': 'Campaign title',
   'cmp.field.summary': 'Description',
   'cmp.summary.count': '{used} / {max} characters',
