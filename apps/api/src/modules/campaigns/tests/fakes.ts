@@ -147,6 +147,26 @@ export class InMemoryCampaignRepository implements CampaignRepository {
     return { kind: 'ok', campaign: this.strip(row) };
   }
 
+  /** Test helper: someone has taken part. */
+  addParticipants(id: string, n = 1): void {
+    const row = this.rows.find((r) => r.id === id);
+    if (row) row.participantCount += n;
+  }
+
+  async returnToDraft(ctx: TenantContext, id: string, expectedVersion: number): Promise<WriteResult> {
+    const row = this.live(ctx, id);
+    if (!row) return { kind: 'not_found' };
+    if (!['SCHEDULED', 'LIVE', 'PAUSED', 'CANCELLED'].includes(row.status) || row.archivedAt) {
+      return { kind: 'wrong_state' };
+    }
+    if (row.version !== expectedVersion) return { kind: 'conflict' };
+    if (row.participantCount > 0) return { kind: 'has_participants' };
+    row.status = 'DRAFT';
+    row.slug = null;
+    this.touch(row);
+    return { kind: 'ok', campaign: this.strip(row) };
+  }
+
   async setArchived(
     ctx: TenantContext,
     id: string,

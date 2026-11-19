@@ -83,6 +83,56 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     await Promise.all([db.$disconnect(), platform.$disconnect()]);
   });
 
+  describe('returning a campaign to draft', () => {
+    const launchedCampaign = async () => {
+      const c = await withTenant(db, ctx(tenantA), (tx) =>
+        tx.campaign.create({
+          data: row({
+            title: 'Was live',
+            status: 'LIVE',
+            slug: `was-live-${randomUUID().slice(0, 8)}`,
+            endAt: new Date(Date.now() + 86_400_000),
+          }),
+        }),
+      );
+      return c;
+    };
+    const repo = () => new PrismaCampaignRepository(db);
+
+    it('is refused once someone has joined (seat counted), and nothing changes', async () => {
+      const c = await launchedCampaign();
+      await platform.campaign.update({ where: { id: c.id }, data: { participantCount: 1 } });
+      const result = await repo().returnToDraft(ctx(tenantA), c.id, c.version);
+      expect(result.kind).toBe('has_participants');
+      const after = await platform.campaign.findUniqueOrThrow({ where: { id: c.id } });
+      expect(after.status).toBe('LIVE');
+      expect(after.slug).toBe(c.slug);
+    });
+
+    it('is refused when a response exists even if the seat count was never bumped', async () => {
+      const c = await launchedCampaign();
+      const person = await platform.user.create({
+        data: { email: `resp-${randomUUID().slice(0, 8)}@test.local`, name: 'R' },
+      });
+      await platform.surveyResponse.create({
+        data: { tenantId: tenantA, campaignId: c.id, userId: person.id },
+      });
+      const result = await repo().returnToDraft(ctx(tenantA), c.id, c.version);
+      expect(result.kind).toBe('has_participants');
+      await platform.surveyResponse.deleteMany({ where: { campaignId: c.id } });
+      await platform.user.delete({ where: { id: person.id } });
+    });
+
+    it('works when nobody has taken part, and clears the address', async () => {
+      const c = await launchedCampaign();
+      const result = await repo().returnToDraft(ctx(tenantA), c.id, c.version);
+      expect(result.kind === 'ok' && result.campaign).toMatchObject({
+        status: 'DRAFT',
+        slug: null,
+      });
+    });
+  });
+
   it('shows nothing when no tenant is set (fails closed)', async () => {
     expect(await db.campaign.count()).toBe(0);
     expect(await db.campaignPrize.count()).toBe(0);

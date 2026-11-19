@@ -180,6 +180,23 @@ export function repositoryContract(
       expect(cancelled.kind === 'ok' && cancelled.campaign.status).toBe('CANCELLED');
     });
 
+    it('takes a launched campaign back to draft, releases its address and lets it launch again', async () => {
+      const c = await make();
+      await w.repo.saveDraft(a, c.id, 1, content());
+      await w.repo.launch(a, c.id, 2, { status: 'LIVE', slug: slug() });
+
+      expect((await w.repo.returnToDraft(a, c.id, 99)).kind).toBe('conflict');
+      const draft = await w.repo.returnToDraft(a, c.id, 3);
+      expect(draft.kind === 'ok' && draft.campaign).toMatchObject({
+        status: 'DRAFT',
+        slug: null,
+        version: 4,
+      });
+      expect((await w.repo.returnToDraft(a, c.id, 4)).kind).toBe('wrong_state');
+      const again = await w.repo.launch(a, c.id, 4, { status: 'LIVE', slug: slug() });
+      expect(again.kind === 'ok' && again.campaign.status).toBe('LIVE');
+    });
+
     it('stores fields in order, with their options and correct answer, and replaces them as a set', async () => {
       const c = await make('Fields');
       const fields = normalizeFields([

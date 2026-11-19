@@ -266,6 +266,40 @@ export class PrismaCampaignRepository implements CampaignRepository {
     });
   }
 
+  returnToDraft(ctx: TenantContext, id: string, expectedVersion: number): Promise<WriteResult> {
+    const from: DbStatus[] = ['SCHEDULED', 'LIVE', 'PAUSED', 'CANCELLED'];
+    return withTenant(this.db, ctx, async (tx) => {
+      const updated = await tx.campaign.updateMany({
+        where: {
+          ...this.guard(ctx, id, expectedVersion, from),
+          participantCount: 0,
+          attempts: { none: {} },
+          surveyResponses: { none: {} },
+        },
+        // The address is released; launching again picks a new one.
+        data: { status: 'DRAFT', slug: null, launchedAt: null, version: { increment: 1 } },
+      });
+      if (updated.count === 0) {
+        const why = await this.whyNotWritten(tx, ctx, id, from);
+        if (why.kind !== 'conflict') return why;
+        const taken = await tx.campaign.findFirst({
+          where: {
+            id,
+            tenantId: ctx.tenantId,
+            OR: [
+              { participantCount: { gt: 0 } },
+              { attempts: { some: {} } },
+              { surveyResponses: { some: {} } },
+            ],
+          },
+          select: { id: true },
+        });
+        return taken ? { kind: 'has_participants' } : why;
+      }
+      return this.finish(tx, ctx, id, 'campaign.returned_to_draft');
+    });
+  }
+
   setArchived(
     ctx: TenantContext,
     id: string,

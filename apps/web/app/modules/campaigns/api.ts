@@ -71,6 +71,8 @@ export function createCampaignsApi(fetcher: Fetcher, base = '/api/v1/campaigns')
     resume: (id: string, version: number, csrf: string) => act(id, 'resume', version, csrf),
     cancel: (id: string, version: number, csrf: string) => act(id, 'cancel', version, csrf),
     republish: (id: string, version: number, csrf: string) => act(id, 'republish', version, csrf),
+    returnToDraft: (id: string, version: number, csrf: string) =>
+      act(id, 'return-to-draft', version, csrf),
     archive: (id: string, version: number, csrf: string) => act(id, 'archive', version, csrf),
     unarchive: (id: string, version: number, csrf: string) => act(id, 'unarchive', version, csrf),
     duplicate: (id: string, csrf: string, title?: string) =>

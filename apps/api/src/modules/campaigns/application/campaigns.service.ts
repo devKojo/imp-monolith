@@ -11,6 +11,7 @@ import {
   CampaignLockedError,
   CampaignNotFoundError,
   CampaignPermissionError,
+  CampaignHasParticipantsError,
   CampaignStateError,
   NoActiveBusinessError,
   PreflightFailedError,
@@ -262,6 +263,25 @@ export class CampaignsService {
   }
 
   /**
+   * Takes a launched campaign back to a draft so its content can be edited again. Only while nobody has
+   * taken part (otherwise results would be changed under people); its public address is released.
+   */
+  async returnToDraft(
+    actor: Actor | null,
+    id: string,
+    expectedVersion: number,
+  ): Promise<CampaignDetail> {
+    const ctx = this.scope(actor, 'manage');
+    await this.running(
+      ctx,
+      id,
+      ['SCHEDULED', 'LIVE', 'PAUSED', 'CANCELLED'],
+      'Only a scheduled, live, paused or cancelled campaign can go back to draft',
+    );
+    return this.detail(ctx, this.settle(await this.repo.returnToDraft(ctx, id, expectedVersion)));
+  }
+
+  /**
    * Puts a campaign away. Only one that is not running: a draft, or one that has ended or been
    * cancelled (a running or paused one must be ended first, so a public page never vanishes quietly).
    */
@@ -379,6 +399,8 @@ export class CampaignsService {
         throw new VersionConflictError();
       case 'wrong_state':
         throw wrongState();
+      case 'has_participants':
+        throw new CampaignHasParticipantsError();
     }
   }
 }

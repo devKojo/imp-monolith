@@ -43,6 +43,17 @@ export class CampaignFullError extends AppError {
   }
 }
 
+/** People have already taken part, so the campaign's content must not change under them. */
+export class CampaignHasParticipantsError extends AppError {
+  constructor() {
+    super(
+      'Someone has already taken part, so this campaign cannot go back to draft. Duplicate it to change it',
+      409,
+      'CAMPAIGN_HAS_PARTICIPANTS',
+    );
+  }
+}
+
 /** The action does not fit the campaign's state (for example pausing one that has ended). */
 export class CampaignStateError extends AppError {
   constructor(message: string) {

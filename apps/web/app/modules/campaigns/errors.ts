@@ -10,6 +10,8 @@ export function campaignErrorKey(err: ApiError): AppTextKey {
       return 'cmp.error.locked';
     case 'CAMPAIGN_STATE':
       return 'cmp.error.state';
+    case 'CAMPAIGN_HAS_PARTICIPANTS':
+      return 'cmp.error.hasParticipants';
     case 'PREFLIGHT_FAILED':
       return 'cmp.error.checks';
     case 'CAMPAIGN_INVALID':

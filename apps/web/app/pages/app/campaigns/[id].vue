@@ -308,6 +308,21 @@ const cancel = async () => {
   });
   cancelOpen.value = false;
 };
+// Offered for any launched campaign; the server refuses it once someone has taken part.
+const canReturnToDraft = computed(
+  () =>
+    canManage.value &&
+    !isArchived.value &&
+    (runningStatus.value || draft.value?.status === 'PAUSED' || draft.value?.status === 'CANCELLED'),
+);
+const toDraftOpen = ref(false);
+const returnToDraft = async () => {
+  await attempt(async () => {
+    adopt(await store.returnToDraft(draft.value!));
+    toast.push(t('cmp.toDraft.done'), 'info');
+  });
+  toDraftOpen.value = false;
+};
 const republish = () =>
   attempt(async () => {
     adopt(await store.republish(draft.value!));
@@ -432,6 +447,15 @@ const crumbs = computed(() => [
               @click="republish"
             >
               {{ t('cmp.republish') }}
+            </UiButton>
+            <UiButton
+              v-if="canReturnToDraft"
+              variant="secondary"
+              size="xs"
+              :disabled="busy"
+              @click="toDraftOpen = true"
+            >
+              {{ t('cmp.toDraft') }}
             </UiButton>
             <UiButton
               v-if="canManage && (runningStatus || draft.status === 'PAUSED')"
@@ -587,6 +611,14 @@ const crumbs = computed(() => [
         :consequence="t('cmp.discard.consequence')"
         :confirm-label="t('cmp.discard')"
         @confirm="leave"
+      />
+      <UiConfirmDialog
+        v-model:open="toDraftOpen"
+        :title="t('cmp.toDraft.title')"
+        :consequence="t('cmp.toDraft.consequence')"
+        :confirm-label="t('cmp.toDraft')"
+        :loading="busy"
+        @confirm="returnToDraft"
       />
       <UiConfirmDialog
         v-model:open="cancelOpen"

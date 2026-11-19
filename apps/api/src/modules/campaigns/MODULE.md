@@ -72,6 +72,7 @@ Writes need the session cookie, the `X-CSRF-Token` header and a permitted Origin
 | `POST /:id/archive`   | `{ expectedVersion }` for a draft, completed or cancelled campaign -> `archivedAt` set; `409 CAMPAIGN_STATE` if it is running, paused or already archived                                                                                         |
 | `POST /:id/unarchive` | `{ expectedVersion }` -> `archivedAt` null, status as it was; `409 CAMPAIGN_STATE` if it is not archived                                                                                                                                          |
 | `POST /:id/republish` | `{ expectedVersion }` from `CANCELLED` -> live or scheduled again (same address); `409 CAMPAIGN_STATE` if it is not cancelled or its end date has passed |
+| `POST /:id/return-to-draft` | `{ expectedVersion }` from scheduled, live, paused or cancelled -> `DRAFT` with its address released, so its content can be edited again; `409 CAMPAIGN_HAS_PARTICIPANTS` once anyone has taken part (a seat taken, a quiz attempt or a survey response); `409 CAMPAIGN_STATE` from any other state (including one that has ended) |
 | `POST /:id/cancel`    | `{ expectedVersion }` from scheduled, live or paused -> `CANCELLED` (can be published again while its end date is ahead)                                                                                                                                                                       |
 | `POST /:id/duplicate` | `{ title? }` -> `201` new draft (own ids, no schedule, no address), default title "`<title> (copy)`"                                                                                                                                              |
 | `DELETE /:id`         | Soft delete of a draft -> `204`; `409 CAMPAIGN_LOCKED` otherwise                                                                                                                                                                                  |
@@ -84,6 +85,7 @@ Unknown request keys are rejected (`400`). Ids are validated as UUIDs; dates mus
 create -> DRAFT --edit--> DRAFT --launch (checks pass)--> SCHEDULED --start time--> LIVE --end time--> COMPLETED
                                                       \-> LIVE ------------------------------------^
 LIVE or SCHEDULED --pause--> PAUSED --resume--> LIVE or SCHEDULED     any of those --cancel--> CANCELLED
+SCHEDULED, LIVE, PAUSED or CANCELLED --return to draft (nobody has taken part)--> DRAFT
 DRAFT --delete--> (soft deleted)        any state --duplicate--> new DRAFT
 ```
 
