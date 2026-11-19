@@ -76,6 +76,7 @@ const funnel = [
   <GalleryBlock name="UiPagination">
     <UiPagination v-model:page="page" :total="134" :page-size="10" />
     <UiPagination :total="7" :page-size="10" />
+    <UiPagination :total="4" :page-size="10" always-show-controls />
   </GalleryBlock>
 
   <GalleryBlock name="UiDataTable">
