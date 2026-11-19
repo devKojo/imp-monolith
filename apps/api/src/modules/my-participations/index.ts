@@ -1,8 +1,10 @@
 // Public surface of the my-participations module. Other modules import ONLY from here.
 import { Router, type RequestHandler } from 'express';
+import { z } from 'zod';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { requireSession, type IdentityModule } from '@/modules/identity';
 import { withParticipant } from '@/shared/database';
+import { parse } from '@/shared/http';
 
 export type MyParticipation = {
   campaignId: string;
@@ -26,17 +28,29 @@ export type MyParticipationsConfig = {
   identity: Pick<IdentityModule, 'guards'>;
 };
 
-const LIMIT = 100;
+export type MyParticipationsPage = { items: MyParticipation[]; total: number };
+
+const querySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    offset: z.coerce.number().int().min(0).max(5_000).default(0),
+  })
+  .strict();
 
 export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
-  const list = (userId: string): Promise<MyParticipation[]> =>
+  const list = (userId: string, limit: number, offset: number): Promise<MyParticipationsPage> =>
     withParticipant(cfg.db, userId, async (tx) => {
-      const where = { userId };
-      const [attempts, responses] = await Promise.all([
+      // Only participation in a campaign that still exists counts, so the total matches the rows.
+      const where = { userId, campaign: { is: { deletedAt: null } } };
+      // Two tables, one newest-first list: take enough from each to fill the page after the offset.
+      const take = offset + limit;
+      const [quizTotal, surveyTotal, attempts, responses] = await Promise.all([
+        tx.quizAttempt.count({ where }),
+        tx.surveyResponse.count({ where }),
         tx.quizAttempt.findMany({
           where,
           orderBy: { startedAt: 'desc' },
-          take: LIMIT,
+          take,
           select: {
             campaignId: true,
             startedAt: true,
@@ -49,7 +63,7 @@ export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
         tx.surveyResponse.findMany({
           where,
           orderBy: { startedAt: 'desc' },
-          take: LIMIT,
+          take,
           select: { campaignId: true, startedAt: true, submittedAt: true },
         }),
       ]);
@@ -85,7 +99,8 @@ export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
       };
       attempts.forEach((a) => add('quiz', a, a));
       responses.forEach((s) => add('survey', s));
-      return rows.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, LIMIT);
+      rows.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+      return { items: rows.slice(offset, offset + limit), total: quizTotal + surveyTotal };
     });
 
   const noStore: RequestHandler = (_req, res, next) => {
@@ -95,9 +110,10 @@ export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
   const router = Router();
   router.use(...cfg.identity.guards);
   router.use(noStore);
-  // GET /   session   the signed-in person's own participation, newest first
+  // GET /   session   the signed-in person's own participation, newest first (?limit=&offset=)
   router.get('/', requireSession, async (req, res) => {
-    res.json({ items: await list(req.auth!.userId) });
+    const { limit, offset } = parse(querySchema, req.query);
+    res.json(await list(req.auth!.userId, limit, offset));
   });
 
   return { basePath: '/api/v1/me/participations', router, list };

@@ -5,7 +5,10 @@ import { useAuth } from '../../modules/auth/composables/useAuth';
 import ParticipantShell from '../../modules/participant/components/ParticipantShell.vue';
 import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
 import MyParticipations from '../../modules/participant/components/MyParticipations.vue';
-import { useMyParticipations } from '../../modules/participant/useMyParticipations';
+import {
+  PARTICIPATION_PAGE_SIZE,
+  useMyParticipations,
+} from '../../modules/participant/useMyParticipations';
 import { useOpenCampaigns } from '../../modules/participant/useOpenCampaigns';
 import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.vue';
 
@@ -41,9 +44,16 @@ const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0]
       <CampaignCarousel v-else :campaigns="open.campaigns.value" :now="open.now.value" />
     </section>
 
-    <UiSkeleton v-if="mine.pending.value" variant="card" />
+    <UiSkeleton v-if="mine.pending.value && mine.data.value.total === 0" variant="card" />
     <UiSystemState v-else-if="mine.error.value" kind="generic" @action="mine.refresh()" />
-    <MyParticipations v-else-if="mine.items.value.length > 0" :items="mine.items.value" />
+    <MyParticipations
+      v-else-if="mine.data.value.total > 0"
+      v-model:page="mine.page.value"
+      :items="mine.data.value.items"
+      :total="mine.data.value.total"
+      :page-size="PARTICIPATION_PAGE_SIZE"
+      :busy="mine.pending.value"
+    />
     <UiEmptyState
       v-else
       :title="t('me.empty.title')"

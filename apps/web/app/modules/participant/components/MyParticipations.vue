@@ -6,7 +6,14 @@ import type { MyParticipation } from '../useMyParticipations';
  * "My participation" on the participant hub: one row per quiz attempt or survey response, newest
  * first. A campaign with a public address links back to its page.
  */
-defineProps<{ items: MyParticipation[] }>();
+defineProps<{
+  items: MyParticipation[];
+  total: number;
+  pageSize: number;
+  /** The next page is loading; the current rows stay visible but dimmed. */
+  busy?: boolean;
+}>();
+const page = defineModel<number>('page', { default: 1 });
 
 const dateOf = (iso: string) =>
   new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(iso));
@@ -18,9 +25,9 @@ function result(p: MyParticipation): string | null {
 </script>
 
 <template>
-  <section class="mine" aria-labelledby="mine-title">
+  <section class="mine" aria-labelledby="mine-title" :aria-busy="busy">
     <h2 id="mine-title" class="ui-text-h2">{{ t('me.participations.title') }}</h2>
-    <ul class="mine__list">
+    <ul class="mine__list" :data-busy="busy">
       <li v-for="(p, i) in items" :key="`${p.campaignId}-${p.startedAt}-${i}`">
         <UiCard class="mine__row">
           <div class="mine__main">
@@ -49,6 +56,12 @@ function result(p: MyParticipation): string | null {
         </UiCard>
       </li>
     </ul>
+    <UiPagination
+      v-model:page="page"
+      :total="total"
+      :page-size="pageSize"
+      :label="t('me.participations.title')"
+    />
   </section>
 </template>
 
@@ -65,6 +78,9 @@ function result(p: MyParticipation): string | null {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.mine__list[data-busy='true'] {
+  opacity: 0.6;
 }
 .mine__row {
   display: flex;

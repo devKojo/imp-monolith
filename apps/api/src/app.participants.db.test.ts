@@ -373,8 +373,21 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
     expect(kofi.body.items[0]).toMatchObject({ kind: 'survey', status: 'in_progress' });
   });
 
+  it("pages a person's own participation with a total", async () => {
+    const first = await read(people.ama, 'me/participations?limit=1&offset=0');
+    const second = await read(people.ama, 'me/participations?limit=1&offset=1');
+    const beyond = await read(people.ama, 'me/participations?limit=1&offset=2');
+    expect(first.body.total).toBe(2);
+    expect(first.body.items).toHaveLength(1);
+    expect(second.body.items).toHaveLength(1);
+    expect(first.body.items[0].kind).not.toBe(second.body.items[0].kind);
+    expect(first.body.items[0].startedAt >= second.body.items[0].startedAt).toBe(true);
+    expect(beyond.body).toMatchObject({ items: [], total: 2 });
+    expect((await read(people.ama, 'me/participations?limit=0')).status).toBe(400);
+  });
+
   it('shows nothing to a person who has not taken part, and needs a session', async () => {
-    expect((await read(people.owner, 'me/participations')).body.items).toEqual([]);
+    expect((await read(people.owner, 'me/participations')).body).toEqual({ items: [], total: 0 });
     expect((await read(null, 'me/participations')).status).toBe(401);
   });
 });
