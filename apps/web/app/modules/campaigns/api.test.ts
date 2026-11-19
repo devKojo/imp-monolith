@@ -129,6 +129,7 @@ describe('client', () => {
     await api.resume('c1', 6, 'tok');
     await api.cancel('c1', 7, 'tok');
     await api.republish('c1', 7, 'tok');
+    await api.returnToDraft('c1', 7, 'tok');
     await api.archive('c1', 8, 'tok');
     await api.unarchive('c1', 9, 'tok');
     await api.duplicate('c1', 'tok');
@@ -141,6 +142,7 @@ describe('client', () => {
       ['POST', '/api/v1/campaigns/c1/resume'],
       ['POST', '/api/v1/campaigns/c1/cancel'],
       ['POST', '/api/v1/campaigns/c1/republish'],
+      ['POST', '/api/v1/campaigns/c1/return-to-draft'],
       ['POST', '/api/v1/campaigns/c1/archive'],
       ['POST', '/api/v1/campaigns/c1/unarchive'],
       ['POST', '/api/v1/campaigns/c1/duplicate'],
@@ -180,6 +182,7 @@ describe('messages and roles', () => {
     expect(campaignErrorKey(err('VERSION_CONFLICT'))).toBe('cmp.error.conflict');
     expect(campaignErrorKey(err('CAMPAIGN_LOCKED'))).toBe('cmp.error.locked');
     expect(campaignErrorKey(err('CAMPAIGN_STATE'))).toBe('cmp.error.state');
+    expect(campaignErrorKey(err('CAMPAIGN_HAS_PARTICIPANTS'))).toBe('cmp.error.hasParticipants');
     expect(campaignErrorKey(err('PREFLIGHT_FAILED'))).toBe('cmp.error.checks');
     expect(campaignErrorKey(err('FORBIDDEN'))).toBe('cmp.error.forbidden');
     expect(campaignErrorKey(err('NETWORK'))).toBe('cmp.error.offline');

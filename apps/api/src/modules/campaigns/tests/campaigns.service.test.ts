@@ -421,6 +421,63 @@ describe('publishing a cancelled campaign again', () => {
   });
 });
 
+describe('taking a launched campaign back to draft', () => {
+  it('makes a live campaign editable again and releases its address', async () => {
+    const c = await launched();
+    const draft = await service.returnToDraft(owner, c.id, c.version);
+    expect(draft.status).toBe('DRAFT');
+    expect(draft.slug).toBeNull();
+    expect(draft.version).toBe(c.version + 1);
+    const edited = await service.update(owner, c.id, {
+      expectedVersion: draft.version,
+      ...body({ summary: 'New description' }),
+    });
+    expect(edited.summary).toBe('New description');
+  });
+
+  it('works from scheduled, paused and cancelled too', async () => {
+    const scheduled = await launched({ startAt: hours(5) });
+    expect((await service.returnToDraft(owner, scheduled.id, scheduled.version)).status).toBe(
+      'DRAFT',
+    );
+    const live = await launched();
+    const paused = await service.pause(owner, live.id, live.version);
+    expect((await service.returnToDraft(owner, live.id, paused.version)).status).toBe('DRAFT');
+    const other = await launched();
+    const cancelled = await service.cancel(owner, other.id, other.version);
+    expect((await service.returnToDraft(owner, other.id, cancelled.version)).status).toBe('DRAFT');
+  });
+
+  it('refuses once someone has taken part', async () => {
+    const c = await launched();
+    repo.addParticipants(c.id);
+    await expect(service.returnToDraft(owner, c.id, c.version)).rejects.toMatchObject({
+      status: 409,
+      code: 'CAMPAIGN_HAS_PARTICIPANTS',
+    });
+  });
+
+  it('refuses a draft, an ended campaign and a stale version', async () => {
+    const draft = await service.create(owner, { title: 'Draft only' });
+    await expect(service.returnToDraft(owner, draft.id, draft.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+    const c = await launched({ endAt: hours(2) });
+    await expect(service.returnToDraft(owner, c.id, 1)).rejects.toMatchObject({ status: 412 });
+    now = new Date(NOW.getTime() + 3 * 3_600_000);
+    await expect(service.returnToDraft(owner, c.id, c.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+  });
+
+  it('is for managers only', async () => {
+    const c = await launched();
+    await expect(service.returnToDraft(operator, c.id, c.version)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+});
+
 describe('prize pools', () => {
   const pool = {
     kind: 'MONEY' as const,

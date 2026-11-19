@@ -310,7 +310,8 @@ export const staticSiteText = {
   'cmp.noMatch.title': 'No campaigns match',
   'cmp.noMatch.body': 'Try a different search or filter.',
   'cmp.readonly.role': 'View only. Your role cannot change campaigns.',
-  'cmp.readonly.launched': 'Launched. A launched campaign cannot be edited.',
+  'cmp.readonly.launched':
+    'Launched. To change it, return it to draft (possible until someone takes part) or duplicate it.',
   'cmp.field.title': 'Campaign title',
   'cmp.field.summary': 'Description',
   'cmp.summary.count': '{used} / {max} characters',
@@ -426,6 +427,13 @@ export const staticSiteText = {
   'cmp.paused': 'Campaign paused',
   'cmp.resume': 'Resume',
   'cmp.resumed': 'Campaign resumed',
+  'cmp.toDraft': 'Return to draft',
+  'cmp.toDraft.title': 'Return this campaign to draft?',
+  'cmp.toDraft.consequence':
+    'Its public page goes offline and its address is released. You can edit it, then launch it again with a new address.',
+  'cmp.toDraft.done': 'Campaign is a draft again',
+  'cmp.error.hasParticipants':
+    'Someone has already taken part, so this campaign cannot go back to draft. Duplicate it to change it.',
   'cmp.cancel': 'Cancel campaign',
   'cmp.cancel.title': 'Cancel this campaign?',
   'cmp.cancel.consequence': 'It stops for good and cannot be restarted.',

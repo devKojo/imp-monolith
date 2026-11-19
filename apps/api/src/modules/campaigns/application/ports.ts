@@ -17,7 +17,9 @@ export type WriteResult =
   | { kind: 'ok'; campaign: StoredCampaign }
   | { kind: 'not_found' }
   | { kind: 'conflict' }
-  | { kind: 'wrong_state' };
+  | { kind: 'wrong_state' }
+  /** Someone has already taken part, so the content can no longer be changed under them. */
+  | { kind: 'has_participants' };
 
 export type DraftContent = {
   title: string;
@@ -65,6 +67,12 @@ export interface CampaignRepository {
     expectedVersion: number,
     change: { from: CampaignStatus[]; to: CampaignStatus },
   ): Promise<WriteResult>;
+  /**
+   * Takes a scheduled, live, paused or cancelled campaign back to DRAFT (its public address is released), but
+   * only while nobody has taken part: `has_participants` otherwise. One UPDATE, so a person joining at the
+   * same moment either gets in first (and this is refused) or finds the page gone.
+   */
+  returnToDraft(ctx: TenantContext, id: string, expectedVersion: number): Promise<WriteResult>;
   /**
    * Archives or unarchives at `expectedVersion`. `wrong_state` if it already is what was asked (so a
    * double click is harmless and says so).
