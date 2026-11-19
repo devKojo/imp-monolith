@@ -81,9 +81,21 @@ const titleProblem = computed(() =>
   draft.value && draft.value.title.trim() === '' ? t('cmp.title.required') : undefined,
 );
 
+// No native maxlength on the description: it would silently cut a long paste (or refuse it when the
+// field is full). The text is accepted, counted, and flagged while it is over the limit.
+const summaryProblem = computed(() =>
+  draft.value && draft.value.summary.length > LIMITS.summary
+    ? t('cmp.summary.tooLong', { max: LIMITS.summary })
+    : undefined,
+);
+
 const checks = computed(() => (draft.value ? preflight(draft.value, new Date()) : []));
 const launchable = computed(
-  () => draft.value !== null && isLaunchable(draft.value, new Date()) && !titleProblem.value,
+  () =>
+    draft.value !== null &&
+    isLaunchable(draft.value, new Date()) &&
+    !titleProblem.value &&
+    !summaryProblem.value,
 );
 const runningStatus = computed(
   () => draft.value?.status === 'LIVE' || draft.value?.status === 'SCHEDULED',
@@ -252,6 +264,7 @@ async function attempt(action: () => Promise<void>): Promise<boolean> {
 const save = () =>
   attempt(async () => {
     if (titleProblem.value) throw new Error('title');
+    if (summaryProblem.value) throw new Error('summary');
     showProblems.value = true;
     adopt(await store.save(draft.value!));
     toast.push(t('cmp.saved'));
@@ -383,7 +396,7 @@ const crumbs = computed(() => [
               size="xs"
               :loading="busy"
               :loading-label="t('cmp.saving')"
-              :disabled="!dirty || !!titleProblem"
+              :disabled="!dirty || !!titleProblem || !!summaryProblem"
               @click="save"
             >
               {{ t('cmp.save') }}
@@ -470,7 +483,8 @@ const crumbs = computed(() => [
               :rows="3"
               :model-value="draft.summary"
               :label="t('cmp.field.summary')"
-              :maxlength="LIMITS.summary"
+              :hint="t('cmp.summary.count', { used: draft.summary.length, max: LIMITS.summary })"
+              :error="summaryProblem"
               :readonly="readonly"
               @update:model-value="draft = { ...draft!, summary: $event }"
             />
