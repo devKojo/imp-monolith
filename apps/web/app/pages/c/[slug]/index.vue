@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import SessionActions from '../../../modules/auth/components/SessionActions.vue';
 import { t } from '../../../i18n';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { useAuth } from '../../../modules/auth/composables/useAuth';
@@ -123,7 +124,7 @@ const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
       </template>
     </template>
     <template #actions>
-      <UiButton to="/signin" variant="tertiary" size="xs">{{ t('nav.signin') }}</UiButton>
+      <SessionActions :signup="false" />
     </template>
 
     <UiSkeleton v-if="state === 'loading'" variant="card" />

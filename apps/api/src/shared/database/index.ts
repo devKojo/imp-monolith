@@ -5,3 +5,4 @@ export * from './tenant-context';
 export * from './with-identity';
 export * from './with-public';
 export * from './with-tenant';
+export * from './with-participant';
