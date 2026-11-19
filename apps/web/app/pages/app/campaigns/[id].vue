@@ -325,6 +325,17 @@ const canReturnToDraft = computed(
     !isArchived.value &&
     (runningStatus.value || draft.value?.status === 'PAUSED' || draft.value?.status === 'CANCELLED'),
 );
+const deleteOpen = ref(false);
+// The name to type; never empty, so the confirmation cannot be skipped by clearing the title.
+const deletePhrase = computed(() => draft.value?.title.trim() || t('cmp.newTitle'));
+async function removeCampaign() {
+  const ok = await attempt(async () => {
+    await store.remove(draft.value!.id);
+    toast.push(t('cmp.deleted'));
+  });
+  deleteOpen.value = false;
+  if (ok) await navigateTo('/app/campaigns');
+}
 const toDraftOpen = ref(false);
 const returnToDraft = async () => {
   await attempt(async () => {
@@ -428,6 +439,15 @@ const crumbs = computed(() => [
             </UiButton>
             <UiButton size="xs" :disabled="!launchable || busy" @click="launch">
               {{ t('cmp.launch') }}
+            </UiButton>
+            <UiButton
+              variant="tertiary"
+              size="xs"
+              icon="trash"
+              :disabled="busy"
+              @click="deleteOpen = true"
+            >
+              {{ t('cmp.delete') }}
             </UiButton>
           </template>
           <template v-else>
@@ -614,6 +634,16 @@ const crumbs = computed(() => [
         :consequence="t('cmp.discard.consequence')"
         :confirm-label="t('cmp.discard')"
         @confirm="leave"
+      />
+      <UiConfirmDialog
+        v-model:open="deleteOpen"
+        variant="destructive"
+        :title="t('cmp.delete.title')"
+        :consequence="t('cmp.delete.consequence', { name: deletePhrase })"
+        :typed-phrase="deletePhrase"
+        :confirm-label="t('cmp.delete')"
+        :loading="busy"
+        @confirm="removeCampaign"
       />
       <UiConfirmDialog
         v-model:open="toDraftOpen"
