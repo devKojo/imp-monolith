@@ -17,7 +17,6 @@ const loggingOut = ref(false);
 const nav = [
   { label: t('me.nav.home'), to: '/me', current: props.current === 'home' },
   { label: t('me.nav.rewards'), to: '/me/rewards', current: props.current === 'rewards' },
-  { label: t('me.nav.discover'), to: '/discover' },
 ];
 
 async function logout() {
@@ -40,7 +39,6 @@ async function logout() {
     :user-name="session.user.name"
     :user-status="session.user.emailVerified ? t('me.verified') : undefined"
     :sign-out-label="loggingOut ? t('me.loggingOut') : t('me.logout')"
-    :portal-label="t('portal.participant')"
     @sign-out="logout"
   >
     <slot />

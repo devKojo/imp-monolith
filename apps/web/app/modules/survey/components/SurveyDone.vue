@@ -10,7 +10,10 @@ defineProps<{ title: string }>();
     <UiIcon name="check-circle" :size="40" />
     <h1 id="survey-done" class="ui-text-h2">{{ t('survey.done.title') }}</h1>
     <p class="ui-text-body">{{ t('survey.done.body', { title }) }}</p>
-    <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+    <div class="actions">
+      <UiButton to="/me" size="xs">{{ t('quiz.toDashboard') }}</UiButton>
+      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.toHome') }}</UiButton>
+    </div>
   </UiCard>
 </template>
 
@@ -20,6 +23,11 @@ defineProps<{ title: string }>();
   flex-direction: column;
   gap: var(--ui-space-3);
   align-items: flex-start;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
 }
 .done h1,
 .done p {

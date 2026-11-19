@@ -39,6 +39,8 @@ const problem = ref('');
 const confirmOpen = ref(false);
 const submitting = ref(false);
 const timeUp = ref(false);
+// Confetti only when the result arrives in this visit, not when coming back to a finished quiz.
+const celebrate = ref(false);
 const retaking = ref(false);
 
 useHead({ title: t('quiz.page.title') });
@@ -81,6 +83,7 @@ watch(left, async (seconds) => {
   timeUp.value = true;
   try {
     adopt(await quiz.current(slug));
+    celebrate.value = true;
   } catch {
     problem.value = t('quiz.error.generic');
   }
@@ -132,6 +135,7 @@ async function retake() {
     index.value = resumeIndex(view.value!);
     flagged.value = new Set();
     timeUp.value = false;
+    celebrate.value = false;
   } catch (e) {
     problem.value = t(quizErrorKey(toApiError(e)));
   } finally {
@@ -150,6 +154,7 @@ async function finish() {
   try {
     await queue; // let the last answer land first
     adopt(await quiz.submit(slug));
+    celebrate.value = true;
     confirmOpen.value = false;
   } catch (e) {
     problem.value = t(quizErrorKey(toApiError(e)));
@@ -186,10 +191,9 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
     <div v-else-if="view.result" class="wrap solo">
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
       <QuizResult
-        :result="view.result"
+        :view="view"
         :time-up="timeUp"
-        :attempt="view.attemptNumber"
-        :max-attempts="view.maxAttempts"
+        :celebrate="celebrate"
         :retaking="retaking"
         @retake="retake"
       />
