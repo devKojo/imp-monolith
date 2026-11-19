@@ -67,9 +67,13 @@ const confettiOn = ref(false);
       <UiButton variant="secondary" @click="toast.push('Report requested.', 'info')"
         >Show info toast</UiButton
       >
+      <UiButton variant="secondary" @click="toast.push('Could not save. Try again.', 'error')"
+        >Show error toast</UiButton
+      >
     </div>
     <p class="ui-text-body-s ui-text-hint">
-      Auto-dismiss after 6 s; pauses on hover and focus. Errors use a banner or inline message.
+      Auto-dismiss after 6 s (12 s for an error); pauses on hover and focus. A mistake in one field
+      still belongs inline next to that field.
     </p>
   </GalleryBlock>
 

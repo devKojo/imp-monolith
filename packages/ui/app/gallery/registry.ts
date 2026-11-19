@@ -237,10 +237,10 @@ export const registry: ComponentEntry[] = [
     name: 'UiToaster',
     category: 'Feedback',
     summary:
-      'Success and info toasts (via useToast) that auto-dismiss and pause on hover and focus.',
+      'Success, info and error toasts (via useToast) that auto-dismiss and pause on hover and focus.',
     specRefs: ['Spec 5', 'UI-DSH-13'],
-    states: ['success', 'info'],
-    a11y: 'aria-live polite, never takes focus, 6 s with pause.',
+    states: ['success', 'info', 'error'],
+    a11y: 'aria-live polite (an error is role alert), never takes focus, 6 s (12 s for an error) with pause.',
   },
   {
     name: 'UiEmptyState',

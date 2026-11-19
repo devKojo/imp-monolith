@@ -1,6 +1,6 @@
 import { inject, provide, reactive, type InjectionKey } from 'vue';
 
-export type Toast = { id: number; tone: 'success' | 'info'; message: string };
+export type Toast = { id: number; tone: 'success' | 'info' | 'error'; message: string };
 
 export type ToastApi = {
   toasts: Toast[];
@@ -29,7 +29,7 @@ export function provideToasts(): ToastApi {
   return api;
 }
 
-/** Success and info only: errors that block use belong in a banner or inline message. */
+/** Success, info and error. A field-level mistake still belongs inline next to the field. */
 export function useToast(): Pick<ToastApi, 'push'> {
   const api = inject(key, null);
   if (!api) throw new Error('useToast() needs a <UiToaster> ancestor');
