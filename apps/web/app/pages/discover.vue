@@ -4,6 +4,7 @@ import { formatInZone } from '@imp/ui/app/utils/datetime';
 import type { IconName } from '@imp/ui/app/icons';
 import { t, type AppTextKey } from '../i18n';
 import { useDiscovery } from '../modules/discovery/composables/useDiscovery';
+import SessionActions from '../modules/auth/components/SessionActions.vue';
 import { BRAND_NAME } from '../modules/auth/constants';
 import { siteFooter } from '../modules/site/footer';
 import { PAGE_SIZE, countText, nextVisible, timeLeftText } from '../modules/discovery/logic';
@@ -11,7 +12,7 @@ import { isCampaignType, type CampaignType } from '../modules/discovery/types';
 
 /**
  * Public campaign discovery. Server-rendered and edge-cacheable: no cookies and no per-user data
- * (R-WEB-05), so the signed-in state is deliberately not shown here. Search text and type filter
+ * (R-WEB-05), so the server never renders the signed-in state; the header swaps in a Dashboard button in the browser. Search text and type filter
  * live in the URL. Entering a campaign goes to its page (/c/:slug); participants never sign in to
  * enter, they verify per campaign.
  */
@@ -117,8 +118,7 @@ const resultCount = computed(() => (pending.value ? '' : countText(campaigns.val
       <UiLink to="/business">{{ t('nav.forBusinesses') }}</UiLink>
     </template>
     <template #actions>
-      <UiButton to="/signin" variant="tertiary" size="xs">{{ t('nav.signin') }}</UiButton>
-      <UiButton to="/signup" size="xs">{{ t('nav.signup') }}</UiButton>
+      <SessionActions />
     </template>
 
     <section class="hero" aria-labelledby="discover-title">

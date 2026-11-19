@@ -12,6 +12,7 @@ export const staticSiteText = {
   'nav.forBusinesses': 'For businesses',
   'nav.signin': 'Sign in',
   'nav.signup': 'Create account',
+  'nav.dashboard': 'Dashboard',
 
   // validation (mirrors the server rules; the server is authoritative)
   'validation.email.required': 'Enter your email address.',
@@ -213,6 +214,12 @@ export const staticSiteText = {
   'me.carousel.queue': 'Closing soonest',
   'me.carousel.by': 'Run by {business}',
   'me.carousel.enter': 'Enter campaign',
+  'me.participations.title': 'Your participation',
+  'me.participations.score': 'Scored {score} of {total}',
+  'me.participations.passed': 'Passed',
+  'me.participations.notPassed': 'Not passed',
+  'me.participations.completed': 'Completed',
+  'me.participations.inProgress': 'In progress',
   'me.empty.title': 'Nothing here yet',
   'me.empty.body': 'Join a campaign and your entries, draws and rewards will show up on this page.',
   'me.empty.action': 'Discover campaigns',

@@ -15,6 +15,7 @@ import { createCampaignsModule } from './modules/campaigns';
 import { SEEDED } from './modules/campaigns/tests/fixtures';
 import { createIdentityModule } from './modules/identity';
 import { csrfTokenFor, generateToken, hashToken } from './modules/identity/domain/tokens';
+import { createMyParticipationsModule } from './modules/my-participations';
 import { createParticipantsModule } from './modules/participants';
 import { createQuizModule } from './modules/quiz';
 import { createSurveyModule } from './modules/survey';
@@ -103,6 +104,7 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
     const quiz = createQuizModule({ db, identity });
     const survey = createSurveyModule({ db, identity });
     const participants = createParticipantsModule({ db, identity });
+    const myParticipations = createMyParticipationsModule({ db, identity });
     const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
     app = await createApp({
       bus: new InMemoryEventBus(),
@@ -112,6 +114,7 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
       quiz,
       survey,
       participants,
+      myParticipations,
     });
   });
 
@@ -345,5 +348,33 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
     expect((await read(null, 'participants')).status).toBe(401);
     expect((await read(people.ama, 'participants')).status).toBe(403);
     expect((await read(people.ama, 'participants/summary')).status).toBe(403);
+  });
+
+  it("lists a person's own participation across businesses, and nobody else's", async () => {
+    const ama = await read(people.ama, 'me/participations');
+    expect(ama.status).toBe(200);
+    expect(ama.headers['cache-control']).toBe('no-store');
+    expect(ama.body.items).toHaveLength(2);
+    const quizRow = ama.body.items.find((i: { kind: string }) => i.kind === 'quiz');
+    expect(quizRow).toMatchObject({
+      campaignId: quiz.id,
+      title: 'Participants quiz',
+      slug: quiz.slug,
+      status: 'completed',
+      score: 1,
+      total: 1,
+      passed: true,
+    });
+    const surveyRow = ama.body.items.find((i: { kind: string }) => i.kind === 'survey');
+    expect(surveyRow).toMatchObject({ title: 'Participants survey', status: 'completed' });
+
+    const kofi = await read(people.kofi, 'me/participations');
+    expect(kofi.body.items).toHaveLength(1);
+    expect(kofi.body.items[0]).toMatchObject({ kind: 'survey', status: 'in_progress' });
+  });
+
+  it('shows nothing to a person who has not taken part, and needs a session', async () => {
+    expect((await read(people.owner, 'me/participations')).body.items).toEqual([]);
+    expect((await read(null, 'me/participations')).status).toBe(401);
   });
 });

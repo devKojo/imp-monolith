@@ -4,13 +4,15 @@ import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { BRAND_NAME, SIGNIN } from '../../modules/auth/constants';
 import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
+import MyParticipations from '../../modules/participant/components/MyParticipations.vue';
+import { useMyParticipations } from '../../modules/participant/useMyParticipations';
 import { useOpenCampaigns } from '../../modules/participant/useOpenCampaigns';
 import VerifyEmailPrompt from '../../modules/auth/components/VerifyEmailPrompt.vue';
 
 /**
  * Participant hub (client-rendered, no-store). Participants have an account but no business
- * (ADR-P001). Only the account is real so far; entries, draws and rewards appear once the
- * participation API exists, until then the page says so instead of showing made-up figures.
+ * (ADR-P001). Lists the person's own quiz attempts and survey responses; draws and rewards are
+ * not shown yet, and the page never shows made-up figures.
  */
 definePageMeta({ middleware: 'auth', portal: 'participant' });
 useHead({ title: t('me.title') });
@@ -19,6 +21,7 @@ const auth = useAuth();
 const session = auth.session;
 const loggingOut = ref(false);
 const open = useOpenCampaigns();
+const mine = useMyParticipations();
 
 const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0] ?? '');
 const nav = [
@@ -67,7 +70,15 @@ async function logout() {
       <CampaignCarousel v-else :campaigns="open.campaigns.value" :now="open.now.value" />
     </section>
 
-    <UiEmptyState :title="t('me.empty.title')" :description="t('me.empty.body')" icon="ticket">
+    <UiSkeleton v-if="mine.pending.value" variant="card" />
+    <UiSystemState v-else-if="mine.error.value" kind="generic" @action="mine.refresh()" />
+    <MyParticipations v-else-if="mine.items.value.length > 0" :items="mine.items.value" />
+    <UiEmptyState
+      v-else
+      :title="t('me.empty.title')"
+      :description="t('me.empty.body')"
+      icon="ticket"
+    >
       <UiButton to="/discover">{{ t('me.empty.action') }}</UiButton>
     </UiEmptyState>
 
