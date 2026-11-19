@@ -266,7 +266,7 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
   }
 }
 .solo {
-  max-inline-size: calc(var(--ui-space-12) * 12);
+  /* The result is a two-column dashboard, so it gets the full content width. */
   margin-block: var(--ui-space-8);
 }
 .screen {
