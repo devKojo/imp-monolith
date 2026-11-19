@@ -175,7 +175,7 @@ const started = computed(() => summary.value?.started ?? 0);
         </UiButton>
       </UiEmptyState>
 
-      <section v-else class="block" aria-labelledby="everyone">
+      <section v-else class="block table-card" aria-labelledby="everyone">
         <div class="block__head">
           <h2 id="everyone" class="ui-text-h3">
             {{ t('participants.list.title') }}
@@ -194,8 +194,11 @@ const started = computed(() => summary.value?.started ?? 0);
             />
           </div>
         </div>
-        <UiBanner v-if="failed" tone="error" role="alert">{{ t('participants.error') }}</UiBanner>
+        <UiBanner v-if="failed" tone="error" role="alert" class="table-card__banner">{{
+          t('participants.error')
+        }}</UiBanner>
         <UiDataTable
+          flush
           :name="t('participants.list.title')"
           :columns="columns"
           :rows="tableRows"
@@ -276,8 +279,21 @@ const started = computed(() => summary.value?.started ?? 0);
 .block {
   display: flex;
   flex-direction: column;
-  gap: var(--ui-space-4);
   margin-block-end: var(--ui-space-8);
+}
+/* The list sits in a white card, like the campaigns table. */
+.table-card {
+  background: var(--ui-color-surface);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-lg);
+  overflow: hidden;
+}
+.table-card .block__head {
+  padding: var(--ui-space-5) var(--ui-space-6);
+  border-block-end: 1px solid var(--ui-color-border);
+}
+.table-card__banner {
+  margin: var(--ui-space-4) var(--ui-space-6);
 }
 .block h2 {
   margin: 0;
