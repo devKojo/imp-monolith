@@ -14,7 +14,8 @@ import {
   totalSeconds,
   unanswered,
 } from '../../../modules/quiz/logic';
-import type { AttemptView } from '../../../modules/quiz/types';
+import type { AttemptView, QuizInfo } from '../../../modules/quiz/types';
+import { useOpenCampaigns } from '../../../modules/participant/useOpenCampaigns';
 import { useQuiz } from '../../../modules/quiz/useQuiz';
 
 /**
@@ -39,6 +40,10 @@ const problem = ref('');
 const confirmOpen = ref(false);
 const submitting = ref(false);
 const timeUp = ref(false);
+// The title and rules for the result page. Optional: the page still works without them.
+const info = ref<QuizInfo | null>(null);
+const openCampaigns = useOpenCampaigns();
+const next = computed(() => openCampaigns.campaigns.value.find((c) => c.slug !== slug) ?? null);
 // Confetti only when the result arrives in this visit, not when coming back to a finished quiz.
 const celebrate = ref(false);
 const retaking = ref(false);
@@ -56,6 +61,10 @@ async function load() {
     adopt(await quiz.current(slug));
     index.value = resumeIndex(view.value!);
     state.value = 'ready';
+    void quiz
+      .info(slug)
+      .then((i) => (info.value = i))
+      .catch(() => undefined);
   } catch (e) {
     const err = toApiError(e);
     if (err.code === 'NO_ATTEMPT') return void navigateTo(`/c/${slug}`);
@@ -192,6 +201,9 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
       <QuizResult
         :view="view"
+        :info="info"
+        :next="next"
+        :now="openCampaigns.now.value"
         :time-up="timeUp"
         :celebrate="celebrate"
         :retaking="retaking"
