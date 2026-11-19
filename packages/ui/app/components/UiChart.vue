@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { uiText } from '../composables/useUiText';
 import { tokens } from '../tokens.generated';
 import UiButton from './UiButton.vue';
+import UiPagination from './UiPagination.vue';
 
 export type ChartSeries = { name: string; points: Array<{ label: string; value: number }> };
 
@@ -21,8 +22,9 @@ const props = defineProps<{
   approx?: boolean;
   status?: 'provisional' | 'final';
   /**
-   * Rows of the data table shown at first; the rest sit behind "View breakdown". Over time (line, area,
-   * bar) the most recent rows are kept; otherwise the first. Leave unset to show every row.
+   * Rows per page of the data table; more rows than this are paged with page controls. Over time (line,
+   * area, bar) the table opens on the most recent page; otherwise on the first. Leave unset to show every
+   * row on one page.
    */
   tableLimit?: number;
   /** Text in the middle of a donut (usually the total). */
@@ -30,7 +32,7 @@ const props = defineProps<{
 }>();
 
 const showTable = ref(false);
-const fullTable = ref(false);
+const picked = ref<number | null>(null);
 const W = 600;
 const H = 280;
 const M = { top: 16, end: 96, bottom: 36, start: 48 };
@@ -76,16 +78,19 @@ const funnel = computed(() => {
 const overTime = computed(
   () => props.type === 'line' || props.type === 'area' || props.type === 'bar',
 );
-const hidden = computed(() =>
-  props.tableLimit && !fullTable.value ? Math.max(0, labels.value.length - props.tableLimit) : 0,
-);
+const pageSize = computed(() => props.tableLimit || Math.max(1, labels.value.length));
+const pageCount = computed(() => Math.max(1, Math.ceil(labels.value.length / pageSize.value)));
+const paged = computed(() => !!props.tableLimit && labels.value.length > props.tableLimit);
+const tablePage = computed({
+  get: () => Math.min(picked.value ?? (overTime.value ? pageCount.value : 1), pageCount.value),
+  set: (v: number) => {
+    picked.value = v;
+  },
+});
 const tableRows = computed(() => {
   const all = labels.value.map((label, i) => ({ label, i }));
-  if (hidden.value === 0) return all;
-  return overTime.value ? all.slice(-props.tableLimit!) : all.slice(0, props.tableLimit);
+  return all.slice((tablePage.value - 1) * pageSize.value, tablePage.value * pageSize.value);
 });
-const canCollapse = computed(() => !!props.tableLimit && labels.value.length > props.tableLimit);
-const moreRows = computed(() => labels.value.length - (props.tableLimit ?? 0));
 
 // Donut: each slice is a ring segment drawn as a dashed circle, so a single 100% slice still works.
 const D = { cx: 150, cy: H / 2, r: 82, w: 44 };
@@ -309,17 +314,13 @@ const statusText = computed(() =>
         </tr>
       </tbody>
     </table>
-    <UiButton
-      v-if="showTable && canCollapse"
-      variant="tertiary"
-      size="xs"
-      :aria-expanded="fullTable"
-      @click="fullTable = !fullTable"
-    >
-      {{
-        fullTable ? uiText('chart.hideBreakdown') : uiText('chart.viewBreakdown', { n: moreRows })
-      }}
-    </UiButton>
+    <UiPagination
+      v-if="showTable && paged"
+      v-model:page="tablePage"
+      :total="labels.length"
+      :page-size="pageSize"
+      :label="title"
+    />
     <p class="ui-chart__summary ui-text-body-s">{{ summary }}</p>
   </figure>
 </template>

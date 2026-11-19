@@ -341,7 +341,7 @@ export const registry: ComponentEntry[] = [
     name: 'UiChart',
     category: 'Data',
     summary:
-      'Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally truncated behind "View breakdown") and summary.',
+      'Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally paged) and summary.',
     specRefs: ['UI-A11Y-10', 'UI-DSH-08'],
     states: ['chart', 'data table', 'truncated table', 'approx', 'provisional'],
     a11y: 'Never colour alone; text summary always shown; table alternative.',

@@ -77,10 +77,10 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiPagination` | Page controls for long lists: "Showing 11-20 of 134", previous and next, and a short run of page numbers. | `UiButton` | - | UI-DSH-04, UI-A11Y-05 |
+| `UiPagination` | Page controls for long lists: "Showing 11-20 of 134", previous and next, and a short run of page numbers. | `UiButton` | `UiChart` | UI-DSH-04, UI-A11Y-05 |
 | `UiDataTable` | Sticky-header, sortable table with load-more, priority collapse and card layout on mobile. | `UiButton`, `UiEmptyState`, `UiIcon`, `UiSkeleton` | - | UI-DSH-04, UI-DSH-06, UI-A11Y-11 |
 | `UiMaskedValue` | Masked PII with permission-gated reveal that re-masks after 30 s. | `UiButton`, `UiLiveRegion` | - | UI-DSH-07, UXA-012, Spec 7.4 |
-| `UiChart` | Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally truncated behind "View breakdown") and summary. | `UiButton` | - | UI-A11Y-10, UI-DSH-08 |
+| `UiChart` | Line, area, bar, funnel and donut SVG charts with markers, patterns, a data table (optionally paged) and summary. | `UiButton`, `UiPagination` | - | UI-A11Y-10, UI-DSH-08 |
 | `UiStatCard` | One KPI: label, headline value, optional suffix, trend badge, icon and label/value rows. | `UiBadge`, `UiIconTile` | - | UI-DSH-04, UI-DSH-05 |
 
 ## Navigation

@@ -131,7 +131,8 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   },
   "UiChart": {
     "composes": [
-      "UiButton"
+      "UiButton",
+      "UiPagination"
     ],
     "usedBy": []
   },
@@ -411,7 +412,9 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
     "composes": [
       "UiButton"
     ],
-    "usedBy": []
+    "usedBy": [
+      "UiChart"
+    ]
   },
   "UiPasswordField": {
     "composes": [

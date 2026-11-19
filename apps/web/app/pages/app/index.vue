@@ -258,12 +258,22 @@ async function onSwitch(membershipId: string) {
         </div>
 
         <section class="charts" :aria-label="t('overview.analytics')">
-          <UiCard v-if="activity" as="section" class="chart chart--wide">
+          <UiCard v-if="activity" as="section" class="chart">
             <UiChart
               type="bar"
               :title="t('overview.chart.activity')"
               :series="daily"
               :summary="dailySummary"
+              :table-limit="5"
+            />
+          </UiCard>
+
+          <UiCard v-if="campaigns.length > 0" as="section" class="chart">
+            <UiChart
+              type="bar"
+              :title="t('overview.chart.byCampaign')"
+              :series="byCampaign"
+              :summary="byCampaignSummary"
               :table-limit="5"
             />
           </UiCard>
@@ -285,16 +295,6 @@ async function onSwitch(membershipId: string) {
               :series="outcome"
               :summary="outcomeSummary"
               :center-text="String(quiz.passed + quiz.failed)"
-            />
-          </UiCard>
-
-          <UiCard v-if="campaigns.length > 0" as="section" class="chart chart--wide">
-            <UiChart
-              type="bar"
-              :title="t('overview.chart.byCampaign')"
-              :series="byCampaign"
-              :summary="byCampaignSummary"
-              :table-limit="5"
             />
           </UiCard>
         </section>
@@ -348,9 +348,6 @@ async function onSwitch(membershipId: string) {
 @media (min-width: 1024px) {
   .charts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .chart--wide {
-    grid-column: 1 / -1;
   }
 }
 </style>
