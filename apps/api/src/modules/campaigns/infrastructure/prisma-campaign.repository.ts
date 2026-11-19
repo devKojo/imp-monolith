@@ -8,6 +8,7 @@ import { withTenant, writeAudit, type TenantContext, type TenantTx } from '@/sha
 import type { CampaignRepository, DraftContent, WriteResult } from '../application/ports';
 import type { CampaignField, CampaignSettings, FieldInput, FieldKind } from '../domain/fields';
 import type { CampaignStatus, Prize, StoredCampaign, StoredSummary } from '../domain/model';
+import { poolOf } from '../domain/pool';
 
 const withContent = {
   prizes: { orderBy: { position: 'asc' } },
@@ -31,6 +32,8 @@ function summaryOf(
     version: r.version,
     updatedAt: r.updatedAt.toISOString(),
     archivedAt: iso(r.archivedAt),
+    participantCount: r.participantCount,
+    maxParticipants: poolOf(r.settings)?.maxParticipants ?? null,
     prizeCount: r._count.prizes,
   };
 }
@@ -42,13 +45,19 @@ function settingsOf(value: unknown): CampaignSettings {
       quiz?: { timeLimitMinutes?: unknown; passPercent?: unknown; maxAttempts?: unknown };
     } | null
   )?.quiz;
-  if (!quiz || typeof quiz.passPercent !== 'number') return {};
+  const pool = poolOf(value);
   return {
-    quiz: {
-      timeLimitMinutes: typeof quiz.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
-      passPercent: quiz.passPercent,
-      maxAttempts: typeof quiz.maxAttempts === 'number' ? quiz.maxAttempts : 1,
-    },
+    ...(quiz && typeof quiz.passPercent === 'number'
+      ? {
+          quiz: {
+            timeLimitMinutes:
+              typeof quiz.timeLimitMinutes === 'number' ? quiz.timeLimitMinutes : null,
+            passPercent: quiz.passPercent,
+            maxAttempts: typeof quiz.maxAttempts === 'number' ? quiz.maxAttempts : 1,
+          },
+        }
+      : {}),
+    ...(pool ? { pool } : {}),
   };
 }
 
@@ -86,6 +95,7 @@ function detailOf(r: Row): StoredCampaign {
     updatedAt: r.updatedAt.toISOString(),
     launchedAt: iso(r.launchedAt),
     archivedAt: iso(r.archivedAt),
+    participantCount: r.participantCount,
   };
 }
 

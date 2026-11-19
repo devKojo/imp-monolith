@@ -168,6 +168,7 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
       passPercent?: number;
       maxAttempts?: number;
       questions?: unknown[];
+      pool?: object;
     } = {},
   ) {
     const res = await write(people.owner, 'put', `campaigns/${c.id}`, {
@@ -189,6 +190,7 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
           passPercent: over.passPercent ?? 60,
           maxAttempts: over.maxAttempts ?? 1,
         },
+        ...(over.pool ? { pool: over.pool } : {}),
       },
     });
     expect(res.status).toBe(200);
@@ -288,6 +290,42 @@ describe.skipIf(!enabled)('quiz API end to end (real guards, real PostgreSQL)', 
     expect((await answer(q3!.id, 1)).status).toBe(409);
     const twice = await write(ama, 'post', `quiz/${slug}/attempt/submit`);
     expect(twice.body.result).toEqual(done.body.result);
+  });
+
+  it('keeps a full prize pool quiz open to the people already in, and tells a new person it is full', async () => {
+    const { slug } = await launched('Pool quiz', {
+      pool: { kind: 'POINTS', amount: 1000, currency: null, maxParticipants: 2 },
+    });
+    const zed = await participant('zed');
+    const { ama, kofi } = people;
+
+    expect((await write(ama, 'post', `quiz/${slug}/attempt`)).status).toBe(200);
+    // The second person takes the last seat: the campaign is full and stored as COMPLETED.
+    expect((await write(kofi, 'post', `quiz/${slug}/attempt`)).status).toBe(200);
+
+    // Its page is still there, saying no places are left; the listing no longer offers it.
+    const page = await read(null, `public/campaigns/${slug}`);
+    expect(page.status).toBe(200);
+    expect(page.body.pool).toMatchObject({ joined: 2, spotsLeft: 0 });
+    expect((await read(null, `public/quiz/${slug}`)).status).toBe(200);
+    const listed = await read(null, 'public/campaigns');
+    expect(listed.body.items.map((i: { slug: string }) => i.slug)).not.toContain(slug);
+
+    // Someone who already holds a seat can resume, answer and finish.
+    const resumed = await read(ama, `quiz/${slug}/attempt`);
+    expect(resumed.status).toBe(200);
+    const [q1] = resumed.body.questions as Array<{ id: string }>;
+    expect(
+      (await write(ama, 'put', `quiz/${slug}/attempt/answers/${q1!.id}`, { choiceIndex: 0 })).status,
+    ).toBe(204);
+    expect((await write(ama, 'post', `quiz/${slug}/attempt/submit`)).status).toBe(200);
+    expect((await write(ama, 'post', `quiz/${slug}/attempt`)).status).toBe(200); // not a new seat
+
+    // A new person is told it is full (not "not found"), and holds no attempt.
+    const late = await write(zed, 'post', `quiz/${slug}/attempt`);
+    expect(late.status).toBe(409);
+    expect(late.body.error.code).toBe('CAMPAIGN_FULL');
+    expect((await read(zed, `quiz/${slug}/attempt`)).status).toBe(404);
   });
 
   it('keeps each participant to their own attempt', async () => {

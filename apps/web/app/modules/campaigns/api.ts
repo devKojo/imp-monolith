@@ -10,12 +10,15 @@ export const toUpdateBody = (c: Campaign) => ({
   templateId: c.templateId,
   startAt: c.startAt,
   endAt: c.endAt,
-  prizes: c.prizes.map(({ name, valueLabel, winners, description }) => ({
-    name,
-    valueLabel,
-    winners,
-    description,
-  })),
+  // A prize pool replaces prize tiers: a campaign has one or the other.
+  prizes: c.settings.pool
+    ? []
+    : c.prizes.map(({ name, valueLabel, winners, description }) => ({
+        name,
+        valueLabel,
+        winners,
+        description,
+      })),
   // Fields go without ids and machine names: the server numbers and names them.
   fields: c.fields.map(({ kind, label, helper, required, options, correctIndex }) => ({
     kind,
@@ -25,7 +28,7 @@ export const toUpdateBody = (c: Campaign) => ({
     options,
     correctIndex,
   })),
-  settings: { quiz: c.settings.quiz ?? null },
+  settings: { quiz: c.settings.quiz ?? null, pool: c.settings.pool ?? null },
 });
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';

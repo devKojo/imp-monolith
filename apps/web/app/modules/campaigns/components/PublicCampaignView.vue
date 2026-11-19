@@ -66,7 +66,10 @@ const enterable = computed(() => canEnter(kind.value));
 
 // ---- prizes
 const tiers = computed(() => props.campaign.prizes);
-const top = computed(() => tiers.value[0] ?? null);
+const pool = computed(() => props.campaign.pool ?? null);
+/** Every place of a prize pool is taken: only people already in can carry on. */
+const full = computed(() => pool.value !== null && pool.value.spotsLeft < 1);
+const top = computed(() => (pool.value ? null : (tiers.value[0] ?? null)));
 const topValue = computed(() => top.value?.valueLabel || top.value?.name || '');
 const winnersText = (n: number) => t(winnersLabelKey(n), { n });
 const prizeSummary = computed(() =>
@@ -100,7 +103,7 @@ const ready = computed(
 );
 const isSurvey = computed(() => kind.value === 'survey');
 const hasSections = computed(() => ({
-  prizes: tiers.value.length > 0,
+  prizes: tiers.value.length > 0 || pool.value !== null,
   details: details.value.length > 0,
 }));
 </script>
@@ -152,6 +155,7 @@ const hasSections = computed(() => ({
         </UiBanner>
         <UiBanner v-else-if="!enterable" tone="info">{{ t('quiz.notQuiz') }}</UiBanner>
         <UiBanner v-else-if="businessAccount" tone="info">{{ t('quiz.businessAccount') }}</UiBanner>
+        <UiBanner v-else-if="full && !actionLabel" tone="info">{{ t('pub.pool.full') }}</UiBanner>
         <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
 
         <div v-if="ready && !businessAccount" class="actions">
@@ -159,7 +163,7 @@ const hasSections = computed(() => ({
             {{ actionLabel }}
           </UiButton>
           <UiButton
-            v-else
+            v-else-if="actionLabel"
             size="lg"
             icon-trailing="arrow-right"
             :loading="starting"
@@ -178,7 +182,20 @@ const hasSections = computed(() => ({
         </p>
       </div>
 
-      <aside v-if="top" class="hero__prize" :aria-label="t('pub.top.label')">
+      <aside v-if="pool" class="hero__prize" :aria-label="t('pub.pool.label')">
+        <UiIcon name="trophy" :size="32" />
+        <p class="ui-text-label-sm hero__prize-label">{{ t('pub.pool.label') }}</p>
+        <p class="hero__prize-value">{{ pool.label }}</p>
+        <p class="ui-text-body-s">{{ t('pub.pool.each') }} {{ pool.shareLabel }}</p>
+        <p class="ui-text-caption hero__prize-note">
+          {{
+            pool.spotsLeft > 0
+              ? t('pub.pool.spots', { n: pool.spotsLeft, max: pool.maxParticipants })
+              : t('pub.pool.full')
+          }}
+        </p>
+      </aside>
+      <aside v-else-if="top" class="hero__prize" :aria-label="t('pub.top.label')">
         <UiIcon name="trophy" :size="32" />
         <p class="ui-text-label-sm hero__prize-label">{{ t('pub.top.label') }}</p>
         <p class="hero__prize-value">{{ topValue }}</p>
@@ -190,8 +207,20 @@ const hasSections = computed(() => ({
     <section v-if="hasSections.prizes" id="prizes" class="band" aria-labelledby="prizes-title">
       <p class="eyebrow ui-text-label-sm">{{ t('pub.prizes.eyebrow') }}</p>
       <h2 id="prizes-title" class="ui-text-h1">{{ t('pub.prizes.title') }}</h2>
-      <p class="ui-text-body-s ui-text-hint">{{ prizeSummary }}</p>
-      <ul class="tiers">
+      <p class="ui-text-body-s ui-text-hint">
+        {{ pool ? t('pub.pool.summary', { max: pool.maxParticipants }) : prizeSummary }}
+      </p>
+      <div v-if="pool" class="tier" data-top="true">
+        <p class="tier__top ui-text-label-sm">
+          <span>{{ t('pub.pool.label') }}</span>
+          <UiBadge tone="info">{{
+            t('pub.pool.spots', { n: pool.spotsLeft, max: pool.maxParticipants })
+          }}</UiBadge>
+        </p>
+        <p class="tier__value">{{ pool.label }}</p>
+        <p class="ui-text-body-s ui-text-hint">{{ t('pub.pool.each') }} {{ pool.shareLabel }}</p>
+      </div>
+      <ul v-else class="tiers">
         <li v-for="(p, i) in tiers" :key="`${i}-${p.name}`" class="tier" :data-top="i === 0">
           <p class="tier__top ui-text-label-sm">
             <span>{{ i === 0 ? t('cmp.preview.top') : t('cmp.preview.tier', { n: i + 1 }) }}</span>

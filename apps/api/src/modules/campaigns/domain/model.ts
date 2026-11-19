@@ -1,4 +1,5 @@
 import type { CampaignField, CampaignSettings, FieldGroup, FieldKind } from './fields';
+import type { PoolView } from './pool';
 
 /**
  * Campaigns: what a business runs from a built-in campaign type (its template). The page text, the
@@ -71,16 +72,24 @@ export type StoredCampaign = {
   launchedAt: string | null;
   /** When it was archived; null if it is not. Archived campaigns are hidden from the default list. */
   archivedAt: string | null;
+  /** Participants admitted so far; a prize pool campaign closes when it reaches the pool's limit. */
+  participantCount: number;
 };
 export type StoredSummary = Omit<
   StoredCampaign,
   'summary' | 'prizes' | 'fields' | 'settings' | 'launchedAt'
 > & {
   prizeCount: number;
+  /** The pool's participant limit, or null for a campaign without a prize pool. */
+  maxParticipants: number | null;
 };
 
 /** What the API returns: the effective status, and the template it uses. */
-export type CampaignDetail = StoredCampaign & { template: TemplateRef | null };
+export type CampaignDetail = StoredCampaign & {
+  template: TemplateRef | null;
+  /** The prize pool with each participant's equal share worked out, or null when it has prize tiers. */
+  pool: PoolView | null;
+};
 export type CampaignSummary = StoredSummary & { template: TemplateRef | null };
 
 export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes' | 'details' | 'content';

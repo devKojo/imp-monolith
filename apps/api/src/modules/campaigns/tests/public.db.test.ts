@@ -122,6 +122,15 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     await campaign('ended', a, quizA, { endAt: at(-1) });
     await campaign('deleted', a, quizA, { deletedAt: new Date() });
     await campaign('suspended', suspended, tGamma);
+    // A full prize pool campaign: stored COMPLETED while its end is still ahead.
+    const pool = { pool: { kind: 'POINTS', amount: 3000, currency: null, maxParticipants: 3 } };
+    await campaign('full', a, quizA, { status: 'COMPLETED', settings: pool, participantCount: 3 });
+    await campaign('full-ended', a, quizA, {
+      status: 'COMPLETED',
+      settings: pool,
+      participantCount: 3,
+      endAt: at(-1),
+    });
   });
 
   afterAll(async () => {
@@ -235,6 +244,26 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     const mine = seen.filter((s) => s.endsWith(tag)).map((s) => s.replace(`-${tag}`, ''));
     expect(mine).toEqual(['live-a', 'live-b', 'started', 'instant', 'survey']);
     expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it('keeps a full prize pool campaign reachable by its address, but out of the listing', async () => {
+    expect((await visible()).map((i) => i.slug)).not.toContain(`full-${tag}`);
+    const page = await service.get(`full-${tag}`);
+    expect(page.pool).toMatchObject({ joined: 3, spotsLeft: 0, maxParticipants: 3, share: 1000 });
+    // The runnable quiz and survey lookups use the same public scope.
+    const found = await withPublic(db, (tx) =>
+      tx.campaign.findFirst({ where: { slug: `full-${tag}` }, select: { status: true } }),
+    );
+    expect(found?.status).toBe('COMPLETED');
+  });
+
+  it('still hides a completed campaign by address unless it is a full pool with its end ahead', async () => {
+    await expect(service.get(`completed-${tag}`)).rejects.toThrow('not found');
+    await expect(service.get(`full-ended-${tag}`)).rejects.toThrow('not found');
+    const reachable = await withPublic(db, (tx) =>
+      tx.campaign.count({ where: { slug: { in: [`completed-${tag}`, `full-ended-${tag}`] } } }),
+    );
+    expect(reachable).toBe(0);
   });
 
   it('reaches nothing else through the public scope', async () => {

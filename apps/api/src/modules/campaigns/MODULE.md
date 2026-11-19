@@ -11,6 +11,16 @@ quiz's time limit and pass mark). The template only says which kinds of field a 
 - Keep a campaign editable only while it is a draft; a launched campaign is fixed.
 - Decide, on the server, whether a campaign can launch (pre-flight checks) and give it its public address.
 - Run the lifecycle: launch, pause, resume, cancel; the schedule moves a campaign to live and completed.
+- Prize pool: instead of prize tiers, a campaign may share one amount (points, or money in a chosen currency)
+  equally among a limited number of participants. The pool is in `settings.pool` (`kind`, `amount` in whole
+  units or minor units, `currency`, `maxParticipants`); each seat's share is `floor(amount / maxParticipants)`
+  and the API returns it worked out. A campaign has tiers or a pool, never both. The first time a participant
+  joins (a quiz's first attempt, or a survey response) they take a seat (`participant_count`); the update that
+  takes the last seat sets the stored status to COMPLETED, so the campaign closes to anyone new at once, while
+  people already in can finish. A stored COMPLETED with the end date still ahead therefore means "full" (the
+  schedule's own completion is computed, never stored). A new person after that gets `409 CAMPAIGN_FULL`. If it
+  ends on its date with seats left, the empty seats' shares are not paid out. The platform records the pool and
+  the shares; it does not pay anyone.
 - Publish again: a cancelled campaign whose end date is still ahead can be published again, as it was.
 - Archive and unarchive: a draft or a finished (completed or cancelled) campaign can be put away and brought
   back exactly as it was. Archiving is a timestamp (`archived_at`), not a status; a running or paused campaign

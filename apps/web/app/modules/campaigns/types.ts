@@ -81,8 +81,25 @@ export type QuizSettings = {
   /** Attempts a participant may make (1 to 5); one means no retake. */
   maxAttempts: number;
 };
-/** What the campaign type uses: `quiz` is only present for a quiz. */
-export type CampaignSettings = { quiz?: QuizSettings };
+export type PoolKind = 'POINTS' | 'MONEY';
+/** One amount shared equally by a limited number of participants, instead of prize tiers. */
+export type PrizePool = {
+  kind: PoolKind;
+  /** Points, or for money the amount in minor units (500000 is 5,000.00). */
+  amount: number;
+  /** ISO 4217 code for money; null for points. */
+  currency: string | null;
+  maxParticipants: number;
+};
+/** The pool as the API returns it: what was set, and each participant's equal share worked out. */
+export type PoolView = PrizePool & {
+  share: number;
+  remainder: number;
+  label: string;
+  shareLabel: string;
+};
+/** What the campaign type uses: `quiz` is only present for a quiz; `pool` for a prize pool campaign. */
+export type CampaignSettings = { quiz?: QuizSettings; pool?: PrizePool };
 
 export type Campaign = {
   id: string;
@@ -103,14 +120,19 @@ export type Campaign = {
   launchedAt: string | null;
   /** When it was archived; null if it is not. Archived campaigns are left out of the default list. */
   archivedAt: string | null;
+  /** Participants admitted so far; a prize pool campaign closes when it reaches the pool's limit. */
+  participantCount: number;
+  /** The pool with each share worked out, or null when the campaign has prize tiers. */
+  pool: PoolView | null;
 };
 
 /** One row of the campaign library. */
 export type CampaignSummary = Omit<
   Campaign,
-  'summary' | 'prizes' | 'fields' | 'settings' | 'launchedAt'
+  'summary' | 'prizes' | 'fields' | 'settings' | 'launchedAt' | 'pool'
 > & {
   prizeCount: number;
+  maxParticipants: number | null;
 };
 
 export type PreflightId = 'title' | 'template' | 'schedule' | 'prizes' | 'details' | 'content';

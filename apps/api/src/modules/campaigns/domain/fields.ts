@@ -1,3 +1,4 @@
+import type { PrizePool } from './pool';
 /**
  * The fields of a campaign: what a participant is asked about themselves (`details`) and what the
  * campaign is about (`content`: quiz and survey questions). Which kinds a campaign may use, and how many,
@@ -82,7 +83,7 @@ export type QuizSettings = {
   maxAttempts: number;
 };
 /** Settings the campaign type uses; `quiz` is only set for a quiz campaign. */
-export type CampaignSettings = { quiz?: QuizSettings };
+export type CampaignSettings = { quiz?: QuizSettings; pool?: PrizePool };
 
 export const DEFAULT_QUIZ_SETTINGS: QuizSettings = {
   timeLimitMinutes: null,

@@ -6,6 +6,8 @@ export function quizErrorKey(err: ApiError): AppTextKey {
   switch (err.code) {
     case 'ATTEMPT_CLOSED':
       return 'quiz.error.closed';
+    case 'CAMPAIGN_FULL':
+      return 'quiz.error.full';
     case 'NO_ATTEMPTS_LEFT':
       return 'quiz.error.noAttempts';
     case 'NETWORK':

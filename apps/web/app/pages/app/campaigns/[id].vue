@@ -32,6 +32,7 @@ import type {
   CampaignField,
   CampaignSettings,
   Prize,
+  PrizePool,
   TemplateRef,
 } from '../../../modules/campaigns/types';
 import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
@@ -181,10 +182,13 @@ function chooseTemplate(templateId: string) {
     templateId: found ? templateId : null,
     template: found,
     fields: found ? fitToTemplate(draft.value.fields, found, uid) : [],
-    settings:
-      found?.archetype === draft.value.template?.archetype
+    settings: {
+      ...(found?.archetype === draft.value.template?.archetype
         ? draft.value.settings
-        : defaultSettingsFor(found),
+        : defaultSettingsFor(found)),
+      // The prize pool belongs to the campaign, not to its type.
+      ...(draft.value.settings.pool ? { pool: draft.value.settings.pool } : {}),
+    },
   };
 }
 
@@ -192,7 +196,22 @@ const setFields = (fields: CampaignField[]) => {
   if (draft.value) draft.value = { ...draft.value, fields };
 };
 const setSettings = (settings: CampaignSettings) => {
-  if (draft.value) draft.value = { ...draft.value, settings };
+  // The content editor sends the quiz settings only; the prize pool is kept as it is.
+  if (draft.value) {
+    draft.value = {
+      ...draft.value,
+      settings: {
+        ...settings,
+        ...(draft.value.settings.pool ? { pool: draft.value.settings.pool } : {}),
+      },
+    };
+  }
+};
+// A campaign gives its prize as tiers or as a pool, never both.
+const setPool = (pool: PrizePool | null) => {
+  if (!draft.value) return;
+  const { pool: _dropped, ...rest } = draft.value.settings;
+  draft.value = { ...draft.value, settings: pool ? { ...rest, pool } : rest };
 };
 
 // ---- prizes
@@ -469,7 +488,10 @@ const crumbs = computed(() => [
 
           <PrizeEditor
             :prizes="draft.prizes"
+            :pool="draft.settings.pool ?? null"
+            :joined="isDraft ? null : draft.participantCount"
             :readonly="readonly"
+            @update:pool="setPool"
             @add="addNewPrize"
             @update="(prizeId, patch) => setPrizes(updatePrize(draft!.prizes, prizeId, patch))"
             @move="(prizeId, direction) => setPrizes(movePrize(draft!.prizes, prizeId, direction))"
@@ -526,6 +548,7 @@ const crumbs = computed(() => [
               :summary="draft.summary"
               :end-at="draft.endAt"
               :prizes="draft.prizes"
+              :pool="draft.settings.pool ?? null"
               :kicker="kicker"
               :blocks="draft.fields"
               :has-template="draft.template !== null"

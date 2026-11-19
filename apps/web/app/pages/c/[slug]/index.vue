@@ -92,10 +92,12 @@ async function start() {
 }
 
 const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+// A full prize pool takes no new person; people already in keep their button to carry on.
+const full = computed(() => (campaign.value?.pool?.spotsLeft ?? 1) < 1);
 const action = computed(() => {
   const isSurvey = surveyInfo.value !== null;
   return {
-    none: t(isSurvey ? 'survey.start' : 'quiz.start'),
+    none: full.value ? '' : t(isSurvey ? 'survey.start' : 'quiz.start'),
     inProgress: t(isSurvey ? 'survey.resume' : 'quiz.resume'),
     done: t(isSurvey ? 'survey.viewResult' : 'quiz.viewResult'),
     signedOut: t(isSurvey ? 'survey.signin' : 'quiz.signin'),
