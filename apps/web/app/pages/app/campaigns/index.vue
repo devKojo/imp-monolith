@@ -35,7 +35,6 @@ const showArchived = computed(() => status.value === 'archived');
 const items = ref<CampaignSummary[]>([]);
 const loading = ref(true);
 const loadFailed = ref(false);
-const problem = ref('');
 
 async function load() {
   loading.value = true;
@@ -53,11 +52,10 @@ onMounted(load);
 watch(showArchived, () => void load());
 
 async function attempt(action: () => Promise<void>) {
-  problem.value = '';
   try {
     await action();
   } catch (e) {
-    problem.value = t(campaignErrorKey(toApiError(e)));
+    toast.push(t(campaignErrorKey(toApiError(e))), 'error');
   }
 }
 
@@ -262,7 +260,6 @@ const confirmDelete = () =>
       <p v-if="!canManage" class="ui-text-caption ui-text-hint">{{ t('cmp.readonly.role') }}</p>
     </header>
 
-    <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
 
     <UiSystemState v-if="loadFailed" kind="generic" @action="load" />
     <section v-else class="table-card" aria-labelledby="campaigns-title">

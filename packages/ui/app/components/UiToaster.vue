@@ -6,8 +6,8 @@ import UiButton from './UiButton.vue';
 import UiIcon from './UiIcon.vue';
 
 /**
- * Wrap the app (or shell) once. Toasts auto-dismiss after 6 s, pause on hover and focus, are
- * announced politely, and never take focus (spec 5). Place below the sticky header so a toast
+ * Wrap the app (or shell) once. Toasts auto-dismiss after 6 s (an error stays twice as long), pause on
+ * hover and focus, are announced politely (an error is announced at once), and never take focus (spec 5). Place below the sticky header so a toast
  * does not cover the focused element (UI-A11Y-02).
  */
 const props = withDefaults(defineProps<{ duration?: number }>(), { duration: 6000 });
@@ -18,7 +18,10 @@ function start(id: number) {
   stop(id);
   timers.set(
     id,
-    setTimeout(() => api.dismiss(id), props.duration),
+    setTimeout(
+      () => api.dismiss(id),
+      api.toasts.find((x) => x.id === id)?.tone === 'error' ? props.duration * 2 : props.duration,
+    ),
   );
 }
 function stop(id: number) {
@@ -42,12 +45,16 @@ onBeforeUnmount(() => timers.forEach((t) => clearTimeout(t)));
         :ref="(el) => track(el, t.id)"
         class="ui-toast"
         :data-tone="t.tone"
+        :role="t.tone === 'error' ? 'alert' : undefined"
         @mouseenter="stop(t.id)"
         @mouseleave="start(t.id)"
         @focusin="stop(t.id)"
         @focusout="start(t.id)"
       >
-        <UiIcon :name="t.tone === 'success' ? 'check-circle' : 'info'" :size="20" />
+        <UiIcon
+          :name="t.tone === 'success' ? 'check-circle' : t.tone === 'error' ? 'alert-circle' : 'info'"
+          :size="20"
+        />
         <span class="ui-toast__message">{{ t.message }}</span>
         <UiButton variant="tertiary" icon="x" @click="api.dismiss(t.id)">
           <span class="ui-sr-only">{{ uiText('common.dismiss') }}</span>
@@ -85,6 +92,9 @@ onBeforeUnmount(() => timers.forEach((t) => clearTimeout(t)));
 }
 .ui-toast[data-tone='success'] {
   color: var(--ui-color-success-text);
+}
+.ui-toast[data-tone='error'] {
+  color: var(--ui-color-danger-text);
 }
 .ui-toast[data-tone='info'] {
   color: var(--ui-color-info-text);

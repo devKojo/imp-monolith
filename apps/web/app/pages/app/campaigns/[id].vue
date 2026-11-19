@@ -64,7 +64,6 @@ const dirty = computed(
 // Explanations of what is unfinished appear once the person has saved (or tried to launch).
 const showProblems = ref(false);
 const busy = ref(false);
-const problem = ref('');
 const conflict = ref(false);
 
 const available = ref<TemplateRef[]>([]);
@@ -164,7 +163,6 @@ const zones = computed(() => [...new Set([zone.value, 'UTC'])]);
 // ---- loading and the template choice
 async function load() {
   state.value = 'loading';
-  problem.value = '';
   conflict.value = false;
   try {
     const [campaign, list] = await Promise.all([
@@ -256,11 +254,10 @@ function adopt(next: Campaign) {
 function failed(e: unknown) {
   const err = toApiError(e);
   if (err.code === 'VERSION_CONFLICT') conflict.value = true;
-  else problem.value = t(campaignErrorKey(err));
+  else toast.push(t(campaignErrorKey(err)), 'error');
 }
 async function attempt(action: () => Promise<void>): Promise<boolean> {
   if (!draft.value || busy.value) return false;
-  problem.value = '';
   conflict.value = false;
   busy.value = true;
   try {
@@ -486,7 +483,6 @@ const crumbs = computed(() => [
       <UiBanner v-if="frozenReason" tone="warning" :title="t('cmp.frozen.title')">
         {{ t(frozenReason) }}
       </UiBanner>
-      <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
       <UiBanner v-if="conflict" tone="warning" role="alert" :title="t('cmp.error.conflict')">
         <span class="conflict">
           <UiButton variant="secondary" size="xs" @click="load">{{ t('cmp.reload') }}</UiButton>

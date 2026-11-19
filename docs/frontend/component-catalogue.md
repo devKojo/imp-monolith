@@ -57,7 +57,7 @@
 | `UiStatusChip` | A UiBadge driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk). | `UiBadge` | - | UI-DSH-05, Spec 7.2 |
 | `UiBanner` | Persistent info, warning, error, system and elevation messages. | `UiButton`, `UiIcon` | `UiSystemState` | Spec 5, UI-DSH-13, UI-ADM-01 |
 | `UiConfetti` | A one-time burst of confetti for a moment worth celebrating, such as passing a quiz. | - | - | Spec 5 |
-| `UiToaster` | Success and info toasts (via useToast) that auto-dismiss and pause on hover and focus. | `UiButton`, `UiIcon` | - | Spec 5, UI-DSH-13 |
+| `UiToaster` | Success, info and error toasts (via useToast) that auto-dismiss and pause on hover and focus. | `UiButton`, `UiIcon` | - | Spec 5, UI-DSH-13 |
 | `UiEmptyState` | Heading, explanation and next action for empty and terminal screens. | `UiIcon` | `UiDataTable`, `UiSystemState` | Spec 5, Spec 11 |
 | `UiSkeleton` | Layout-matching placeholders for text, card, table, chart and form. | - | `UiDataTable` | UI-PRF-02, Spec 11 |
 | `UiSystemState` | Renders any state from the section 11 matrix (401, 403, 404, 409, 429, 503, offline, ...). | `UiBanner`, `UiButton`, `UiEmptyState` | - | Spec 11, UXA-006 |
