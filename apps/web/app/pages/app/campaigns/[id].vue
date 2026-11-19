@@ -97,6 +97,19 @@ const launchable = computed(
     !titleProblem.value &&
     !summaryProblem.value,
 );
+// Why the form cannot be edited, in the order that matters most to the person looking at it.
+const frozenReason = computed<AppTextKey | null>(() => {
+  const c = draft.value;
+  if (!c || !readonly.value) return null;
+  if (!canManage.value) return 'cmp.readonly.role';
+  if (isArchived.value) return 'cmp.readonly.archived';
+  if (c.participantCount > 0) return 'cmp.frozen.responses';
+  if (c.status === 'LIVE' || c.status === 'SCHEDULED' || c.status === 'PAUSED') {
+    return 'cmp.frozen.live';
+  }
+  return c.status === 'CANCELLED' ? 'cmp.frozen.cancelled' : 'cmp.frozen.ended';
+});
+
 const runningStatus = computed(
   () => draft.value?.status === 'LIVE' || draft.value?.status === 'SCHEDULED',
 );
@@ -470,15 +483,9 @@ const crumbs = computed(() => [
         </div>
       </header>
 
-      <p v-if="readonly" class="ui-text-caption ui-text-hint">
-        {{
-          !canManage
-            ? t('cmp.readonly.role')
-            : isArchived
-              ? t('cmp.readonly.archived')
-              : t('cmp.readonly.launched')
-        }}
-      </p>
+      <UiBanner v-if="frozenReason" tone="warning" :title="t('cmp.frozen.title')">
+        {{ t(frozenReason) }}
+      </UiBanner>
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
       <UiBanner v-if="conflict" tone="warning" role="alert" :title="t('cmp.error.conflict')">
         <span class="conflict">
