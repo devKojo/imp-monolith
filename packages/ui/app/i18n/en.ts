@@ -157,8 +157,6 @@ export const en = {
   'mask.hide': 'Hide now',
   'mask.hidden': '{what} hidden',
   'mask.notice': 'Revealing contact details is logged. Details hide again after 30 seconds.',
-  'chart.viewBreakdown': 'View breakdown ({n} more)',
-  'chart.hideBreakdown': 'Show less',
   'chart.showTable': 'Show data table',
   'chart.showChart': 'Show chart',
   'chart.approx': 'approx.',

@@ -255,7 +255,6 @@ export const staticSiteText = {
   'console.nav.campaigns': 'Campaigns',
   'console.nav.participants': 'Participants',
   'console.nav.analytics': 'Analytics',
-  'console.nav.settings': 'Settings',
   'tpl.archetype.giveaway': 'Giveaway',
   'tpl.archetype.quiz': 'Quiz',
   'tpl.archetype.survey': 'Survey',
