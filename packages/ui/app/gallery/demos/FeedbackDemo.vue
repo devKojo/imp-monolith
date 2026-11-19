@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useToast } from '../../composables/useToast';
 import UiBanner from '../../components/UiBanner.vue';
 import UiButton from '../../components/UiButton.vue';
+import UiConfetti from '../../components/UiConfetti.vue';
 import UiEmptyState from '../../components/UiEmptyState.vue';
 import UiMeter from '../../components/UiMeter.vue';
 import UiSkeleton from '../../components/UiSkeleton.vue';
@@ -15,6 +16,7 @@ import GalleryBlock from '../GalleryBlock.vue';
 const vocabularies = Object.keys(statusVocabularies) as StatusVocabulary[];
 const toast = useToast();
 const dismissed = ref(false);
+const confettiOn = ref(false);
 </script>
 
 <template>
@@ -30,6 +32,11 @@ const dismissed = ref(false);
         />
       </div>
     </div>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiConfetti">
+    <UiButton variant="secondary" @click="confettiOn = true">Celebrate</UiButton>
+    <UiConfetti :active="confettiOn" @done="confettiOn = false" />
   </GalleryBlock>
 
   <GalleryBlock name="UiBanner">

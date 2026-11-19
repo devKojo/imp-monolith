@@ -4,13 +4,13 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-69 components.
+70 components.
 
 ## Foundation
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPortalShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
 | `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiActionMenu`, `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
 | `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
 | `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
@@ -56,6 +56,7 @@
 |---|---|---|---|---|
 | `UiStatusChip` | A UiBadge driven by fixed vocabularies (campaign, reward unit, moderation, delivery, risk). | `UiBadge` | - | UI-DSH-05, Spec 7.2 |
 | `UiBanner` | Persistent info, warning, error, system and elevation messages. | `UiButton`, `UiIcon` | `UiSystemState` | Spec 5, UI-DSH-13, UI-ADM-01 |
+| `UiConfetti` | A one-time burst of confetti for a moment worth celebrating, such as passing a quiz. | - | - | Spec 5 |
 | `UiToaster` | Success and info toasts (via useToast) that auto-dismiss and pause on hover and focus. | `UiButton`, `UiIcon` | - | Spec 5, UI-DSH-13 |
 | `UiEmptyState` | Heading, explanation and next action for empty and terminal screens. | `UiIcon` | `UiDataTable`, `UiSystemState` | Spec 5, Spec 11 |
 | `UiSkeleton` | Layout-matching placeholders for text, card, table, chart and form. | - | `UiDataTable` | UI-PRF-02, Spec 11 |
@@ -98,7 +99,7 @@
 | `UiPublicShell` | Public page frame: brand, optional navigation and actions, language switcher, reading column or wide listing width, required footer links. | `UiLink`, `UiSelect`, `UiSkipLink` | - | UI-PUB-01, UI-PUB-23, UI-A11Y-13 |
 | `UiAuthShell` | Frame for sign-in, sign-up and onboarding: brand, one card, account-routing footer, optional side column, or a full-bleed split entry layout. | `UiBreadcrumbs`, `UiSkipLink` | - | UI-PUB-01, UI-A11Y-06 |
 | `UiConsoleShell` | Business console frame: sidebar (brand, navigation, account) and a slim header with search and actions. | `UiAvatar`, `UiBadge`, `UiButton`, `UiSidebarNav`, `UiSkipLink` | - | UI-DSH-01, UI-A11Y-05 |
-| `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiBadge`, `UiButton`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
+| `UiPortalShell` | Participant frame: brand, tabs, signed-in person, one main landmark and a footer. | `UiAvatar`, `UiBadge`, `UiButton`, `UiIcon`, `UiLink`, `UiSkipLink` | - | UI-PRT-01, UI-A11Y-05 |
 
 ## Domain
 
@@ -117,7 +118,7 @@
 
 ## Most reused
 
-- `UiIcon`: used by 29 components
+- `UiIcon`: used by 30 components
 - `UiButton`: used by 26 components
 - `UiLink`: used by 9 components
 - `UiBadge`: used by 8 components

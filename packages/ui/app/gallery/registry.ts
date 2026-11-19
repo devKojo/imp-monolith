@@ -226,6 +226,14 @@ export const registry: ComponentEntry[] = [
     a11y: 'Errors use role=alert; others role=status. Pushes content down.',
   },
   {
+    name: 'UiConfetti',
+    category: 'Feedback',
+    summary: 'A one-time burst of confetti for a moment worth celebrating, such as passing a quiz.',
+    specRefs: ['Spec 5'],
+    states: ['fires once when active', 'reduced motion: none'],
+    a11y: 'Decorative: aria-hidden, ignores the pointer, and does nothing when reduced motion is preferred.',
+  },
+  {
     name: 'UiToaster',
     category: 'Feedback',
     summary:

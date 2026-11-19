@@ -29,14 +29,10 @@ const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0]
   <ParticipantShell current="home">
     <VerifyEmailPrompt class="gap-after" />
     <header class="hero">
-      <UiBadge shape="pill" tone="info">{{ t('me.eyebrow') }}</UiBadge>
       <h1 class="hero__title">
         {{ t('me.welcome') }}
         <span class="hero__name">{{ firstName }}</span>
       </h1>
-      <p class="hero__summary ui-text-body-l">
-        {{ t('me.summary') }}
-      </p>
     </header>
 
     <section class="open-campaigns">

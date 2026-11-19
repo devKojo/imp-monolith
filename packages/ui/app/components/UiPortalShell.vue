@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UiAvatar from './UiAvatar.vue';
 import UiBadge from './UiBadge.vue';
+import UiIcon from './UiIcon.vue';
 import UiButton from './UiButton.vue';
 import UiLink from './UiLink.vue';
 import UiSkipLink from './UiSkipLink.vue';
@@ -51,9 +52,10 @@ const emit = defineEmits<{ signOut: [] }>();
           <UiAvatar :name="userName" :verified="!!userStatus" />
           <span class="ui-portal__who">
             <span class="ui-portal__name ui-text-label">{{ userName }}</span>
-            <span v-if="userStatus" class="ui-portal__status ui-text-caption">{{
-              userStatus
-            }}</span>
+            <span v-if="userStatus" class="ui-portal__status ui-text-caption">
+              {{ userStatus }}
+              <UiIcon name="check-circle" :size="14" class="ui-portal__tick" />
+            </span>
           </span>
           <UiButton variant="tertiary" icon="log-out" @click="emit('signOut')">
             <span class="ui-sr-only">{{ signOutLabel }}</span>
@@ -124,7 +126,13 @@ const emit = defineEmits<{ signOut: [] }>();
   flex-direction: column;
 }
 .ui-portal__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-1);
   color: var(--ui-color-text-hint);
+}
+.ui-portal__tick {
+  color: var(--ui-color-success-text);
 }
 @media (min-width: 640px) {
   .ui-portal__who {
