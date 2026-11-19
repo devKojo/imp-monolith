@@ -15,8 +15,10 @@ const props = withDefaults(
     pageSize: number;
     /** Accessible name of the navigation, for pages with more than one list. */
     label?: string;
+    /** Keep the previous/next and page buttons even when everything fits on one page. */
+    alwaysShowControls?: boolean;
   }>(),
-  {},
+  { alwaysShowControls: false },
 );
 const page = defineModel<number>('page', { default: 1 });
 
@@ -49,7 +51,7 @@ const go = (to: number) => {
     <p class="ui-pager__range ui-text-body-s ui-text-hint" role="status">
       {{ uiText('pagination.showing', { from, to, total }) }}
     </p>
-    <ul v-if="count > 1" class="ui-pager__list">
+    <ul v-if="count > 1 || alwaysShowControls" class="ui-pager__list">
       <li>
         <UiButton
           variant="secondary"

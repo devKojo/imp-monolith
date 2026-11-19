@@ -60,6 +60,7 @@ function result(p: MyParticipation): string | null {
       v-model:page="page"
       :total="total"
       :page-size="pageSize"
+      always-show-controls
       :label="t('me.participations.title')"
     />
   </section>
