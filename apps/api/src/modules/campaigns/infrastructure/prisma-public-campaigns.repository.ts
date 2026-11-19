@@ -19,7 +19,15 @@ export class PrismaPublicCampaignRepository implements PublicCampaignRepository 
   find(query: PublicQuery): Promise<PublicRow[]> {
     const and: Prisma.CampaignWhereInput[] = [
       { deletedAt: null, archivedAt: null, slug: { not: null }, endAt: { gt: query.now } },
-      { OR: [{ status: 'LIVE' }, { status: 'SCHEDULED', startAt: { lte: query.now } }] },
+      {
+        OR: [
+          { status: 'LIVE' },
+          { status: 'SCHEDULED', startAt: { lte: query.now } },
+          // A full prize pool campaign (stored COMPLETED, end still ahead) keeps its own page, so people
+          // see "all places taken"; the listing leaves it out because nobody can join it any more.
+          ...(query.slug ? [{ status: 'COMPLETED' as const }] : []),
+        ],
+      },
       { business: { status: { in: ['PENDING', 'ACTIVE'] } } },
     ];
     if (query.slug) and.push({ slug: query.slug });

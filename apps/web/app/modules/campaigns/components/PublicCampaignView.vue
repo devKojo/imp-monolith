@@ -67,6 +67,8 @@ const enterable = computed(() => canEnter(kind.value));
 // ---- prizes
 const tiers = computed(() => props.campaign.prizes);
 const pool = computed(() => props.campaign.pool ?? null);
+/** Every place of a prize pool is taken: only people already in can carry on. */
+const full = computed(() => pool.value !== null && pool.value.spotsLeft < 1);
 const top = computed(() => (pool.value ? null : (tiers.value[0] ?? null)));
 const topValue = computed(() => top.value?.valueLabel || top.value?.name || '');
 const winnersText = (n: number) => t(winnersLabelKey(n), { n });
@@ -153,6 +155,7 @@ const hasSections = computed(() => ({
         </UiBanner>
         <UiBanner v-else-if="!enterable" tone="info">{{ t('quiz.notQuiz') }}</UiBanner>
         <UiBanner v-else-if="businessAccount" tone="info">{{ t('quiz.businessAccount') }}</UiBanner>
+        <UiBanner v-else-if="full && !actionLabel" tone="info">{{ t('pub.pool.full') }}</UiBanner>
         <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
 
         <div v-if="ready && !businessAccount" class="actions">
@@ -160,7 +163,7 @@ const hasSections = computed(() => ({
             {{ actionLabel }}
           </UiButton>
           <UiButton
-            v-else
+            v-else-if="actionLabel"
             size="lg"
             icon-trailing="arrow-right"
             :loading="starting"
