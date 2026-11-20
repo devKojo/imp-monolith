@@ -20,15 +20,20 @@ export const toUpdateBody = (c: Campaign) => ({
         description,
       })),
   // Fields go without ids and machine names: the server numbers and names them.
-  fields: c.fields.map(({ kind, label, helper, required, options, correctIndex }) => ({
+  fields: c.fields.map(({ kind, label, helper, required, options, correctIndex, imageUrl }) => ({
     kind,
     label,
     helper,
     required,
     options,
     correctIndex,
+    ...(kind === 'candidate' ? { imageUrl: imageUrl ?? '' } : {}),
   })),
-  settings: { quiz: c.settings.quiz ?? null, pool: c.settings.pool ?? null },
+  settings: {
+    quiz: c.settings.quiz ?? null,
+    ballot: c.settings.ballot ?? null,
+    pool: c.settings.pool ?? null,
+  },
 });
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';

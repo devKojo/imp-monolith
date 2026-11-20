@@ -57,9 +57,10 @@ describe('prizes and entry', () => {
     expect(totalWinners([{ winners: 1 }, { winners: 3 }, { winners: 50 }])).toBe(54);
     expect(totalWinners([])).toBe(0);
   });
-  it('lets visitors enter quizzes only for now', () => {
-    expect(canEnter('quiz')).toBe(true);
-    expect(canEnter('survey')).toBe(true);
-    expect(canEnter('giveaway')).toBe(false);
+  it('lets visitors enter every kind of campaign they can take part in', () => {
+    for (const type of ['quiz', 'survey', 'poll', 'vote', 'giveaway']) {
+      expect(canEnter(type)).toBe(true);
+    }
+    expect(canEnter('instant')).toBe(false);
   });
 });

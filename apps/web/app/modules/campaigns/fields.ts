@@ -4,6 +4,7 @@ import type {
   CampaignSettings,
   FieldGroup,
   FieldKind,
+  BallotSettings,
   QuizSettings,
   TemplateRef,
 } from './types';
@@ -17,7 +18,9 @@ export const FIELD_LIMITS = {
   option: 120,
   optionsMin: 2,
   optionsMax: 20,
+  pollOptionsMax: 10,
   quizOptionsMax: 6,
+  imageUrl: 500,
   fields: 60,
   content: 50,
   timeLimitMax: 240,
@@ -32,14 +35,19 @@ const CONTENT: ReadonlySet<FieldKind> = new Set([
   'text',
   'long_text',
   'quiz_question',
+  'candidate',
 ]);
 export const groupOf = (kind: FieldKind): FieldGroup => (CONTENT.has(kind) ? 'content' : 'details');
 /** Kinds whose answers are a list of options to pick from. */
 export const hasOptions = (kind: FieldKind): boolean =>
   kind === 'choice' || kind === 'quiz_question';
 /** Most answers a field of this kind can have. */
-export const maxOptions = (kind: FieldKind): number =>
-  kind === 'quiz_question' ? FIELD_LIMITS.quizOptionsMax : FIELD_LIMITS.optionsMax;
+export const maxOptions = (kind: FieldKind, archetype?: string): number =>
+  kind === 'quiz_question'
+    ? FIELD_LIMITS.quizOptionsMax
+    : archetype === 'poll'
+      ? FIELD_LIMITS.pollOptionsMax
+      : FIELD_LIMITS.optionsMax;
 /** The longest label: a question's text is longer than a participant-detail label. */
 export const maxLabel = (kind: FieldKind): number =>
   groupOf(kind) === 'content' ? FIELD_LIMITS.prompt : FIELD_LIMITS.label;
@@ -59,6 +67,7 @@ export function newField(kind: FieldKind, template: TemplateRef | null, id: stri
     required: kind === 'quiz_question' ? true : (rule?.defaultRequired ?? false),
     options: hasOptions(kind) ? ['', ''] : [],
     correctIndex: null,
+    imageUrl: '',
   };
 }
 
@@ -106,7 +115,20 @@ export function fitToTemplate(
 }
 
 export const defaultSettingsFor = (template: TemplateRef | null): CampaignSettings =>
-  template?.archetype === 'quiz' ? { quiz: { ...DEFAULT_QUIZ } } : {};
+  template?.archetype === 'quiz'
+    ? { quiz: { ...DEFAULT_QUIZ } }
+    : template?.archetype === 'poll' || template?.archetype === 'vote'
+      ? { ballot: { ...DEFAULT_BALLOT } }
+      : {};
+
+/** A poll or image vote as it starts: standings show once a participant has voted. */
+const DEFAULT_BALLOT: BallotSettings = { showResults: 'after_vote' };
+
+/** The ballot settings of a campaign, filling in what an older campaign does not have. */
+export const ballotSettingsOf = (settings: CampaignSettings): BallotSettings => ({
+  ...DEFAULT_BALLOT,
+  ...settings.ballot,
+});
 
 /** A quiz as it starts: untimed, the usual pass mark, one attempt. */
 const DEFAULT_QUIZ: QuizSettings = {
@@ -159,8 +181,8 @@ export function moveField(
 }
 
 /** Adds an empty answer, up to the limit for the kind. */
-export const addAnswer = (f: CampaignField): CampaignField =>
-  f.options.length >= maxOptions(f.kind) ? f : { ...f, options: [...f.options, ''] };
+export const addAnswer = (f: CampaignField, archetype?: string): CampaignField =>
+  f.options.length >= maxOptions(f.kind, archetype) ? f : { ...f, options: [...f.options, ''] };
 
 /**
  * Removes an answer, keeping at least two. The correct mark follows its answer: removing the correct
@@ -178,7 +200,19 @@ export const setAnswer = (f: CampaignField, index: number, text: string): Campai
   options: f.options.map((o, i) => (i === index ? text : o)),
 });
 
-export type FieldProblem = 'label' | 'answers' | 'empty' | 'different' | 'correct';
+export type FieldProblem = 'label' | 'answers' | 'empty' | 'different' | 'correct' | 'image';
+
+/** A picture link must be https, without spaces, and a reasonable length. */
+export function isHttpsLink(value: string): boolean {
+  const v = value.trim();
+  if (v === '' || v.length > FIELD_LIMITS.imageUrl || /\s/.test(v)) return false;
+  try {
+    const url = new URL(v);
+    return url.protocol === 'https:' && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
 
 /** Whether a field is finished enough to launch, mirrored from the server so the form can say so early. */
 export function fieldProblem(f: CampaignField): FieldProblem | null {
@@ -196,6 +230,7 @@ export function fieldProblem(f: CampaignField): FieldProblem | null {
   ) {
     return 'correct';
   }
+  if (f.kind === 'candidate' && !isHttpsLink(f.imageUrl ?? '')) return 'image';
   return null;
 }
 
