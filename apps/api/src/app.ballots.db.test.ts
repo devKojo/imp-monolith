@@ -17,6 +17,7 @@ import { createGiveawayModule } from './modules/giveaway';
 import { createIdentityModule } from './modules/identity';
 import { csrfTokenFor, generateToken, hashToken } from './modules/identity/domain/tokens';
 import { createMyParticipationsModule } from './modules/my-participations';
+import { createParticipantsModule } from './modules/participants';
 import { createTemplatesModule } from './modules/templates';
 import { createVotingModule } from './modules/voting';
 import { createPlatformDb, createTenantDb } from './shared/database';
@@ -110,6 +111,7 @@ describe.skipIf(!enabled)(
       const voting = createVotingModule({ db, identity });
       const giveaway = createGiveawayModule({ db, identity });
       const myParticipations = createMyParticipationsModule({ db, identity });
+      const participants = createParticipantsModule({ db, identity });
       const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
       app = await createApp({
         bus: new InMemoryEventBus(),
@@ -119,6 +121,7 @@ describe.skipIf(!enabled)(
         voting,
         giveaway,
         myParticipations,
+        participants,
       });
     });
 
@@ -489,6 +492,72 @@ describe.skipIf(!enabled)(
               status: 'completed',
             }),
           ]),
+        );
+      });
+    });
+
+    describe("the business's participants list", () => {
+      it('shows votes and entries, and counts them in the summary and one campaign', async () => {
+        const poll = await launched('Listed vote', SEEDED.poll, { fields: [pollQuestion] });
+        const giveaway = await launched('Listed entry', SEEDED.giveaway, {
+          fields: [],
+          prizes: [{ name: 'Grant', valueLabel: '$1', winners: 1, description: '' }],
+        });
+        await write(people.ama, 'post', `voting/${poll.slug}/vote`, { optionIndex: 0 });
+        await write(people.kofi, 'post', `voting/${poll.slug}/vote`, { optionIndex: 1 });
+        await write(people.ama, 'post', `giveaway/${giveaway.slug}/entry`, {});
+
+        const list = await read(people.owner, `participants?campaignId=${poll.id}`);
+        expect(list.status, JSON.stringify(list.body)).toBe(200);
+        expect(list.body.total).toBe(2);
+        expect(list.body.items[0]).toMatchObject({
+          kind: 'poll',
+          status: 'completed',
+          campaignTitle: 'Listed vote',
+        });
+        expect(JSON.stringify(list.body)).not.toContain('@test.local');
+
+        const entries = await read(people.owner, `participants?campaignId=${giveaway.id}`);
+        expect(entries.body.items).toEqual([
+          expect.objectContaining({ kind: 'giveaway', name: 'ama', status: 'completed' }),
+        ]);
+        // Nothing of a vote or an entry is ever "in progress".
+        const open = await read(
+          people.owner,
+          `participants?campaignId=${poll.id}&status=in_progress`,
+        );
+        expect(open.body.total).toBe(0);
+
+        const summary = await read(people.owner, 'participants/summary');
+        expect(summary.body.campaigns).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              campaignId: poll.id,
+              kind: 'poll',
+              started: 2,
+              completed: 2,
+            }),
+            expect.objectContaining({
+              campaignId: giveaway.id,
+              kind: 'giveaway',
+              started: 1,
+              completed: 1,
+            }),
+          ]),
+        );
+
+        const one = await read(people.owner, `participants/campaigns/${poll.id}`);
+        expect(one.status).toBe(200);
+        expect(one.body).toMatchObject({ kind: 'poll', started: 2, completed: 2, quiz: null });
+        expect(one.body.daily.at(-1)).toMatchObject({ started: 2, completed: 2 });
+        const mine = await read(people.owner, `participants/campaigns/${giveaway.id}`);
+        expect(mine.body).toMatchObject({ kind: 'giveaway', started: 1, completed: 1 });
+
+        const activity = await read(people.owner, 'participants/activity');
+        expect(activity.body.daily.at(-1).started).toBeGreaterThanOrEqual(3);
+        // Another business sees none of it.
+        expect((await read(people.outsider, `participants?campaignId=${poll.id}`)).body.total).toBe(
+          0,
         );
       });
     });

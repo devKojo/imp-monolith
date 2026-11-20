@@ -23,32 +23,52 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
   summary(ctx: TenantContext): Promise<ParticipantSummary> {
     return withTenant(this.db, ctx, async (tx) => {
       const where = { tenantId: ctx.tenantId };
-      const [quizPeople, surveyPeople, quizStarted, quizDone, surveyStarted, surveyDone] =
-        await Promise.all([
-          tx.quizAttempt.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
-          tx.surveyResponse.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
-          tx.quizAttempt.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
-          tx.quizAttempt.groupBy({
-            by: ['campaignId'],
-            where: { ...where, submittedAt: { not: null } },
-            _count: { _all: true },
-          }),
-          tx.surveyResponse.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
-          tx.surveyResponse.groupBy({
-            by: ['campaignId'],
-            where: { ...where, submittedAt: { not: null } },
-            _count: { _all: true },
-          }),
-        ]);
+      const [
+        quizPeople,
+        surveyPeople,
+        votePeople,
+        entryPeople,
+        quizStarted,
+        quizDone,
+        surveyStarted,
+        surveyDone,
+        voteCounts,
+        entryCounts,
+      ] = await Promise.all([
+        tx.quizAttempt.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
+        tx.surveyResponse.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
+        tx.vote.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
+        tx.giveawayEntry.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
+        tx.quizAttempt.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
+        tx.quizAttempt.groupBy({
+          by: ['campaignId'],
+          where: { ...where, submittedAt: { not: null } },
+          _count: { _all: true },
+        }),
+        tx.surveyResponse.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
+        tx.surveyResponse.groupBy({
+          by: ['campaignId'],
+          where: { ...where, submittedAt: { not: null } },
+          _count: { _all: true },
+        }),
+        tx.vote.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
+        tx.giveawayEntry.groupBy({ by: ['campaignId'], where, _count: { _all: true } }),
+      ]);
 
-      const ids = [...new Set([...quizStarted, ...surveyStarted].map((g) => g.campaignId))];
+      const ids = [
+        ...new Set(
+          [...quizStarted, ...surveyStarted, ...voteCounts, ...entryCounts].map(
+            (g) => g.campaignId,
+          ),
+        ),
+      ];
       const titles = new Map(
         (
           await tx.campaign.findMany({
             where: { tenantId: ctx.tenantId, id: { in: ids } },
-            select: { id: true, title: true },
+            select: { id: true, title: true, template: { select: { archetype: true } } },
           })
-        ).map((c) => [c.id, c.title]),
+        ).map((c) => [c.id, c]),
       );
       const done = (rows: Array<{ campaignId: string; _count: { _all: number } }>) =>
         new Map(rows.map((r) => [r.campaignId, r._count._all]));
@@ -58,22 +78,40 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
       const campaigns: CampaignParticipation[] = [
         ...quizStarted.map((g) => ({
           campaignId: g.campaignId,
-          title: titles.get(g.campaignId) ?? '',
+          title: titles.get(g.campaignId)?.title ?? '',
           kind: 'quiz' as const,
           started: g._count._all,
           completed: quizDoneBy.get(g.campaignId) ?? 0,
         })),
         ...surveyStarted.map((g) => ({
           campaignId: g.campaignId,
-          title: titles.get(g.campaignId) ?? '',
+          title: titles.get(g.campaignId)?.title ?? '',
           kind: 'survey' as const,
           started: g._count._all,
           completed: surveyDoneBy.get(g.campaignId) ?? 0,
         })),
+        // A vote or an entry is complete the moment it is made.
+        ...voteCounts.map((g) => ({
+          campaignId: g.campaignId,
+          title: titles.get(g.campaignId)?.title ?? '',
+          kind: (titles.get(g.campaignId)?.template?.archetype === 'POLL' ? 'poll' : 'vote') as
+            'poll' | 'vote',
+          started: g._count._all,
+          completed: g._count._all,
+        })),
+        ...entryCounts.map((g) => ({
+          campaignId: g.campaignId,
+          title: titles.get(g.campaignId)?.title ?? '',
+          kind: 'giveaway' as const,
+          started: g._count._all,
+          completed: g._count._all,
+        })),
       ].sort((a, b) => b.started - a.started || a.title.localeCompare(b.title));
 
       return {
-        participants: new Set([...quizPeople, ...surveyPeople].map((p) => p.userId)).size,
+        participants: new Set(
+          [...quizPeople, ...surveyPeople, ...votePeople, ...entryPeople].map((p) => p.userId),
+        ).size,
         started: campaigns.reduce((n, c) => n + c.started, 0),
         completed: campaigns.reduce((n, c) => n + c.completed, 0),
         campaigns,
@@ -91,7 +129,7 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
       const where = { tenantId: ctx.tenantId };
 
       type DayRow = { day: string; n: number };
-      const [quizStarted, quizDone, surveyStarted, surveyDone] = await Promise.all([
+      const [quizStarted, quizDone, surveyStarted, surveyDone, voted, entered] = await Promise.all([
         tx.$queryRaw<DayRow[]>`
           SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM quiz_attempts
@@ -111,6 +149,16 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
           SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM survey_responses
           WHERE tenant_id = ${ctx.tenantId}::uuid AND submitted_at >= ${since}
+          GROUP BY 1`,
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(cast_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM votes
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND cast_at >= ${since}
+          GROUP BY 1`,
+        tx.$queryRaw<DayRow[]>`
+          SELECT to_char(entered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+          FROM giveaway_entries
+          WHERE tenant_id = ${ctx.tenantId}::uuid AND entered_at >= ${since}
           GROUP BY 1`,
       ]);
       const sum = (...lists: DayRow[][]) => {
@@ -118,8 +166,9 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
         for (const r of lists.flat()) by.set(r.day, (by.get(r.day) ?? 0) + r.n);
         return by;
       };
-      const startedBy = sum(quizStarted, surveyStarted);
-      const completedBy = sum(quizDone, surveyDone);
+      // A vote or an entry starts and completes at the same moment.
+      const startedBy = sum(quizStarted, surveyStarted, voted, entered);
+      const completedBy = sum(quizDone, surveyDone, voted, entered);
       const daily = Array.from({ length: ACTIVITY_DAYS }, (_, i) => {
         const date = day(new Date(since.getTime() + i * 86_400_000));
         return { date, started: startedBy.get(date) ?? 0, completed: completedBy.get(date) ?? 0 };
@@ -159,12 +208,15 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
           template: { select: { archetype: true } },
         },
       });
-      const kind =
-        campaign?.template?.archetype === 'QUIZ'
-          ? 'quiz'
-          : campaign?.template?.archetype === 'SURVEY'
-            ? 'survey'
-            : null;
+      const KINDS = {
+        QUIZ: 'quiz',
+        SURVEY: 'survey',
+        POLL: 'poll',
+        VOTE: 'vote',
+        GIVEAWAY: 'giveaway',
+      } as const;
+      const archetype = campaign?.template?.archetype;
+      const kind = archetype && archetype in KINDS ? KINDS[archetype as keyof typeof KINDS] : null;
       if (!campaign || !kind) return null;
 
       const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -195,24 +247,46 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
                 tx.quizAttempt.count({ where: { ...where, submittedAt: { not: null } } }),
               ]),
             ])
-          : await Promise.all([
-              tx.$queryRaw<DayRow[]>`
+          : kind === 'poll' || kind === 'vote'
+            ? await (async () => {
+                const perDay = await tx.$queryRaw<DayRow[]>`
+                  SELECT to_char(cast_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+                  FROM votes
+                  WHERE tenant_id = ${ctx.tenantId}::uuid AND campaign_id = ${campaignId}::uuid
+                    AND cast_at >= ${since}
+                  GROUP BY 1`;
+                const n = await tx.vote.count({ where });
+                return [perDay, perDay, [n, n]] as const;
+              })()
+            : kind === 'giveaway'
+              ? await (async () => {
+                  const perDay = await tx.$queryRaw<DayRow[]>`
+                    SELECT to_char(entered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
+                    FROM giveaway_entries
+                    WHERE tenant_id = ${ctx.tenantId}::uuid AND campaign_id = ${campaignId}::uuid
+                      AND entered_at >= ${since}
+                    GROUP BY 1`;
+                  const n = await tx.giveawayEntry.count({ where });
+                  return [perDay, perDay, [n, n]] as const;
+                })()
+              : await Promise.all([
+                  tx.$queryRaw<DayRow[]>`
                 SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
                 FROM survey_responses
                 WHERE tenant_id = ${ctx.tenantId}::uuid AND campaign_id = ${campaignId}::uuid
                   AND started_at >= ${since}
                 GROUP BY 1`,
-              tx.$queryRaw<DayRow[]>`
+                  tx.$queryRaw<DayRow[]>`
                 SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
                 FROM survey_responses
                 WHERE tenant_id = ${ctx.tenantId}::uuid AND campaign_id = ${campaignId}::uuid
                   AND submitted_at >= ${since}
                 GROUP BY 1`,
-              Promise.all([
-                tx.surveyResponse.count({ where }),
-                tx.surveyResponse.count({ where: { ...where, submittedAt: { not: null } } }),
-              ]),
-            ]);
+                  Promise.all([
+                    tx.surveyResponse.count({ where }),
+                    tx.surveyResponse.count({ where: { ...where, submittedAt: { not: null } } }),
+                  ]),
+                ]);
 
       const startedBy = new Map(started.map((r) => [r.day, r.n]));
       const completedBy = new Map(completed.map((r) => [r.day, r.n]));
@@ -267,22 +341,51 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
         user: { select: { id: true, name: true } },
         campaign: { select: { id: true, title: true } },
       } as const;
-      const [attempts, responses, quizTotal, surveyTotal] = await Promise.all([
-        tx.quizAttempt.findMany({
-          where,
-          include,
-          orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
-          take,
-        }),
-        tx.surveyResponse.findMany({
-          where,
-          include,
-          orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
-          take,
-        }),
-        tx.quizAttempt.count({ where }),
-        tx.surveyResponse.count({ where }),
-      ]);
+      // A vote or an entry is complete when made, so it is never "in progress".
+      const instantWhere =
+        query.status === 'in_progress'
+          ? null
+          : {
+              tenantId: ctx.tenantId,
+              ...(query.campaignId ? { campaignId: query.campaignId } : {}),
+            };
+      const none = { tenantId: ctx.tenantId, id: { in: [] as string[] } };
+      const [attempts, responses, quizTotal, surveyTotal, votes, entries, voteTotal, entryTotal] =
+        await Promise.all([
+          tx.quizAttempt.findMany({
+            where,
+            include,
+            orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+            take,
+          }),
+          tx.surveyResponse.findMany({
+            where,
+            include,
+            orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+            take,
+          }),
+          tx.quizAttempt.count({ where }),
+          tx.surveyResponse.count({ where }),
+          tx.vote.findMany({
+            where: instantWhere ?? none,
+            include: {
+              ...include,
+              campaign: {
+                select: { id: true, title: true, template: { select: { archetype: true } } },
+              },
+            },
+            orderBy: [{ castAt: 'desc' }, { id: 'desc' }],
+            take,
+          }),
+          tx.giveawayEntry.findMany({
+            where: instantWhere ?? none,
+            include,
+            orderBy: [{ enteredAt: 'desc' }, { id: 'desc' }],
+            take,
+          }),
+          tx.vote.count({ where: instantWhere ?? none }),
+          tx.giveawayEntry.count({ where: instantWhere ?? none }),
+        ]);
 
       const rows: Participation[] = [
         ...attempts.map((a) => ({
@@ -314,11 +417,37 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
           completedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
           result: null,
         })),
+        ...votes.map((v) => ({
+          id: v.id,
+          kind: (v.campaign.template?.archetype === 'POLL' ? 'poll' : 'vote') as 'poll' | 'vote',
+          participantId: v.user.id,
+          name: v.user.name,
+          campaignId: v.campaign.id,
+          campaignTitle: v.campaign.title,
+          attempt: 1,
+          status: 'completed' as const,
+          startedAt: v.castAt.toISOString(),
+          completedAt: v.castAt.toISOString(),
+          result: null,
+        })),
+        ...entries.map((e) => ({
+          id: e.id,
+          kind: 'giveaway' as const,
+          participantId: e.user.id,
+          name: e.user.name,
+          campaignId: e.campaign.id,
+          campaignTitle: e.campaign.title,
+          attempt: 1,
+          status: 'completed' as const,
+          startedAt: e.enteredAt.toISOString(),
+          completedAt: e.enteredAt.toISOString(),
+          result: null,
+        })),
       ].sort((a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id));
 
       return {
         items: rows.slice(query.offset, query.offset + query.limit),
-        total: quizTotal + surveyTotal,
+        total: quizTotal + surveyTotal + voteTotal + entryTotal,
       };
     });
   }

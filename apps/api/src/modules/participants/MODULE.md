@@ -1,8 +1,8 @@
 # participants
 
 What a business sees about the people who took part in its campaigns: counts, and a list of who took part and
-how far they got. Read-only. The facts come from quiz attempts (`quiz`) and survey responses (`survey`); this
-module writes nothing and owns no table.
+how far they got. Read-only. The facts come from quiz attempts (`quiz`), survey responses (`survey`), votes
+(`voting`: polls and image votes) and giveaway entries (`giveaway`); this module writes nothing and owns no table.
 
 ## Responsibilities
 
@@ -47,6 +47,8 @@ All are `Cache-Control: no-store`.
 
 ## Rules worth knowing
 
+- **A vote or a giveaway entry is complete the moment it is made**: it counts as started and completed, shows
+  as `completed`, and never appears under `in_progress`. Its kind is `poll`, `vote` or `giveaway`.
 - **Distinct people** are counted across quizzes and surveys together, so someone who did both is one
   participant but two participations.
 - **Paging** reads each source newest first up to the end of the requested page and merges them, so a page is
@@ -56,4 +58,4 @@ All are `Cache-Control: no-store`.
 ## Not built yet
 
 - Per-participant detail, per-question results, exports, and removing a participant's data on request.
-- Giveaway and poll participation (those campaign kinds cannot be entered yet).
+- Per-option vote detail (who voted for what is never shown; the business reads counts from `voting`).
