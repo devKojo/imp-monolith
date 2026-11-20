@@ -24,8 +24,8 @@ export type RewardsConfig = {
 };
 
 export function createRewardsModule(cfg: RewardsConfig) {
-  const service = new RewardsService(new PrismaRewardsRepository(cfg.db));
   const box = new SecretBox(cfg.dataKey ?? 'development-only-rewards-data-key');
+  const service = new RewardsService(new PrismaRewardsRepository(cfg.db), box);
   const mine = new MyRewardsService(
     new PrismaMyRewardsRepository(cfg.db),
     box,

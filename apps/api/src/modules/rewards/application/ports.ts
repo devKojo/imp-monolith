@@ -4,6 +4,8 @@ import type {
   DrawRecord,
   DrawRow,
   Entrant,
+  FulfilOutcome,
+  PayoutRecord,
   PlannedAward,
   PublishedDraw,
   SettleableCampaign,
@@ -42,6 +44,20 @@ export interface RewardsRepository {
     },
   ): Promise<void>;
   awards(ctx: TenantContext, campaignId: string): Promise<AwardRow[]>;
+  /**
+   * A claimed award's destination, still encrypted. Writes a `destination_viewed` event in the same
+   * transaction, so no one can read where money goes without it being recorded. Null when there is nothing
+   * to send (no such award, or no destination).
+   */
+  reveal(ctx: TenantContext, awardId: string, actorId: string): Promise<PayoutRecord | null>;
+  /**
+   * Marks a claimed cash or item award paid with the business's own reference. One conditional UPDATE
+   * decides, so two people paying at once record one payment.
+   */
+  fulfil(
+    ctx: TenantContext,
+    input: { awardId: string; actorId: string; reference: string; now: Date },
+  ): Promise<FulfilOutcome>;
   /** A made draw by its id, for anyone to verify. Null until the draw has been made. */
   publicDraw(drawId: string): Promise<PublishedDraw | null>;
 }

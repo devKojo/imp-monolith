@@ -10,7 +10,7 @@ import {
   type QuizSettings,
   DEFAULT_BALLOT_SETTINGS,
 } from './fields';
-import { poolProblem, type PrizePool } from './pool';
+import { POOL_CURRENCIES, poolProblem, type PrizePool } from './pool';
 import type {
   CampaignStatus,
   PreflightCheck,
@@ -70,12 +70,56 @@ export function slugify(title: string): string {
 
 /** Trim what the client sent so equal input is stored the same way. */
 export const normalizePrizes = (prizes: readonly PrizeInput[]): PrizeInput[] =>
-  prizes.map((p) => ({
-    name: p.name.trim(),
-    valueLabel: p.valueLabel.trim(),
-    winners: p.winners,
-    description: p.description.trim(),
-  }));
+  prizes.map((p) => {
+    const kind = p.kind ?? 'ITEM';
+    return {
+      name: p.name.trim(),
+      valueLabel: p.valueLabel.trim(),
+      winners: p.winners,
+      description: p.description.trim(),
+      kind,
+      // An item has no amount or currency; points have no currency.
+      amountMinor: kind === 'ITEM' ? null : (p.amountMinor ?? null),
+      currency: kind === 'CASH' ? (p.currency?.toUpperCase() ?? null) : null,
+      rankFrom: p.rankFrom ?? null,
+      rankTo: p.rankTo ?? null,
+      selection: p.selection ?? null,
+    };
+  });
+
+/**
+ * What is wrong with the reward settings of these prizes, or null. Cash and points need an amount (cash a
+ * currency); a placing range is whole and does not overlap another, and covers as many places as there are
+ * winners. These are the rules the award engine relies on, so a bad setting is caught while editing and
+ * never at settlement.
+ */
+export function prizeProblem(prizes: readonly PrizeInput[]): string | null {
+  const taken: Array<[number, number]> = [];
+  for (const [i, p] of prizes.entries()) {
+    const n = `Prize ${i + 1}`;
+    const kind = p.kind ?? 'ITEM';
+    if (kind !== 'ITEM') {
+      if (!p.amountMinor || p.amountMinor < 1) return `${n} needs an amount`;
+    }
+    if (
+      kind === 'CASH' &&
+      !(p.currency && (POOL_CURRENCIES as readonly string[]).includes(p.currency.toUpperCase()))
+    ) {
+      return `${n} needs a currency`;
+    }
+    const from = p.rankFrom ?? null;
+    const to = p.rankTo ?? null;
+    if ((from === null) !== (to === null)) return `${n} needs both ends of its placing`;
+    if (from !== null && to !== null) {
+      if (to < from) return `${n} ends its placing before it starts`;
+      if (to - from + 1 !== p.winners) return `${n} has a placing that does not match its winners`;
+      if (taken.some(([a, b]) => from <= b && to >= a))
+        return `${n} shares a place with another prize`;
+      taken.push([from, to]);
+    }
+  }
+  return null;
+}
 
 export type PreflightInput = {
   title: string;

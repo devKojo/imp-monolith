@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { createTenantContext, type TenantContext } from '@/shared/database';
+import type { SecretBox } from '../infrastructure/secret-box';
+import { awardsCsv } from '../domain/export';
 import { newNonce, rulesHashOf, rulesOf, runDraw } from '../domain/draw';
 import {
   AlreadyAwardedError,
+  AwardNotFoundError,
+  AwardNotPayableError,
   CampaignNotEndedError,
   CampaignNotFoundError,
   DrawNotFoundError,
@@ -20,6 +24,7 @@ import type {
   DrawRecord,
   DrawRow,
   DrawView,
+  PayoutDestination,
   PlannedAward,
   PublishedDraw,
   SettleableCampaign,
@@ -52,6 +57,7 @@ const view = (d: DrawRow): DrawView => ({
 export class RewardsService {
   constructor(
     private readonly repo: RewardsRepository,
+    private readonly box: SecretBox,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -173,6 +179,48 @@ export class RewardsService {
     const ctx = this.scope(actor);
     await this.load(ctx, campaignId);
     return this.repo.awards(ctx, campaignId);
+  }
+
+  /** The awards as a spreadsheet, for the business's own books. Destinations are never in it. */
+  async awardsCsv(actor: Actor | null, campaignId: string): Promise<string> {
+    return awardsCsv(await this.awards(actor, campaignId));
+  }
+
+  /**
+   * Where to send one claimed award. Decrypted only here, only for someone who manages rewards, and every
+   * view is recorded against them in the award's history.
+   */
+  async destination(actor: Actor | null, awardId: string): Promise<PayoutDestination> {
+    const ctx = this.scope(actor);
+    const found = await this.repo.reveal(ctx, awardId, actor!.userId);
+    if (!found) throw new AwardNotFoundError();
+    const { encrypted, ...rest } = found;
+    return { ...rest, destination: this.box.decrypt(encrypted) };
+  }
+
+  /** Records that the business has paid or sent a claimed cash or item award, with its own reference. */
+  async fulfil(
+    actor: Actor | null,
+    awardId: string,
+    reference: string,
+  ): Promise<{ status: 'FULFILLED'; reference: string | null; alreadyPaid: boolean }> {
+    const ctx = this.scope(actor);
+    const r = await this.repo.fulfil(ctx, {
+      awardId,
+      actorId: actor!.userId,
+      reference,
+      now: this.now(),
+    });
+    switch (r.kind) {
+      case 'fulfilled':
+        return { status: 'FULFILLED', reference, alreadyPaid: false };
+      case 'already':
+        return { status: 'FULFILLED', reference: r.reference, alreadyPaid: true };
+      case 'blocked':
+        throw new AwardNotPayableError(r.status);
+      case 'missing':
+        throw new AwardNotFoundError();
+    }
   }
 
   /** Anyone can fetch a made draw and re-run it. */

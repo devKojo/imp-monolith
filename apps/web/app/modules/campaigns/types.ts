@@ -58,7 +58,17 @@ export type Prize = {
   valueLabel: string;
   winners: number;
   description: string;
+  /** What the prize is worth to the winner; absent reads as an item shown as text. */
+  kind?: PrizeKind;
+  /** Whole minor units (cash) or points; null for an item. */
+  amountMinor?: number | null;
+  currency?: string | null;
+  /** The places this prize covers ("1st" is 1 to 1); both or neither. */
+  rankFrom?: number | null;
+  rankTo?: number | null;
 };
+
+export type PrizeKind = 'ITEM' | 'CASH' | 'POINTS';
 
 /** A field of a campaign. The id is the server's once saved and a client id while editing; never sent back. */
 export type CampaignField = {

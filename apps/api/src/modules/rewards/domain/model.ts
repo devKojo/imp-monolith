@@ -94,7 +94,33 @@ export type AwardRow = {
   status: string;
   claimBy: string | null;
   createdAt: string;
+  /** How and where it will be sent, masked; null until claimed or for points. */
+  payoutMethod: string | null;
+  payoutHint: string | null;
+  /** The business's own payment reference, once marked paid. */
+  paidReference: string | null;
 };
+
+/** Where to send an award: shown to the business only on request, and every view is recorded. */
+export type PayoutDestination = {
+  awardId: string;
+  winnerName: string;
+  kind: PrizeKind;
+  amountMinor: number | null;
+  currency: string | null;
+  method: string;
+  accountName: string;
+  destination: string;
+};
+
+/** What the repository holds for a payout before it is decrypted. */
+export type PayoutRecord = Omit<PayoutDestination, 'destination'> & { encrypted: string };
+
+export type FulfilOutcome =
+  | { kind: 'fulfilled' }
+  | { kind: 'already'; reference: string | null }
+  | { kind: 'blocked'; status: string }
+  | { kind: 'missing' };
 
 export type AwardResult = {
   campaignId: string;

@@ -8,6 +8,9 @@ export const drawParamSchema = z.object({ drawId: uuidSchema }).strict();
 
 export const awardParamSchema = z.object({ awardId: uuidSchema }).strict();
 
+/** The business's own payment reference (a transfer id, receipt number or tracking number). */
+export const fulfilBodySchema = z.object({ reference: z.string().trim().min(3).max(80) }).strict();
+
 export const myListQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(50).default(20),

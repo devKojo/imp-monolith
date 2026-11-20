@@ -13,12 +13,29 @@ export const toUpdateBody = (c: Campaign) => ({
   // A prize pool replaces prize tiers: a campaign has one or the other.
   prizes: c.settings.pool
     ? []
-    : c.prizes.map(({ name, valueLabel, winners, description }) => ({
-        name,
-        valueLabel,
-        winners,
-        description,
-      })),
+    : c.prizes.map(
+        ({
+          name,
+          valueLabel,
+          winners,
+          description,
+          kind,
+          amountMinor,
+          currency,
+          rankFrom,
+          rankTo,
+        }) => ({
+          name,
+          valueLabel,
+          winners,
+          description,
+          kind: kind ?? 'ITEM',
+          amountMinor: amountMinor ?? null,
+          currency: currency ?? null,
+          rankFrom: rankFrom ?? null,
+          rankTo: rankTo ?? null,
+        }),
+      ),
   // Fields go without ids and machine names: the server numbers and names them.
   fields: c.fields.map(({ kind, label, helper, required, options, correctIndex, imageUrl }) => ({
     kind,

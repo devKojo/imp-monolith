@@ -106,11 +106,18 @@ describe('save body', () => {
     });
     expect(body.prizes[0]).not.toHaveProperty('id');
     expect(Object.keys(body.prizes[0]!).sort()).toEqual([
+      'amountMinor',
+      'currency',
       'description',
+      'kind',
       'name',
+      'rankFrom',
+      'rankTo',
       'valueLabel',
       'winners',
     ]);
+    // A prize that predates rewards is sent as an item.
+    expect(body.prizes[0]).toMatchObject({ kind: 'ITEM', amountMinor: null, currency: null });
   });
 });
 

@@ -54,6 +54,13 @@ export class SealNotAllowedError extends AppError {
   }
 }
 
+/** Only a claimed cash or item award can be sent or marked paid. */
+export class AwardNotPayableError extends AppError {
+  constructor(readonly awardStatus: string) {
+    super('This award is not waiting to be paid', 409, 'AWARD_NOT_PAYABLE');
+  }
+}
+
 export class NoEntrantsError extends AppError {
   constructor() {
     super('Nobody is eligible for a reward in this campaign', 409, 'NO_ENTRANTS');

@@ -8,6 +8,7 @@ import {
   campaignParamSchema,
   claimBodySchema,
   drawParamSchema,
+  fulfilBodySchema,
   myListQuerySchema,
 } from '../contracts/rewards.schemas';
 import type { Actor } from '../domain/model';
@@ -29,6 +30,9 @@ const noStore: RequestHandler = (_req, res, next) => {
  *   POST /campaigns/:campaignId/draw/seal   session + csrf   fix the draw's rules before the campaign closes
  *   POST /campaigns/:campaignId/award       session + csrf   settle an ended campaign (once)
  *   GET  /campaigns/:campaignId/awards      session          who was awarded what, and where each stands
+ *   GET  /campaigns/:campaignId/awards/export  session       the same as a CSV (no destinations)
+ *   GET  /awards/:awardId/destination       session          where to send it (decrypted; each view is recorded)
+ *   POST /awards/:awardId/fulfil            session + csrf   record that it was paid or sent, with a reference
  */
 export function rewardsRouter(service: RewardsService, guards: RequestHandler[]): Router {
   const r = Router();
@@ -48,6 +52,24 @@ export function rewardsRouter(service: RewardsService, guards: RequestHandler[])
   r.get('/campaigns/:campaignId/awards', requireSession, async (req, res) => {
     const { campaignId } = parse(campaignParamSchema, req.params);
     res.json({ items: await service.awards(actorOf(req), campaignId) });
+  });
+
+  r.get('/campaigns/:campaignId/awards/export', requireSession, async (req, res) => {
+    const { campaignId } = parse(campaignParamSchema, req.params);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="awards.csv"');
+    res.send(await service.awardsCsv(actorOf(req), campaignId));
+  });
+
+  r.get('/awards/:awardId/destination', requireSession, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    res.json(await service.destination(actorOf(req), awardId));
+  });
+
+  r.post('/awards/:awardId/fulfil', requireSession, requireCsrfToken, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    const { reference } = parse(fulfilBodySchema, req.body ?? {});
+    res.json(await service.fulfil(actorOf(req), awardId, reference));
   });
 
   return r;
