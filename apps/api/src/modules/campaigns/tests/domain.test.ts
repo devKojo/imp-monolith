@@ -9,6 +9,7 @@ import {
   fieldProblem,
   normalizeFields,
   normalizePrizes,
+  prizeProblem,
   normalizeSettings,
   preflight,
   runningStatusFor,
@@ -252,7 +253,61 @@ describe('normalizePrizes', () => {
   it('trims text and keeps the winner count', () => {
     expect(
       normalizePrizes([{ name: ' A ', valueLabel: ' 5 ', winners: 3, description: ' x ' }]),
-    ).toEqual([{ name: 'A', valueLabel: '5', winners: 3, description: 'x' }]);
+    ).toEqual([
+      {
+        name: 'A',
+        valueLabel: '5',
+        winners: 3,
+        description: 'x',
+        kind: 'ITEM',
+        amountMinor: null,
+        currency: null,
+        rankFrom: null,
+        rankTo: null,
+        selection: null,
+      },
+    ]);
+  });
+
+  it('drops an amount from an item and a currency from points', () => {
+    const base = { name: 'P', valueLabel: '', winners: 1, description: '' };
+    const [item, points, cash] = normalizePrizes([
+      { ...base, kind: 'ITEM', amountMinor: 500, currency: 'ghs' },
+      { ...base, kind: 'POINTS', amountMinor: 500, currency: 'GHS' },
+      { ...base, kind: 'CASH', amountMinor: 500, currency: 'ghs' },
+    ]);
+    expect([item?.amountMinor, item?.currency]).toEqual([null, null]);
+    expect([points?.amountMinor, points?.currency]).toEqual([500, null]);
+    expect([cash?.amountMinor, cash?.currency]).toEqual([500, 'GHS']);
+  });
+});
+
+describe('prizeProblem', () => {
+  const p = (extra: object, winners = 1) => ({
+    name: 'P',
+    valueLabel: '',
+    winners,
+    description: '',
+    ...extra,
+  });
+  it('accepts items, cash, points and clean placings', () => {
+    expect(prizeProblem([p({})])).toBeNull();
+    expect(
+      prizeProblem([
+        p({ kind: 'CASH', amountMinor: 5000, currency: 'GHS', rankFrom: 1, rankTo: 1 }),
+        p({ kind: 'POINTS', amountMinor: 100, rankFrom: 2, rankTo: 4 }, 3),
+      ]),
+    ).toBeNull();
+  });
+  it('asks for an amount, a currency and whole, matching, separate placings', () => {
+    expect(prizeProblem([p({ kind: 'POINTS' })])).toMatch(/amount/);
+    expect(prizeProblem([p({ kind: 'CASH', amountMinor: 1 })])).toMatch(/currency/);
+    expect(prizeProblem([p({ rankFrom: 1 })])).toMatch(/both ends/);
+    expect(prizeProblem([p({ rankFrom: 3, rankTo: 2 })])).toMatch(/before it starts/);
+    expect(prizeProblem([p({ rankFrom: 1, rankTo: 3 })])).toMatch(/does not match/);
+    expect(prizeProblem([p({ rankFrom: 1, rankTo: 2 }, 2), p({ rankFrom: 2, rankTo: 2 })])).toMatch(
+      /shares a place/,
+    );
   });
 });
 

@@ -28,6 +28,11 @@ export const newPrize = (id: string): Prize => ({
   valueLabel: '',
   winners: 1,
   description: '',
+  kind: 'ITEM',
+  amountMinor: null,
+  currency: null,
+  rankFrom: null,
+  rankTo: null,
 });
 
 export const addPrize = (prizes: readonly Prize[], prize: Prize): Prize[] => [...prizes, prize];

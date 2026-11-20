@@ -9,6 +9,8 @@ import type {
   DrawRecord,
   DrawRow,
   Entrant,
+  FulfilOutcome,
+  PayoutRecord,
   PlannedAward,
   PublishedDraw,
   SettleableCampaign,
@@ -20,6 +22,12 @@ const isUniqueViolation = (e: unknown): boolean =>
   (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002');
 
 const num = (v: bigint | null): number | null => (v === null ? null : Number(v));
+
+/** The payment reference a business recorded, from the event's metadata. */
+const referenceOf = (metadata: unknown): string | null => {
+  const ref = (metadata as { reference?: unknown } | null | undefined)?.reference;
+  return typeof ref === 'string' ? ref : null;
+};
 
 /** What a made draw keeps in `winners`: the rules, the entrant references and the winners, all public. */
 type StoredDraw = Pick<PublishedDraw, 'rules' | 'entrants' | 'winners'>;
@@ -250,7 +258,11 @@ export class PrismaRewardsRepository implements RewardsRepository {
     return withTenant(this.db, ctx, async (tx) => {
       const rows = await tx.rewardAward.findMany({
         where: { tenantId: ctx.tenantId, campaignId },
-        include: { user: { select: { name: true } } },
+        include: {
+          user: { select: { name: true } },
+          claim: { select: { method: true, destinationHint: true } },
+          events: { where: { type: 'fulfilled' }, select: { metadata: true }, take: 1 },
+        },
         orderBy: [{ rank: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }, { id: 'asc' }],
       });
       return rows.map((r) => ({
@@ -267,7 +279,79 @@ export class PrismaRewardsRepository implements RewardsRepository {
         status: r.status,
         claimBy: r.claimBy?.toISOString() ?? null,
         createdAt: r.createdAt.toISOString(),
+        payoutMethod: r.claim?.method ?? null,
+        payoutHint: r.claim?.destinationHint ?? null,
+        paidReference: referenceOf(r.events[0]?.metadata),
       }));
+    });
+  }
+
+  reveal(ctx: TenantContext, awardId: string, actorId: string): Promise<PayoutRecord | null> {
+    return withTenant(this.db, ctx, async (tx) => {
+      const r = await tx.rewardAward.findFirst({
+        where: { id: awardId, tenantId: ctx.tenantId },
+        include: { user: { select: { name: true } }, claim: true },
+      });
+      if (!r?.claim) return null;
+      await tx.rewardEvent.create({
+        data: {
+          tenantId: ctx.tenantId,
+          awardId,
+          actorId,
+          type: 'destination_viewed',
+          fromStatus: r.status,
+          toStatus: r.status,
+        },
+      });
+      return {
+        awardId,
+        winnerName: r.user.name,
+        kind: r.kind,
+        amountMinor: num(r.amountMinor),
+        currency: r.currency,
+        method: r.claim.method,
+        accountName: r.claim.accountName,
+        encrypted: r.claim.destinationEnc,
+      };
+    });
+  }
+
+  fulfil(
+    ctx: TenantContext,
+    input: { awardId: string; actorId: string; reference: string; now: Date },
+  ): Promise<FulfilOutcome> {
+    return withTenant(this.db, ctx, async (tx): Promise<FulfilOutcome> => {
+      const { awardId, actorId, reference, now } = input;
+      const moved = await tx.$queryRaw<Array<{ id: string }>>`UPDATE reward_awards
+        SET status = 'FULFILLED'::"AwardStatus", updated_at = ${now}
+        WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid
+          AND status = 'CLAIMED' AND kind <> 'POINTS'
+        RETURNING id`;
+      if (moved.length === 0) {
+        const r = await tx.rewardAward.findFirst({
+          where: { id: awardId, tenantId: ctx.tenantId },
+          include: {
+            events: { where: { type: 'fulfilled' }, select: { metadata: true }, take: 1 },
+          },
+        });
+        if (!r) return { kind: 'missing' };
+        if (r.status === 'FULFILLED') {
+          return { kind: 'already', reference: referenceOf(r.events[0]?.metadata) };
+        }
+        return { kind: 'blocked', status: r.status };
+      }
+      await tx.rewardEvent.create({
+        data: {
+          tenantId: ctx.tenantId,
+          awardId,
+          actorId,
+          type: 'fulfilled',
+          fromStatus: 'CLAIMED',
+          toStatus: 'FULFILLED',
+          metadata: { reference },
+        },
+      });
+      return { kind: 'fulfilled' };
     });
   }
 

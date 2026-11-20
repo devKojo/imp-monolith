@@ -13,7 +13,16 @@ import {
   poolShare,
   withKind,
 } from '../pool';
-import type { PoolKind, Prize, PrizePool } from '../types';
+import {
+  PRIZE_KINDS,
+  amountInput as prizeAmountText,
+  amountPatch,
+  currencyPatch,
+  placeOf,
+  rewardProblem,
+  withKind as prizeWithKind,
+} from '../prizeRewards';
+import type { PoolKind, Prize, PrizeKind, PrizePool } from '../types';
 
 /**
  * The prize tiers of a campaign, in the order the page shows them. Reordering uses buttons rather than
@@ -52,6 +61,37 @@ function onWinners(id: string, text: string) {
   emit('update', id, { winners: Math.min(LIMITS.winners, Math.floor(n)) });
 }
 const settle = (id: string) => delete typed[id];
+
+// ---- what a tier is worth: cash or points, and the places it covers. Typed text is kept as typed;
+// a prize only takes a value that is valid.
+const prizeKinds = PRIZE_KINDS.map((k) => ({
+  value: k,
+  label: t(`cmp.prize.kind.${k}` as AppTextKey),
+}));
+const amountTyped = reactive<Record<string, string>>({});
+const placeTyped = reactive<Record<string, string>>({});
+const amountOf = (p: Prize) => amountTyped[p.id] ?? prizeAmountText(p);
+const placeOfPrize = (p: Prize, end: 'rankFrom' | 'rankTo') =>
+  placeTyped[`${p.id}:${end}`] ?? (p[end] ? String(p[end]) : '');
+function onPrizeKind(p: Prize, kind: string) {
+  delete amountTyped[p.id];
+  emit('update', p.id, prizeWithKind(kind as PrizeKind));
+}
+function onPrizeAmount(p: Prize, text: string) {
+  amountTyped[p.id] = text;
+  emit('update', p.id, amountPatch(p, text));
+}
+function onPrizeCurrency(p: Prize, currency: string) {
+  emit('update', p.id, currencyPatch(currency, amountOf(p)));
+}
+function onPlace(p: Prize, end: 'rankFrom' | 'rankTo', text: string) {
+  placeTyped[`${p.id}:${end}`] = text;
+  emit('update', p.id, { [end]: placeOf(text) });
+}
+const rewardHint = (p: Prize) => {
+  const problem = rewardProblem(p);
+  return problem ? t(`cmp.prize.problem.${problem}` as AppTextKey) : '';
+};
 
 // ---- the prize pool: what is typed is kept as typed; the pool only takes values that are valid
 const modeOptions = [
@@ -254,6 +294,56 @@ const poolHint = (pool: PrizePool) => {
             @focusout="settle(p.id)"
           />
         </div>
+        <div class="prize__reward">
+          <UiSelect
+            :id="`prize-kind-${p.id}`"
+            :model-value="p.kind ?? 'ITEM'"
+            :label="t('cmp.prize.kind')"
+            :options="prizeKinds"
+            :disabled="readonly"
+            @update:model-value="onPrizeKind(p, $event)"
+          />
+          <UiSelect
+            v-if="p.kind === 'CASH'"
+            :id="`prize-currency-${p.id}`"
+            :model-value="p.currency ?? ''"
+            :label="t('cmp.prize.currency')"
+            :options="currencyOptions"
+            :disabled="readonly"
+            @update:model-value="onPrizeCurrency(p, $event)"
+          />
+          <UiTextInput
+            v-if="p.kind === 'CASH' || p.kind === 'POINTS'"
+            :id="`prize-amount-${p.id}`"
+            type="text"
+            inputmode="decimal"
+            :model-value="amountOf(p)"
+            :label="p.kind === 'CASH' ? t('cmp.prize.amount.cash') : t('cmp.prize.amount.points')"
+            :readonly="readonly"
+            @update:model-value="onPrizeAmount(p, $event)"
+          />
+          <UiTextInput
+            :id="`prize-from-${p.id}`"
+            type="number"
+            inputmode="numeric"
+            :model-value="placeOfPrize(p, 'rankFrom')"
+            :label="t('cmp.prize.rankFrom')"
+            :readonly="readonly"
+            @update:model-value="onPlace(p, 'rankFrom', $event)"
+          />
+          <UiTextInput
+            :id="`prize-to-${p.id}`"
+            type="number"
+            inputmode="numeric"
+            :model-value="placeOfPrize(p, 'rankTo')"
+            :label="t('cmp.prize.rankTo')"
+            :readonly="readonly"
+            @update:model-value="onPlace(p, 'rankTo', $event)"
+          />
+        </div>
+        <p class="ui-text-caption ui-text-hint">
+          {{ rewardHint(p) || t('cmp.prize.place.hint') }}
+        </p>
         <UiTextInput
           :id="`prize-description-${p.id}`"
           :model-value="p.description"
@@ -322,6 +412,11 @@ const poolHint = (pool: PrizePool) => {
 .prize__actions {
   display: flex;
   gap: var(--ui-space-1);
+}
+.prize__reward {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--ui-space-3);
 }
 .prize__fields {
   display: grid;

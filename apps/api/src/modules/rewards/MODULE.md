@@ -3,8 +3,7 @@
 Who won a campaign and what each person is owed (ADR-R001, part 2). The business never types winners in:
 they come from the score ranking, a prize pool's equal shares, or a sealed, reproducible draw.
 
-Not here yet: the business console and marking awards paid (R4), risk scoring, holds and shared rate limits
-(R5), platform review and payouts (R6). Awards are created `AVAILABLE`; R5 puts the risk gate in front of that.
+Not here yet: risk scoring, holds and shared rate limits (R5), platform review and payouts (R6). Awards are created `AVAILABLE`; R5 puts the risk gate in front of that.
 
 ## How winners are chosen
 
@@ -74,19 +73,36 @@ requests cannot both succeed (`409 ALREADY_AWARDED`).
 
 ## HTTP (business: session + csrf for writes; roles owner, administrator, campaign manager)
 
-| Route                                   | Notes                                                                                |
-| --------------------------------------- | ------------------------------------------------------------------------------------ |
-| `POST /rewards/campaigns/:id/draw/seal` | `409 SEAL_NOT_ALLOWED` once closed or if not a draw; repeatable                      |
-| `POST /rewards/campaigns/:id/award`     | `409 CAMPAIGN_NOT_ENDED`, `DRAW_NOT_SEALED`, `ALREADY_AWARDED`, `NO_ENTRANTS`; `201` |
-| `GET /rewards/campaigns/:id/awards`     | Awards with names and status                                                         |
-| `GET /public/rewards/draws/:drawId`     | Public, cacheable, no personal data                                                  |
+| Route                                      | Notes                                                                                |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `POST /rewards/campaigns/:id/draw/seal`    | `409 SEAL_NOT_ALLOWED` once closed or if not a draw; repeatable                      |
+| `POST /rewards/campaigns/:id/award`        | `409 CAMPAIGN_NOT_ENDED`, `DRAW_NOT_SEALED`, `ALREADY_AWARDED`, `NO_ENTRANTS`; `201` |
+| `GET /rewards/campaigns/:id/awards`        | Awards with names and status                                                         |
+| `GET /rewards/campaigns/:id/awards/export` | The same as CSV (`text/csv`); destinations masked; spreadsheet formulas neutralised  |
+| `GET /rewards/awards/:id/destination`      | The winner's destination, decrypted; writes a `destination_viewed` event             |
+| `POST /rewards/awards/:id/fulfil`          | `{ reference }` (3 to 80 chars); `409 AWARD_NOT_PAYABLE`; once, `alreadyPaid` after  |
+| `GET /public/rewards/draws/:drawId`        | Public, cacheable, no personal data                                                  |
 
 Another business's campaign is a `404`; a participant account has no active business (`403`).
 
+## Paying out (R4)
+
+The business pays from its own account; the platform records and verifies (ADR-R001 decision 1). A claimed
+cash or item award is `CLAIMED`. The business reads the destination (decrypted only in the service, only for
+roles that manage rewards) and every read is an insert-only `destination_viewed` event naming the person who
+asked, written in the same transaction as the read. It then records its own payment reference: one conditional
+`UPDATE ... WHERE status = 'CLAIMED' AND kind <> 'POINTS'` moves the award to `FULFILLED`, so two people paying
+at once record one payment. The reference lives in the `fulfilled` event's metadata. The winner sees the award
+as fulfilled; the history they read never shows who looked at their details.
+
+A prize's kind, amount, currency and placing are set in the campaign editor and validated when the campaign is
+saved (`prizeProblem` in the campaigns module): cash and points need an amount, cash a currency, a placing
+range is whole, matches the number of winners and does not overlap another prize.
+
 ## Known gaps
 
+- No second approver for large payouts, and no way for a winner to confirm receipt or dispute a payment yet.
+
 - Expiry is applied when a claim is attempted; a scheduled job to expire and notify comes later.
-- The campaign editor cannot yet set a prize's kind, amount or placing range (R4), so prizes are still text
-  (`ITEM`, no amount) until then. Awards work either way.
 - Entrant references are stored in the draw row; very large draws (hundreds of thousands) should move to a
   separate table.

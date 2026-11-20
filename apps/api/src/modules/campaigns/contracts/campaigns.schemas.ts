@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { uuidSchema } from '@/shared/uuid';
 import { FIELD_KINDS, FIELD_LIMITS, RESULTS_VISIBILITY } from '../domain/fields';
 import { POOL_CURRENCIES, POOL_KINDS, POOL_LIMITS } from '../domain/pool';
-import { LIMITS } from '../domain/model';
+import { AMOUNT_MAX, LIMITS, PRIZE_KINDS, PRIZE_SELECTIONS } from '../domain/model';
 
 /** Request shapes (R-API-02: validate every input at the edge; unknown keys are rejected). */
 
@@ -14,6 +14,13 @@ export const prizeSchema = z
     valueLabel: z.string().max(LIMITS.valueMax),
     winners: z.number().int().min(1).max(LIMITS.winnersMax),
     description: z.string().max(LIMITS.descriptionMax),
+    // Optional so a client that does not know about rewards still saves; the prize is then an item.
+    kind: z.enum(PRIZE_KINDS).optional(),
+    amountMinor: z.number().int().min(1).max(AMOUNT_MAX).nullable().optional(),
+    currency: z.string().min(3).max(3).nullable().optional(),
+    rankFrom: z.number().int().min(1).max(LIMITS.winnersMax).nullable().optional(),
+    rankTo: z.number().int().min(1).max(LIMITS.winnersMax).nullable().optional(),
+    selection: z.enum(PRIZE_SELECTIONS).nullable().optional(),
   })
   .strict();
 
@@ -47,7 +54,11 @@ export const settingsSchema = z
       .strict()
       .nullable(),
     // Poll and image vote: when people see the standings. Optional; dropped for any other type.
-    ballot: z.object({ showResults: z.enum(RESULTS_VISIBILITY) }).strict().nullable().optional(),
+    ballot: z
+      .object({ showResults: z.enum(RESULTS_VISIBILITY) })
+      .strict()
+      .nullable()
+      .optional(),
     // A draft may hold a pool that is not finished yet (it is checked in full to launch).
     pool: z
       .object({

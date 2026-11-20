@@ -46,3 +46,40 @@ export type ClaimResult = {
   claimHint: string | null;
   alreadyClaimed: boolean;
 };
+
+/** One award as the business sees it: `GET /rewards/campaigns/:id/awards`. */
+export type BusinessAward = {
+  id: string;
+  userId: string;
+  name: string;
+  prizeId: string | null;
+  slot: number;
+  rank: number | null;
+  kind: PrizeKind;
+  amountMinor: number | null;
+  currency: string | null;
+  source: string;
+  status: string;
+  claimBy: string | null;
+  createdAt: string;
+  /** How and where it will be sent, masked; null until claimed, and for points. */
+  payoutMethod: PayoutMethod | null;
+  payoutHint: string | null;
+  /** The business's own payment reference, once marked paid. */
+  paidReference: string | null;
+};
+
+/** Where to send one claimed award. Every view of it is recorded against the person who asked. */
+export type PayoutDestination = {
+  awardId: string;
+  winnerName: string;
+  kind: PrizeKind;
+  amountMinor: number | null;
+  currency: string | null;
+  method: PayoutMethod;
+  accountName: string;
+  destination: string;
+};
+
+export type FulfilResult = { status: 'FULFILLED'; reference: string | null; alreadyPaid: boolean };
+export type SettleResult = { campaignId: string; selection: string; awarded: number };
