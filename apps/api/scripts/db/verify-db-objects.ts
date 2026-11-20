@@ -74,6 +74,7 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['reward_events', 'tenant_isolation'],
   ['points_ledger', 'tenant_isolation'],
   ['reward_draws', 'tenant_isolation'],
+  ['reward_draws', 'public_read'],
   ['participation_signals', 'tenant_isolation'],
   ['campaigns', 'public_read'],
   ['campaign_prizes', 'public_read'],
