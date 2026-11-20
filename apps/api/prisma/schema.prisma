@@ -104,6 +104,9 @@ model User {
   surveyResponses    SurveyResponse[]
   votes              Vote[]
   giveawayEntries    GiveawayEntry[]
+  rewardAwards       RewardAward[]
+  pointsLedger       PointsLedger[]
+  signals            ParticipationSignal[]
 
   @@map("users")
 }
@@ -269,6 +272,9 @@ model Campaign {
   surveyResponses SurveyResponse[]
   votes           Vote[]
   giveawayEntries GiveawayEntry[]
+  rewardAwards    RewardAward[]
+  rewardDraws     RewardDraw[]
+  signals         ParticipationSignal[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
@@ -364,9 +370,20 @@ model CampaignPrize {
   valueLabel  String @default("") @map("value_label")
   winners     Int    @default(1)
   description String @default("")
+  /// What the prize is: money, points or an item. Existing prizes are items shown as text.
+  kind        PrizeKind       @default(ITEM)
+  /// Whole minor units (cash) or points; null while only the text label is used.
+  amountMinor BigInt?         @map("amount_minor")
+  currency    String?
+  /// Placing range this prize covers (1st is 1 to 1; 2nd to 5th is 2 to 5).
+  rankFrom    Int?            @map("rank_from")
+  rankTo      Int?            @map("rank_to")
+  selection   PrizeSelection?
 
-  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  campaign Campaign      @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  awards   RewardAward[]
 
+  @@unique([tenantId, id])
   @@index([tenantId, campaignId, position])
   @@map("campaign_prizes")
 }
@@ -497,4 +514,150 @@ model GiveawayEntry {
   @@unique([tenantId, campaignId, ticketNumber])
   @@index([tenantId, userId])
   @@map("giveaway_entries")
+}
+
+enum PrizeKind {
+  CASH
+  POINTS
+  ITEM
+}
+
+enum PrizeSelection {
+  RANKING
+  DRAW
+  POOL
+  INSTANT
+  COMPLETION
+}
+
+enum AwardStatus {
+  PENDING_REVIEW
+  AVAILABLE
+  CLAIMED
+  FULFILLED
+  HELD
+  REJECTED
+  EXPIRED
+  REVOKED
+}
+
+enum SignalKind {
+  JOIN
+  CLAIM
+}
+
+/// @owner rewards
+/// One winning slot. `prizeId` is null for an equal share of a prize pool. Partial unique indexes (raw SQL)
+/// stop a slot or a person being awarded twice. The amount is a snapshot taken when the award is made.
+model RewardAward {
+  id          String         @id @default(uuid(7)) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  campaignId  String         @map("campaign_id") @db.Uuid
+  prizeId     String?        @map("prize_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  slot        Int            @default(1)
+  rank        Int?
+  kind        PrizeKind
+  amountMinor BigInt?        @map("amount_minor")
+  currency    String?
+  source      PrizeSelection
+  status      AwardStatus    @default(PENDING_REVIEW)
+  riskScore   Int            @default(0) @map("risk_score")
+  claimBy     DateTime?      @map("claim_by") @db.Timestamptz
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign       @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  prize    CampaignPrize? @relation(fields: [tenantId, prizeId], references: [tenantId, id])
+  user     User           @relation(fields: [userId], references: [id])
+  events   RewardEvent[]
+  ledger   PointsLedger[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, campaignId, status])
+  @@index([tenantId, userId])
+  @@map("reward_awards")
+}
+
+/// @owner rewards
+/// Append-only timeline of an award.
+model RewardEvent {
+  id         String       @id @default(uuid(7)) @db.Uuid
+  tenantId   String       @map("tenant_id") @db.Uuid
+  awardId    String       @map("award_id") @db.Uuid
+  actorId    String?      @map("actor_id") @db.Uuid
+  type       String
+  fromStatus AwardStatus? @map("from_status")
+  toStatus   AwardStatus? @map("to_status")
+  reasonCode String?      @map("reason_code")
+  metadata   Json         @default("{}")
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  award RewardAward @relation(fields: [tenantId, awardId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, awardId, createdAt])
+  @@map("reward_events")
+}
+
+/// @owner rewards
+/// Append-only points. The balance is the sum of `delta`; `idempotencyKey` makes a replay a no-op.
+model PointsLedger {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  tenantId       String       @map("tenant_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  awardId        String?      @map("award_id") @db.Uuid
+  delta          BigInt
+  reason         String
+  idempotencyKey String       @map("idempotency_key")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  user  User         @relation(fields: [userId], references: [id])
+  award RewardAward? @relation(fields: [tenantId, awardId], references: [tenantId, id])
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, userId])
+  @@map("points_ledger")
+}
+
+/// @owner rewards
+/// A reproducible draw: the sealed rules, the entrant snapshot, the entropy and seed, and the winners.
+model RewardDraw {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  campaignId   String    @map("campaign_id") @db.Uuid
+  rulesHash    String    @map("rules_hash")
+  sealedAt     DateTime  @map("sealed_at") @db.Timestamptz
+  entrantsHash String?   @map("entrants_hash")
+  entrantCount Int?      @map("entrant_count")
+  entropy      String?
+  seed         String?
+  winners      Json      @default("[]")
+  drawnAt      DateTime? @map("drawn_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, campaignId])
+  @@map("reward_draws")
+}
+
+/// @owner rewards
+/// Abuse-detection facts about a participation: HMAC hashes only, never the raw IP or user agent.
+model ParticipationSignal {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  tenantId   String     @map("tenant_id") @db.Uuid
+  campaignId String     @map("campaign_id") @db.Uuid
+  userId     String     @map("user_id") @db.Uuid
+  kind       SignalKind
+  ipHash     String?    @map("ip_hash")
+  uaHash     String?    @map("ua_hash")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, campaignId, ipHash])
+  @@index([tenantId, userId])
+  @@index([createdAt])
+  @@map("participation_signals")
 }

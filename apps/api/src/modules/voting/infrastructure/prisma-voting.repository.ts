@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { claimSeat } from '@/modules/campaigns';
-import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import type { VotingRepository } from '../application/ports';
 import type {
   BallotField,
@@ -137,6 +137,12 @@ export class PrismaVotingRepository implements VotingRepository {
       return await withTenant(this.db, ctx, async (tx) => {
         // Voting takes a seat on the campaign (a prize pool campaign has a limited number).
         await claimSeat(tx, ctx.tenantId, input.campaignId);
+        await recordSignal(tx, {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+          kind: 'JOIN',
+        });
         // The unique (business, campaign, participant) key makes a double click or a second tab insert
         // nothing; throwing then rolls the seat back, so it is only ever taken once.
         const { count } = await tx.vote.createMany({

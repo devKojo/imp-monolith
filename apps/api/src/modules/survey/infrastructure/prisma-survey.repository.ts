@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@/generated/prisma/client';
-import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import { claimSeat } from '@/modules/campaigns';
 import type { SurveyRepository } from '../application/ports';
 import type {
@@ -131,7 +131,15 @@ export class PrismaSurveyRepository implements SurveyRepository {
         },
         select: { id: true },
       });
-      if (!existing) await claimSeat(tx, ctx.tenantId, input.campaignId);
+      if (!existing) {
+        await claimSeat(tx, ctx.tenantId, input.campaignId);
+        await recordSignal(tx, {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+          kind: 'JOIN',
+        });
+      }
       // The unique (business, campaign, participant) key makes a double click or a second tab return the
       // response that already exists instead of creating another.
       const row = await tx.surveyResponse.upsert({
