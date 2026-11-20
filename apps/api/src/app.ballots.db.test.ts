@@ -124,6 +124,7 @@ describe.skipIf(!enabled)(
 
     afterAll(async () => {
       const tenants = [tenantA, tenantB];
+      await platform.participationSignal.deleteMany({ where: { tenantId: { in: tenants } } });
       await platform.vote.deleteMany({ where: { tenantId: { in: tenants } } });
       await platform.giveawayEntry.deleteMany({ where: { tenantId: { in: tenants } } });
       await platform.campaignField.deleteMany({ where: { tenantId: { in: tenants } } });
@@ -450,6 +451,21 @@ describe.skipIf(!enabled)(
         expect(second.body.entry.ticketNumber).toBe(2);
         expect(second.body.entryCount).toBe(2);
         expect((await read(null, `public/giveaway/${slug}`)).body.entryCount).toBe(2);
+      });
+
+      it('records abuse-detection signals once per participant, as hashes only', async () => {
+        const { slug, id } = await launched('Signal giveaway', SEEDED.giveaway, {
+          fields: [],
+          prizes,
+        });
+        await write(people.ama, 'post', `giveaway/${slug}/entry`, {});
+        await write(people.ama, 'post', `giveaway/${slug}/entry`, {}); // a repeat adds nothing
+        const rows = await platform.participationSignal.findMany({ where: { campaignId: id } });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ userId: people.ama.userId, kind: 'JOIN' });
+        // A keyed hash, not the address itself.
+        expect(rows[0]?.ipHash).toMatch(/^[0-9a-f]{32}$/);
+        expect(rows[0]?.ipHash).not.toContain('127.0.0.1');
       });
 
       it('hands out distinct tickets when people enter at the same moment', async () => {

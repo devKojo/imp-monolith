@@ -26,6 +26,8 @@ const schema = z.object({
   DATABASE_URL_READ: optionalUrl,
   /** HMAC key for session-bound CSRF tokens (>= 32 chars). Required in production. */
   SESSION_SECRET: z.string().min(32).optional(),
+  /** Reverse-proxy hops to trust for the client IP (rate limits and abuse signals). Unset when not proxied. */
+  TRUST_PROXY: z.coerce.number().int().min(1).max(10).optional(),
   /** Comma-separated origins allowed to make state-changing requests. */
   APP_ORIGINS: z
     .string()

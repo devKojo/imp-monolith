@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@/generated/prisma/client';
-import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import { claimSeat } from '@/modules/campaigns';
 import type { QuizRepository } from '../application/ports';
 import type { AttemptResult, AttemptRow, QuizDefinition, RunnableQuiz } from '../domain/model';
@@ -137,7 +137,15 @@ export class PrismaQuizRepository implements QuizRepository {
         },
         select: { id: true },
       });
-      if (!existing) await claimSeat(tx, ctx.tenantId, input.campaignId);
+      if (!existing) {
+        await claimSeat(tx, ctx.tenantId, input.campaignId);
+        await recordSignal(tx, {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+          kind: 'JOIN',
+        });
+      }
       // The unique (business, campaign, participant, number) key makes a double click or a second tab return
       // the attempt that already exists instead of creating another with the same number.
       const row = await tx.quizAttempt.upsert({

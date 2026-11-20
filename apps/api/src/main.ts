@@ -44,6 +44,8 @@ const participants = createParticipantsModule({ db, identity });
 const myParticipations = createMyParticipationsModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
 const app = await createApp({
+  signalSecret: env.SESSION_SECRET,
+  ...(env.TRUST_PROXY ? { trustProxy: env.TRUST_PROXY } : {}),
   bus,
   identity,
   templates,

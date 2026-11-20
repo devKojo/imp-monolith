@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { claimSeat } from '@/modules/campaigns';
-import { withPublic, withTenant, type TenantContext } from '@/shared/database';
+import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import type { GiveawayRepository } from '../application/ports';
 import type { EntryRow, RunnableGiveaway } from '../domain/model';
 
@@ -79,6 +79,12 @@ export class PrismaGiveawayRepository implements GiveawayRepository {
         // update holds the campaign row until this transaction ends, so the count it leaves is this
         // entry's own number and no two entries share one.
         await claimSeat(tx, ctx.tenantId, input.campaignId);
+        await recordSignal(tx, {
+          tenantId: ctx.tenantId,
+          campaignId: input.campaignId,
+          userId: input.userId,
+          kind: 'JOIN',
+        });
         const campaign = await tx.campaign.findFirstOrThrow({
           where: { id: input.campaignId, tenantId: ctx.tenantId },
           select: { participantCount: true },

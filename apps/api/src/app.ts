@@ -1,6 +1,7 @@
 import express from 'express';
 import type { EventBus } from '@/infrastructure/messaging/event-bus';
 import { errorHandler, notFound } from '@/shared/http';
+import { requestSignals } from '@/shared/request-signals';
 import { initNotificationsModule } from '@/modules/notifications';
 import { createUsersModule } from '@/modules/users';
 import type { IdentityModule } from '@/modules/identity';
@@ -25,8 +26,14 @@ export async function createApp(deps: {
   giveaway?: GiveawayModule;
   participants?: ParticipantsModule;
   myParticipations?: MyParticipationsModule;
+  /** Key for the abuse-detection hashes (see `request-signals`). Required in production. */
+  signalSecret?: string;
+  /** Proxy hops to trust for `req.ip`; leave unset when the API is reached directly. */
+  trustProxy?: number;
 }) {
   const app = express();
+  if (deps.trustProxy) app.set('trust proxy', deps.trustProxy);
+  app.use(requestSignals(deps.signalSecret ?? 'development-only-signal-secret'));
   app.use(express.json());
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
