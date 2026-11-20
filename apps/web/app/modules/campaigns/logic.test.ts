@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addPrize,
+  contentDetail,
   fromParts,
   isArchivable,
   isLaunchable,
@@ -212,5 +213,47 @@ describe('details and content at launch', () => {
     ]) {
       expect(passesQuiz([...details(), quizQuestion(), q]).content).toBe(false);
     }
+  });
+});
+
+describe('contentDetail', () => {
+  const vote = template({ archetype: 'vote', slug: 'vote', minContentFields: 2 });
+  const cand = (over: Partial<CampaignField> = {}): CampaignField => ({
+    id: Math.random().toString(),
+    kind: 'candidate',
+    key: 'candidate',
+    label: 'Ama',
+    helper: '',
+    required: true,
+    options: [],
+    correctIndex: null,
+    imageUrl: 'https://img.example.com/a.png',
+    ...over,
+  });
+
+  it('is null when every candidate is finished and there are enough', () => {
+    expect(contentDetail({ template: vote, fields: [cand(), cand()] })).toBeNull();
+  });
+  it('says how many candidates to add', () => {
+    expect(contentDetail({ template: vote, fields: [cand()] })).toEqual({
+      kind: 'min',
+      n: 2,
+      have: 1,
+      candidates: true,
+    });
+  });
+  it('counts candidates missing a name or an https picture link', () => {
+    const d = contentDetail({
+      template: vote,
+      fields: [cand(), cand({ imageUrl: '' }), cand({ imageUrl: 'http://img.example.com/a.png' })],
+    });
+    expect(d).toMatchObject({ kind: 'unfinished', n: 2, candidates: true });
+  });
+  it('uses the general wording for other types', () => {
+    const quiz = template({ archetype: 'quiz', slug: 'quiz', minContentFields: 1 });
+    expect(contentDetail({ template: quiz, fields: [] })).toMatchObject({
+      kind: 'min',
+      candidates: false,
+    });
   });
 });

@@ -18,6 +18,7 @@ import {
   clone,
   fromParts,
   isArchivable,
+  contentDetail,
   isLaunchable,
   movePrize,
   newPrize,
@@ -630,7 +631,7 @@ const crumbs = computed(() => [
               {{ t('cmp.preview.notPublic') }}
             </p>
           </UiCard>
-          <CampaignChecks v-if="isDraft" :checks="checks" />
+          <CampaignChecks v-if="isDraft" :checks="checks" :content-detail="contentDetail(draft)" />
           <CampaignBallotResults
             v-if="!isDraft && hasBallot"
             :key="draft.id"
