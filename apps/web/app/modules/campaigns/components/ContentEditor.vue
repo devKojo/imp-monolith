@@ -77,8 +77,14 @@ const questionsTitle = computed(() =>
 
 const kindLabel = (kind: FieldKind) => t(`cmp.field.kind.${kind}` as AppTextKey);
 const addLabel = (kind: FieldKind) => t('cmp.field.add', { kind: kindLabel(kind).toLowerCase() });
-const problemOf = (f: CampaignField): FieldProblem | null =>
-  props.showProblems ? fieldProblem(f) : null;
+// Problems show after a save attempt. A picture link that has been typed but is not valid shows at once,
+// because the Launch button stays off until it is fixed and nothing else would say why.
+const problemOf = (f: CampaignField): FieldProblem | null => {
+  const problem = fieldProblem(f);
+  const typedBadLink =
+    f.kind === 'candidate' && problem === 'image' && (f.imageUrl ?? '').trim() !== '';
+  return props.showProblems || typedBadLink ? problem : null;
+};
 const problemText = (f: CampaignField, problem: FieldProblem) =>
   problem === 'image'
     ? t('vote.candidate.problem.image')

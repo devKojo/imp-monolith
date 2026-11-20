@@ -394,6 +394,11 @@ export const staticSiteText = {
   'cmp.check.template': 'A campaign type',
   'cmp.check.details': 'Email or phone, and a required consent',
   'cmp.check.content': 'Every field and question complete',
+  'cmp.check.content.min.candidate': 'Add at least {n} candidates (you have {have}).',
+  'cmp.check.content.min.other': 'Add at least {n} questions (you have {have}).',
+  'cmp.check.content.unfinished.candidate':
+    '{n} to finish: each candidate needs a name and a picture link that starts with https://',
+  'cmp.check.content.unfinished.other': '{n} unfinished: check each field and question.',
   'cmp.details': 'Participant details',
   'cmp.details.hint': 'What people tell you when they enter.',
   'cmp.content.noType': 'Choose a campaign type to add its fields.',

@@ -91,6 +91,29 @@ export function preflight(
   ];
 }
 
+/**
+ * Why the "every field and question complete" check fails, as a count of what to fix. Too few questions or
+ * candidates comes first (the person has not added enough), then the ones that are unfinished. Null when the
+ * check passes. An image vote's candidates each need a name and a picture link, so it is said in those words.
+ */
+export type ContentDetail = {
+  kind: 'min' | 'unfinished';
+  n: number;
+  have: number;
+  candidates: boolean;
+};
+
+export function contentDetail(c: Pick<Campaign, 'template' | 'fields'>): ContentDetail | null {
+  const content = fieldsOf(c.fields, 'content');
+  const need = c.template?.minContentFields ?? 0;
+  const candidates = c.template?.archetype === 'vote';
+  if (content.length < need) return { kind: 'min', n: need, have: content.length, candidates };
+  const unfinished = c.fields.filter((f) => fieldProblem(f) !== null).length;
+  return unfinished > 0
+    ? { kind: 'unfinished', n: unfinished, have: content.length, candidates }
+    : null;
+}
+
 export const isLaunchable = (
   c: Pick<Campaign, 'title' | 'template' | 'startAt' | 'endAt' | 'prizes' | 'fields' | 'settings'>,
   now: Date,
