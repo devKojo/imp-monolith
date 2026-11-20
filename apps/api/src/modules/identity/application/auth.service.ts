@@ -5,6 +5,7 @@ import {
   ForbiddenError,
   InvalidCredentialsError,
   InvalidTokenError,
+  PasswordConfirmationError,
   UnauthenticatedError,
   WeakPasswordError,
 } from '../domain/errors';
@@ -177,6 +178,27 @@ export class AuthService {
    * participants). Same limits as the public resend, keyed on their address and IP; the mail is
    * awaited here because the caller is authenticated and can be told it failed.
    */
+  /**
+   * Step-up for a sensitive action by a signed-in person (for example claiming a reward): proves they still
+   * know the password. Wrong attempts count toward the same account lockout as sign-in and are limited per
+   * person, so a stolen session cannot be used to guess the password.
+   */
+  async confirmPassword(ctx: AuthContext, password: string): Promise<void> {
+    const key = `confirm:${ctx.userId}`;
+    this.deps.loginLimiter.assertAllowed(key);
+    const email = normalizeEmail(ctx.email);
+    const now = this.now();
+    const user = await this.deps.repo.findLoginUser(email);
+    const ok = await this.deps.hasher.verify(user?.passwordHash ?? null, password);
+    const locked = !!user && isLocked(user.lockedUntil, now);
+    if (!user || !user.passwordHash || !ok || locked) {
+      this.deps.loginLimiter.recordFailure(key);
+      if (user && !locked) await this.deps.repo.recordLoginFailure(email, now);
+      throw new PasswordConfirmationError();
+    }
+    this.deps.loginLimiter.reset(key);
+  }
+
   async sendOwnVerification(
     ctx: AuthContext,
     ip: string,

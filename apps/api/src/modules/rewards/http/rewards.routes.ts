@@ -1,8 +1,15 @@
 import { Router, type Request, type RequestHandler } from 'express';
 import { requireCsrfToken, requireSession } from '@/modules/identity';
 import { parse } from '@/shared/http';
+import type { MyRewardsService } from '../application/my-rewards.service';
 import type { RewardsService } from '../application/rewards.service';
-import { campaignParamSchema, drawParamSchema } from '../contracts/rewards.schemas';
+import {
+  awardParamSchema,
+  campaignParamSchema,
+  claimBodySchema,
+  drawParamSchema,
+  myListQuerySchema,
+} from '../contracts/rewards.schemas';
 import type { Actor } from '../domain/model';
 
 /** The acting person: from the session's active membership, never from the request. */
@@ -60,5 +67,43 @@ export function publicRewardsRouter(service: RewardsService): Router {
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.json(draw);
   });
+  return r;
+}
+
+/**
+ * A participant's own rewards. Never cached: it holds personal data. The person is the session's, never the
+ * request's.
+ *
+ *   GET  /            session         my awards, newest first (?limit=&offset=)
+ *   GET  /wallet      session         points held with each business
+ *   GET  /:awardId    session         one award with its history
+ *   POST /:awardId/claim  session + csrf   claim it (money and items also need a destination and the password)
+ */
+export function myRewardsRouter(service: MyRewardsService, guards: RequestHandler[]): Router {
+  const r = Router();
+  r.use(...guards);
+  r.use(noStore);
+
+  r.get('/', requireSession, async (req, res) => {
+    res.json(await service.list(req.auth ?? null, parse(myListQuerySchema, req.query)));
+  });
+
+  // Before '/:awardId', or "wallet" would be read as an id.
+  r.get('/wallet', requireSession, async (req, res) => {
+    res.json(await service.wallet(req.auth ?? null));
+  });
+
+  r.get('/:awardId', requireSession, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    res.json(await service.get(req.auth ?? null, awardId));
+  });
+
+  r.post('/:awardId/claim', requireSession, requireCsrfToken, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    res.json(
+      await service.claim(req.auth ?? null, awardId, parse(claimBodySchema, req.body ?? {})),
+    );
+  });
+
   return r;
 }

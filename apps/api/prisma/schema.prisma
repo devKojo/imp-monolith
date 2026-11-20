@@ -105,6 +105,7 @@ model User {
   votes              Vote[]
   giveawayEntries    GiveawayEntry[]
   rewardAwards       RewardAward[]
+  rewardClaims       RewardClaim[]
   pointsLedger       PointsLedger[]
   signals            ParticipationSignal[]
 
@@ -541,6 +542,12 @@ enum AwardStatus {
   REVOKED
 }
 
+enum PayoutMethod {
+  MOBILE_MONEY
+  BANK_TRANSFER
+  DELIVERY
+}
+
 enum SignalKind {
   JOIN
   CLAIM
@@ -572,6 +579,7 @@ model RewardAward {
   user     User           @relation(fields: [userId], references: [id])
   events   RewardEvent[]
   ledger   PointsLedger[]
+  claim    RewardClaim?
 
   @@unique([tenantId, id])
   @@index([tenantId, campaignId, status])
@@ -660,4 +668,28 @@ model ParticipationSignal {
   @@index([tenantId, userId])
   @@index([createdAt])
   @@map("participation_signals")
+}
+
+/// @owner rewards
+/// Where a cash or item award should go. The destination is encrypted; the hash is keyed (for spotting one
+/// destination used by many accounts) and the hint is the masked tail shown back to people. One per award.
+model RewardClaim {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  awardId         String       @map("award_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  method          PayoutMethod
+  accountName     String       @map("account_name")
+  destinationEnc  String       @map("destination_enc")
+  destinationHash String       @map("destination_hash")
+  destinationHint String       @map("destination_hint")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  award RewardAward @relation(fields: [tenantId, awardId], references: [tenantId, id])
+  user  User        @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, awardId])
+  @@index([tenantId, destinationHash])
+  @@index([tenantId, userId])
+  @@map("reward_claims")
 }

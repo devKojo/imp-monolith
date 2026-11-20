@@ -66,3 +66,44 @@ export class UnsupportedRewardsError extends AppError {
     super(message, 422, 'REWARDS_UNSUPPORTED');
   }
 }
+
+/** Only a participant account has awards to claim. */
+export class ParticipantOnlyError extends AppError {
+  constructor() {
+    super('Only a participant account can claim rewards', 403, 'PARTICIPANT_ONLY');
+  }
+}
+
+/** No such award for this person (someone else's award is indistinguishable). */
+export class AwardNotFoundError extends NotFoundError {
+  constructor() {
+    super('Reward not found');
+  }
+}
+
+/** Money and items are only released to a verified address. */
+export class ClaimEmailNotVerifiedError extends AppError {
+  constructor() {
+    super('Verify your email address before claiming this reward', 403, 'EMAIL_NOT_VERIFIED');
+  }
+}
+
+/** What the person gave is not enough to claim; `message` says what to fix. */
+export class ClaimInvalidError extends AppError {
+  constructor(message: string) {
+    super(message, 422, 'CLAIM_INVALID');
+  }
+}
+
+export class AwardExpiredError extends AppError {
+  constructor() {
+    super('The time to claim this reward has passed', 409, 'AWARD_EXPIRED');
+  }
+}
+
+/** The award is on hold, rejected or withdrawn, so it cannot be claimed now. */
+export class AwardNotClaimableError extends AppError {
+  constructor(public readonly awardStatus: string) {
+    super('This reward cannot be claimed right now', 409, 'AWARD_NOT_CLAIMABLE');
+  }
+}
