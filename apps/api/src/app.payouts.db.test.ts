@@ -202,6 +202,9 @@ describe.skipIf(!enabled)(
       for (const p of [people.ama, people.kofi, people.yaw]) {
         expect((await post(p, `giveaway/${launch.body.slug}/entry`)).status).toBe(200);
       }
+      // Every test request comes from one address and one browser, which the risk rules rightly notice.
+      // These tests are about the mechanics, so they start from no signals; app.risk.db.test.ts covers the rules.
+      await platform.participationSignal.deleteMany({ where: { tenantId: tenantA } });
       expect((await post(people.owner, `rewards/campaigns/${id}/draw/seal`)).status).toBe(200);
       await platform.rewardDraw.updateMany({
         where: { campaignId: id },

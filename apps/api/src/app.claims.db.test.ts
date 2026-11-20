@@ -202,6 +202,9 @@ describe.skipIf(!enabled)(
       for (const p of [people.ama, people.kofi, people.yaw]) {
         expect((await post(p, `giveaway/${launch.body.slug}/entry`)).status).toBe(200);
       }
+      // Every test request comes from one address and one browser, which the risk rules rightly notice.
+      // These tests are about the mechanics, so they start from no signals; app.risk.db.test.ts covers the rules.
+      await platform.participationSignal.deleteMany({ where: { tenantId: tenantA } });
       expect((await post(people.owner, `rewards/campaigns/${id}/draw/seal`)).status).toBe(200);
       await platform.rewardDraw.updateMany({
         where: { campaignId: id },
@@ -318,9 +321,11 @@ describe.skipIf(!enabled)(
       it('goes through once when two claims race', async () => {
         const c = await settled('Cash prize 3', { kind: 'CASH', amountMinor: 5000 });
         const kofi = await awardOf(people.kofi, c.id);
+        // Its own number: the destination rules would (rightly) hold a number other people have used.
+        const own = { ...mobile, destination: '+233 20 555 0001' };
         const results = await Promise.all([
-          post(people.kofi, `my-rewards/${kofi.id}/claim`, mobile),
-          post(people.kofi, `my-rewards/${kofi.id}/claim`, mobile),
+          post(people.kofi, `my-rewards/${kofi.id}/claim`, own),
+          post(people.kofi, `my-rewards/${kofi.id}/claim`, own),
         ]);
         expect(results.map((r) => r.status)).toEqual([200, 200]);
         expect(results.filter((r) => r.body.alreadyClaimed === false)).toHaveLength(1);

@@ -67,6 +67,10 @@ export type BusinessAward = {
   payoutHint: string | null;
   /** The business's own payment reference, once marked paid. */
   paidReference: string | null;
+  /** 0 to 100 from the risk rules; from 30 the award waits for review, from 70 only the platform may release it. */
+  riskScore: number;
+  /** Which rules fired (codes), so a reviewer can see why it was held. */
+  riskReasons: string[];
 };
 
 /** Where to send one claimed award. Every view of it is recorded against the person who asked. */
@@ -80,6 +84,11 @@ export type PayoutDestination = {
   accountName: string;
   destination: string;
 };
+
+export type ReviewDecision = 'release' | 'reject';
+export type RejectReason = 'NOT_ELIGIBLE' | 'SUSPECTED_ABUSE' | 'OTHER';
+export type ReportReason = 'ASKED_TO_PAY' | 'SUSPICIOUS_CONTACT' | 'NOT_RECEIVED' | 'OTHER';
+export type ReportInput = { reason: ReportReason; details?: string };
 
 export type FulfilResult = { status: 'FULFILLED'; reference: string | null; alreadyPaid: boolean };
 export type SettleResult = { campaignId: string; selection: string; awarded: number };

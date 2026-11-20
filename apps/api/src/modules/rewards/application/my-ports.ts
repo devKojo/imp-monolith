@@ -21,6 +21,18 @@ export interface MyRewardsRepository {
    * and inside its window, records the claim signals and event, stores the destination, and credits points
    * when the award is points. A repeat of a claim that already went through returns `already`.
    */
+  /** Records a winner's scam report against one of their awards. One per award, person and reason. */
+  report(
+    ctx: TenantContext,
+    input: {
+      awardId: string;
+      campaignId: string;
+      userId: string;
+      reason: string;
+      details: string;
+      severity: number;
+    },
+  ): Promise<void>;
   claim(
     ctx: TenantContext,
     input: {

@@ -3,7 +3,8 @@
 Who won a campaign and what each person is owed (ADR-R001, part 2). The business never types winners in:
 they come from the score ranking, a prize pool's equal shares, or a sealed, reproducible draw.
 
-Not here yet: risk scoring, holds and shared rate limits (R5), platform review and payouts (R6). Awards are created `AVAILABLE`; R5 puts the risk gate in front of that.
+Not here yet: platform review and payouts (R6). Awards are checked by the risk rules (below) before they can be
+claimed: the ones the rules cannot clear are `PENDING_REVIEW`, the rest `AVAILABLE`.
 
 ## How winners are chosen
 
@@ -73,15 +74,17 @@ requests cannot both succeed (`409 ALREADY_AWARDED`).
 
 ## HTTP (business: session + csrf for writes; roles owner, administrator, campaign manager)
 
-| Route                                      | Notes                                                                                |
-| ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `POST /rewards/campaigns/:id/draw/seal`    | `409 SEAL_NOT_ALLOWED` once closed or if not a draw; repeatable                      |
-| `POST /rewards/campaigns/:id/award`        | `409 CAMPAIGN_NOT_ENDED`, `DRAW_NOT_SEALED`, `ALREADY_AWARDED`, `NO_ENTRANTS`; `201` |
-| `GET /rewards/campaigns/:id/awards`        | Awards with names and status                                                         |
-| `GET /rewards/campaigns/:id/awards/export` | The same as CSV (`text/csv`); destinations masked; spreadsheet formulas neutralised  |
-| `GET /rewards/awards/:id/destination`      | The winner's destination, decrypted; writes a `destination_viewed` event             |
-| `POST /rewards/awards/:id/fulfil`          | `{ reference }` (3 to 80 chars); `409 AWARD_NOT_PAYABLE`; once, `alreadyPaid` after  |
-| `GET /public/rewards/draws/:drawId`        | Public, cacheable, no personal data                                                  |
+| Route                                      | Notes                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `POST /rewards/campaigns/:id/draw/seal`    | `409 SEAL_NOT_ALLOWED` once closed or if not a draw; repeatable                        |
+| `POST /rewards/campaigns/:id/award`        | `409 CAMPAIGN_NOT_ENDED`, `DRAW_NOT_SEALED`, `ALREADY_AWARDED`, `NO_ENTRANTS`; `201`   |
+| `GET /rewards/campaigns/:id/awards`        | Awards with names and status                                                           |
+| `GET /rewards/campaigns/:id/awards/export` | The same as CSV (`text/csv`); destinations masked; spreadsheet formulas neutralised    |
+| `GET /rewards/awards/:id/destination`      | The winner's destination, decrypted; writes a `destination_viewed` event               |
+| `POST /rewards/awards/:id/review`          | `{ decision: release\|reject, reason? }`; `403 PLATFORM_REVIEW_REQUIRED` from score 70 |
+| `POST /my-rewards/:id/report`              | Winner's scam report `{ reason, details? }`; `201`; the business never sees it         |
+| `POST /rewards/awards/:id/fulfil`          | `{ reference }` (3 to 80 chars); `409 AWARD_NOT_PAYABLE`; once, `alreadyPaid` after    |
+| `GET /public/rewards/draws/:drawId`        | Public, cacheable, no personal data                                                    |
 
 Another business's campaign is a `404`; a participant account has no active business (`403`).
 
@@ -99,7 +102,51 @@ A prize's kind, amount, currency and placing are set in the campaign editor and 
 saved (`prizeProblem` in the campaigns module): cash and points need an amount, cash a currency, a placing
 range is whole, matches the number of winners and does not overlap another prize.
 
+## Risk controls (R5)
+
+Rule-based and explainable (`domain/risk.ts`, `RULES_VERSION` 1). Each rule returns a weight and counts as
+evidence (never identities); the score is their sum, capped at 100. Bands: below 30 allow, 30 to 69 review
+by the business, 70 and above flagged (only the platform may release; the business may still reject).
+
+| When                   | Rule                                                       | Weight |
+| ---------------------- | ---------------------------------------------------------- | ------ |
+| Settlement             | Others joined from the same network (1, or 3 or more)      | 20, 40 |
+|                        | Others joined from the same network and browser            | 25     |
+|                        | Other winners joined from the same network                 | 30     |
+|                        | Account created less than 24 hours ago                     | 15     |
+|                        | Rejected or revoked in this business before                | 30     |
+| Claim (cash and items) | Payout destination used by another person in this business | 60     |
+|                        | Two or more others claimed from this network in a day      | 25     |
+|                        | Two or more claims by this person in a day                 | 20     |
+|                        | Claimed from a different network than joined               | 10     |
+
+- **At settlement** every winner is scored from their join signals. Below 30 the award is `AVAILABLE`; otherwise
+  `PENDING_REVIEW` with no claim deadline (the 14-day clock starts when it is released). The decision and its
+  rules are stored in the award's first event.
+- **At claim** (cash and items, inside the claim transaction) the claim rules run. A claim score of 30 or more
+  moves the award `CLAIMED` to `HELD`, so it cannot be paid; the score is added to the award's. A repeat of that
+  claim is not an error.
+- **Review** (`POST /rewards/awards/:id/review`): the business releases (pending goes to `AVAILABLE`, held goes
+  back to `CLAIMED`) or rejects with a reason. One locked read decides, so two reviewers cannot both act. Awards
+  at 70 or more cannot be released by a business.
+- **What people see.** The winner sees held and a generic `REVIEW_REQUIRED`; never a rule or a threshold. The
+  business sees the score and which rules fired, as counts.
+- **Rate limits** are counted in PostgreSQL (`rate_limit_counters`, fixed windows, fail closed) so they hold across
+  instances: 15 claim attempts per person per hour, 5 scam reports per person per day, 60 destination views per
+  person per hour. Authentication keeps its own in-memory limiter.
+- **Scam reports** (`scam_reports`): one per award, person and reason; severity from the reason alone (asked to pay
+  80, suspicious contact and not received 50, other 20) to order the platform's queue. The business scope can
+  insert but has no read policy, so it can neither read reports nor tell who made them.
+
+Signals are hashes of the IP and user agent, kept 90 days (ADR-R001 decision 7). A shared network is not proof of
+anything (a household, an office, a mobile carrier): alone it is below the review line and it only counts with
+other signals.
+
 ## Known gaps
+
+- Reports are recorded and ranked but nothing reads them until the platform console (R6); no rule uses them yet.
+- The risk rules run in the request. Re-scoring after the fact, and rules across businesses, need the platform role (R6).
+- Fixed-window limits allow a short burst at a window boundary (up to twice the limit).
 
 - No second approver for large payouts, and no way for a winner to confirm receipt or dispute a payment yet.
 

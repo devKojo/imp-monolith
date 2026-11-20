@@ -4,7 +4,7 @@ import type { IdentityModule } from '@/modules/identity';
 import { MyRewardsService } from './application/my-rewards.service';
 import { RewardsService } from './application/rewards.service';
 import { myRewardsRouter, publicRewardsRouter, rewardsRouter } from './http/rewards.routes';
-import { AttemptLimiter } from './infrastructure/attempt-limiter';
+import { PgRateLimiter } from './infrastructure/pg-rate-limiter';
 import { PrismaMyRewardsRepository } from './infrastructure/prisma-my-rewards.repository';
 import { PrismaRewardsRepository } from './infrastructure/prisma-rewards.repository';
 import { SecretBox } from './infrastructure/secret-box';
@@ -25,12 +25,21 @@ export type RewardsConfig = {
 
 export function createRewardsModule(cfg: RewardsConfig) {
   const box = new SecretBox(cfg.dataKey ?? 'development-only-rewards-data-key');
-  const service = new RewardsService(new PrismaRewardsRepository(cfg.db), box);
+  // Limits live in the database so they hold across server instances.
+  const limit = (scope: string, max: number, windowMs: number) =>
+    new PgRateLimiter(cfg.db, scope, max, windowMs);
+  const hour = 60 * 60 * 1000;
+  const service = new RewardsService(
+    new PrismaRewardsRepository(cfg.db),
+    box,
+    limit('reveal', 60, hour), // payout destinations viewed per person / hour
+  );
   const mine = new MyRewardsService(
     new PrismaMyRewardsRepository(cfg.db),
     box,
     (who, password) => cfg.identity.auth.confirmPassword(who, password),
-    new AttemptLimiter(15, 60 * 60 * 1000), // claim attempts per person / hour
+    limit('claim', 15, hour), // claim attempts per person / hour
+    limit('report', 5, 24 * hour), // scam reports per person / day
   );
   return {
     /** The business settles its campaigns. */

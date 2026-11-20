@@ -2,6 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   canManageRewards,
+  needsPlatform,
+  riskBand,
+  waitsForReview,
   canSettle,
   countAwards,
   needsPayment,
@@ -26,6 +29,8 @@ const award = (over: Partial<BusinessAward>): BusinessAward => ({
   payoutMethod: null,
   payoutHint: null,
   paidReference: null,
+  riskScore: 0,
+  riskReasons: [],
   ...over,
 });
 
@@ -78,5 +83,21 @@ describe('canSettle', () => {
     expect(canSettle({ status: 'RUNNING', endAt: '2026-05-01T00:00:00Z' }, 3, now)).toBe(false);
     expect(canSettle({ status: 'DRAFT', endAt: '2026-05-01T00:00:00Z' }, 0, now)).toBe(false);
     expect(canSettle({ status: 'CANCELLED', endAt: null }, 0, now)).toBe(false);
+  });
+});
+
+describe('risk review', () => {
+  it('waits for review while pending or held', () => {
+    expect(waitsForReview(award({ status: 'PENDING_REVIEW' }))).toBe(true);
+    expect(waitsForReview(award({ status: 'HELD' }))).toBe(true);
+    expect(waitsForReview(award({ status: 'AVAILABLE' }))).toBe(false);
+  });
+  it('leaves high-risk awards to the platform', () => {
+    expect(needsPlatform(award({ status: 'HELD', riskScore: 70 }))).toBe(true);
+    expect(needsPlatform(award({ status: 'HELD', riskScore: 69 }))).toBe(false);
+    expect(needsPlatform(award({ status: 'AVAILABLE', riskScore: 90 }))).toBe(false);
+  });
+  it('bands a score', () => {
+    expect([0, 29, 30, 69, 70].map(riskBand)).toEqual(['none', 'none', 'REVIEW', 'REVIEW', 'FLAG']);
   });
 });

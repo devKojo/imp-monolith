@@ -18,11 +18,24 @@ export function payoutErrorKey(err: ApiError): AppTextKey {
       return 'rewards.biz.error.noEntrants';
     case 'REWARDS_UNSUPPORTED':
       return 'rewards.biz.error.unsupported';
+    case 'PLATFORM_REVIEW_REQUIRED':
+      return 'rewards.biz.error.platform';
+    case 'AWARD_NOT_REVIEWABLE':
+      return 'rewards.biz.error.notReviewable';
+    case 'RATE_LIMITED':
+      return 'rewards.biz.error.rateLimited';
     case 'NETWORK':
       return 'rewards.biz.error.network';
     default:
       return 'rewards.biz.error.generic';
   }
+}
+
+/** The line shown when sending a scam report fails. */
+export function reportErrorKey(err: ApiError): AppTextKey {
+  return err.code === 'RATE_LIMITED'
+    ? 'rewards.report.error.rateLimited'
+    : 'rewards.report.error.generic';
 }
 
 /** The line shown for a failed claim. Codes come from the API's problem envelope. */

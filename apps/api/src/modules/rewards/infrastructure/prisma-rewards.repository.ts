@@ -4,6 +4,8 @@ import { ConflictError } from '@/shared/errors';
 import { withPublic, withTenant, type TenantContext, type TenantTx } from '@/shared/database';
 import type { EntrantPurpose, RewardsRepository } from '../application/ports';
 import { AlreadyAwardedError } from '../domain/errors';
+import { settleFactsFrom } from '../domain/facts';
+import { businessMayRelease, type SettleFacts } from '../domain/risk';
 import type {
   AwardRow,
   DrawRecord,
@@ -12,6 +14,8 @@ import type {
   FulfilOutcome,
   PayoutRecord,
   PlannedAward,
+  ReviewDecision,
+  ReviewOutcome,
   PublishedDraw,
   SettleableCampaign,
 } from '../domain/model';
@@ -22,6 +26,16 @@ const isUniqueViolation = (e: unknown): boolean =>
   (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002');
 
 const num = (v: bigint | null): number | null => (v === null ? null : Number(v));
+
+/** The distinct rule codes recorded on an award's events (`metadata.risk.rules`), in the order first seen. */
+const ruleCodes = (metadata: unknown[]): string[] => {
+  const codes = new Set<string>();
+  for (const m of metadata) {
+    const rules = (m as { risk?: { rules?: Array<{ code?: unknown }> } } | null)?.risk?.rules;
+    for (const rule of rules ?? []) if (typeof rule.code === 'string') codes.add(rule.code);
+  }
+  return [...codes];
+};
 
 /** The payment reference a business recorded, from the event's metadata. */
 const referenceOf = (metadata: unknown): string | null => {
@@ -219,6 +233,8 @@ export class PrismaRewardsRepository implements RewardsRepository {
           });
           if (done.count === 0) throw new AlreadyAwardedError();
         }
+        // What the risk rules found decides whether an award can be claimed now or waits for review.
+        const waits = (a: PlannedAward) => a.risk !== undefined && a.risk.band !== 'ALLOW';
         const created = await tx.rewardAward.createManyAndReturn({
           data: input.awards.map((a) => ({
             tenantId: ctx.tenantId,
@@ -231,20 +247,35 @@ export class PrismaRewardsRepository implements RewardsRepository {
             amountMinor: a.amountMinor,
             currency: a.currency,
             source: a.source,
-            status: 'AVAILABLE' as const,
-            claimBy: input.claimBy,
+            status: waits(a) ? ('PENDING_REVIEW' as const) : ('AVAILABLE' as const),
+            // The claim clock starts when the award is released, not while it waits.
+            claimBy: waits(a) ? null : input.claimBy,
+            riskScore: a.risk?.score ?? 0,
           })),
-          select: { id: true, source: true, rank: true, slot: true },
+          select: { id: true, userId: true, source: true, rank: true, slot: true, status: true },
         });
+        const riskOf = new Map(input.awards.map((a) => [a.userId, a.risk]));
         await tx.rewardEvent.createMany({
-          data: created.map((a) => ({
-            tenantId: ctx.tenantId,
-            awardId: a.id,
-            actorId: input.actorId ?? null,
-            type: 'awarded',
-            toStatus: 'AVAILABLE' as const,
-            metadata: { source: a.source, slot: a.slot, ...(a.rank ? { rank: a.rank } : {}) },
-          })),
+          data: created.map((a) => {
+            const risk = riskOf.get(a.userId);
+            return {
+              tenantId: ctx.tenantId,
+              awardId: a.id,
+              actorId: input.actorId ?? null,
+              type: 'awarded',
+              toStatus: a.status,
+              // A generic reason: winners see this, never which rule fired.
+              ...(a.status === 'PENDING_REVIEW' ? { reasonCode: 'REVIEW_REQUIRED' } : {}),
+              metadata: {
+                source: a.source,
+                slot: a.slot,
+                ...(a.rank ? { rank: a.rank } : {}),
+                ...(risk && risk.reasons.length > 0
+                  ? { risk: { score: risk.score, version: risk.version, rules: risk.reasons } }
+                  : {}),
+              } as Prisma.InputJsonObject,
+            };
+          }),
         });
       });
     } catch (e) {
@@ -261,7 +292,10 @@ export class PrismaRewardsRepository implements RewardsRepository {
         include: {
           user: { select: { name: true } },
           claim: { select: { method: true, destinationHint: true } },
-          events: { where: { type: 'fulfilled' }, select: { metadata: true }, take: 1 },
+          events: {
+            where: { type: { in: ['fulfilled', 'awarded', 'held'] } },
+            select: { type: true, metadata: true },
+          },
         },
         orderBy: [{ rank: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }, { id: 'asc' }],
       });
@@ -281,8 +315,110 @@ export class PrismaRewardsRepository implements RewardsRepository {
         createdAt: r.createdAt.toISOString(),
         payoutMethod: r.claim?.method ?? null,
         payoutHint: r.claim?.destinationHint ?? null,
-        paidReference: referenceOf(r.events[0]?.metadata),
+        paidReference: referenceOf(r.events.find((e) => e.type === 'fulfilled')?.metadata),
+        riskScore: r.riskScore,
+        riskReasons: ruleCodes(r.events.map((e) => e.metadata)),
       }));
+    });
+  }
+
+  settlementFacts(
+    ctx: TenantContext,
+    campaignId: string,
+    userIds: readonly string[],
+    now: Date,
+  ): Promise<Map<string, SettleFacts>> {
+    return withTenant(this.db, ctx, async (tx) => {
+      const ids = [...userIds];
+      const own = await tx.participationSignal.findMany({
+        where: { tenantId: ctx.tenantId, campaignId, kind: 'JOIN', userId: { in: ids } },
+        select: { ipHash: true },
+      });
+      const ips = [...new Set(own.flatMap((s) => (s.ipHash ? [s.ipHash] : [])))];
+      // Everyone who joined from a winner's network, capped so one huge shared network cannot stall settling.
+      const signals =
+        ips.length === 0
+          ? []
+          : await tx.participationSignal.findMany({
+              where: { tenantId: ctx.tenantId, campaignId, kind: 'JOIN', ipHash: { in: ips } },
+              select: { userId: true, ipHash: true, uaHash: true },
+              take: 20_000,
+            });
+      const users = await tx.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, createdAt: true },
+      });
+      const prior = await tx.rewardAward.groupBy({
+        by: ['userId'],
+        where: {
+          tenantId: ctx.tenantId,
+          userId: { in: ids },
+          status: { in: ['REJECTED', 'REVOKED'] },
+        },
+        _count: { _all: true },
+      });
+      return settleFactsFrom({
+        winners: ids,
+        signals,
+        createdAt: new Map(users.map((u) => [u.id, u.createdAt])),
+        priorRejections: new Map(prior.map((p) => [p.userId, p._count._all])),
+        now,
+      });
+    });
+  }
+
+  review(
+    ctx: TenantContext,
+    input: {
+      awardId: string;
+      actorId: string;
+      decision: ReviewDecision;
+      reason: string | null;
+      now: Date;
+      claimBy: Date;
+    },
+  ): Promise<ReviewOutcome> {
+    const { awardId, actorId, decision, reason, now, claimBy } = input;
+    return withTenant(this.db, ctx, async (tx): Promise<ReviewOutcome> => {
+      // The row lock makes two reviewers act one after the other, never both.
+      const rows = await tx.$queryRaw<Array<{ status: string; risk_score: number }>>`
+        SELECT status::text AS status, risk_score FROM reward_awards
+        WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid FOR UPDATE`;
+      const r = rows[0];
+      if (!r) return { kind: 'missing' };
+      if (r.status !== 'PENDING_REVIEW' && r.status !== 'HELD') {
+        return { kind: 'blocked', status: r.status };
+      }
+      if (decision === 'release' && !businessMayRelease(r.risk_score)) return { kind: 'platform' };
+
+      const to =
+        decision === 'reject'
+          ? 'REJECTED'
+          : r.status === 'PENDING_REVIEW'
+            ? 'AVAILABLE'
+            : 'CLAIMED';
+      if (to === 'AVAILABLE') {
+        await tx.$executeRaw`UPDATE reward_awards SET status = 'AVAILABLE'::"AwardStatus", claim_by = ${claimBy}, updated_at = ${now}
+          WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
+      } else if (to === 'CLAIMED') {
+        await tx.$executeRaw`UPDATE reward_awards SET status = 'CLAIMED'::"AwardStatus", updated_at = ${now}
+          WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
+      } else {
+        await tx.$executeRaw`UPDATE reward_awards SET status = 'REJECTED'::"AwardStatus", updated_at = ${now}
+          WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
+      }
+      await tx.rewardEvent.create({
+        data: {
+          tenantId: ctx.tenantId,
+          awardId,
+          actorId,
+          type: decision === 'release' ? 'released' : 'rejected',
+          fromStatus: r.status as 'PENDING_REVIEW' | 'HELD',
+          toStatus: to,
+          reasonCode: reason ?? (decision === 'release' ? 'REVIEWED_OK' : null),
+        },
+      });
+      return { kind: 'done', status: to };
     });
   }
 

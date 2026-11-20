@@ -1,6 +1,13 @@
 import type { Fetcher } from '../auth/api';
 import { toApiError } from '../auth/errors';
-import type { BusinessAward, FulfilResult, PayoutDestination, SettleResult } from './types';
+import type {
+  BusinessAward,
+  FulfilResult,
+  PayoutDestination,
+  RejectReason,
+  ReviewDecision,
+  SettleResult,
+} from './types';
 
 type Method = 'GET' | 'POST';
 
@@ -36,6 +43,16 @@ export function createBusinessRewardsApi(fetcher: Fetcher, root = '/api/v1/rewar
       call<SettleResult>('POST', `/campaigns/${campaignId}/award`, { csrf }),
     destination: (awardId: string) =>
       call<PayoutDestination>('GET', `/awards/${awardId}/destination`),
+    review: (
+      awardId: string,
+      decision: ReviewDecision,
+      reason: RejectReason | undefined,
+      csrf: string,
+    ) =>
+      call<{ awardId: string; status: string }>('POST', `/awards/${awardId}/review`, {
+        body: { decision, ...(reason ? { reason } : {}) },
+        csrf,
+      }),
     fulfil: (awardId: string, reference: string, csrf: string) =>
       call<FulfilResult>('POST', `/awards/${awardId}/fulfil`, { body: { reference }, csrf }),
   };

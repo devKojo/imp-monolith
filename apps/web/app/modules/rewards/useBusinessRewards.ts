@@ -5,6 +5,7 @@ import { toApiError } from '../auth/errors';
 import type { Fetcher } from '../auth/api';
 import { createBusinessRewardsApi } from './businessApi';
 import { canManageRewards } from './businessLogic';
+import type { RejectReason, ReviewDecision } from './types';
 
 /**
  * Settling and paying out rewards for the signed-in business. Client-side only (the console is not
@@ -34,6 +35,8 @@ export function useBusinessRewards() {
     exportCsv: (campaignId: string) => run(() => api.exportCsv(campaignId)),
     settle: (campaignId: string) => run(() => api.settle(campaignId, csrf())),
     destination: (awardId: string) => run(() => api.destination(awardId)),
+    review: (awardId: string, decision: ReviewDecision, reason?: RejectReason) =>
+      run(() => api.review(awardId, decision, reason, csrf())),
     fulfil: (awardId: string, reference: string) =>
       run(() => api.fulfil(awardId, reference, csrf())),
   };
