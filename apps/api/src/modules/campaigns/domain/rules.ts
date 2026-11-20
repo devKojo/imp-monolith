@@ -5,8 +5,10 @@ import {
   type FieldDraft,
   type FieldInput,
   type FieldKind,
+  type BallotSettings,
   type CampaignSettings,
   type QuizSettings,
+  DEFAULT_BALLOT_SETTINGS,
 } from './fields';
 import { poolProblem, type PrizePool } from './pool';
 import type {
@@ -142,6 +144,7 @@ const KEY_BASE: Record<FieldKind, string> = {
   long_text: 'long_answer',
   consent: 'consent',
   quiz_question: 'quiz_question',
+  candidate: 'candidate',
 };
 
 /**
@@ -169,6 +172,7 @@ export function normalizeFields(fields: readonly FieldDraft[]): FieldInput[] {
       required: f.kind === 'quiz_question' ? true : f.required,
       options,
       correctIndex: correct,
+      imageUrl: f.kind === 'candidate' ? (f.imageUrl ?? '').trim() : '',
     };
   });
 }
@@ -183,6 +187,7 @@ export function defaultFields(template: TemplateRef): FieldDraft[] {
       required: a.defaultRequired,
       options: hasOptions(a.kind) ? ['', ''] : [],
       correctIndex: null,
+      imageUrl: '',
     })),
   );
 }
@@ -192,7 +197,9 @@ export function normalizeSettings(
   template: TemplateRef | null,
   quiz: QuizSettings | null | undefined,
   pool?: PrizePool | null,
+  ballot?: BallotSettings | null,
 ): CampaignSettings {
+  const hasBallot = template?.archetype === 'poll' || template?.archetype === 'vote';
   return {
     ...(template?.archetype === 'quiz'
       ? {
@@ -203,6 +210,7 @@ export function normalizeSettings(
           },
         }
       : {}),
+    ...(hasBallot ? { ballot: ballot ?? DEFAULT_BALLOT_SETTINGS } : {}),
     ...(pool ? { pool } : {}),
   };
 }
@@ -233,8 +241,19 @@ export function templateProblem(
     }
     const labelMax = groupOf(f.kind) === 'content' ? FIELD_LIMITS.promptMax : FIELD_LIMITS.labelMax;
     if (f.label.length > labelMax) return 'A field label is too long';
+    // A picture may be missing in a draft, but one that is there must be a real https link.
+    if (f.kind === 'candidate' && f.imageUrl && !isHttpsLink(f.imageUrl)) {
+      return 'A candidate picture must be a link that starts with https://';
+    }
     if (f.kind === 'quiz_question' && f.options.length > FIELD_LIMITS.quizOptionsMax) {
       return `A quiz question can have at most ${FIELD_LIMITS.quizOptionsMax} answers`;
+    }
+    if (
+      template.archetype === 'poll' &&
+      f.kind === 'choice' &&
+      f.options.length > FIELD_LIMITS.pollOptionsMax
+    ) {
+      return `A poll question can have at most ${FIELD_LIMITS.pollOptionsMax} answers`;
     }
   }
   return null;
@@ -258,5 +277,19 @@ export function fieldProblem(f: FieldInput): string | null {
   ) {
     return 'correct';
   }
+  if (f.kind === 'candidate' && !isHttpsLink(f.imageUrl ?? '')) return 'image';
   return null;
 }
+
+/** A picture link must be https, without spaces, and a reasonable length. */
+export const isHttpsLink = (value: string): boolean => {
+  if (value.length === 0 || value.length > FIELD_LIMITS.imageUrlMax || /\s/.test(value)) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+};

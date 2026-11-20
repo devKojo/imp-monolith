@@ -150,7 +150,12 @@ export class CampaignsService {
       // A prize pool replaces prize tiers, so a campaign has one or the other, never both.
       prizes: input.settings.pool ? [] : normalizePrizes(input.prizes),
       fields,
-      settings: normalizeSettings(template, input.settings.quiz, input.settings.pool),
+      settings: normalizeSettings(
+        template,
+        input.settings.quiz,
+        input.settings.pool,
+        input.settings.ballot,
+      ),
     });
     return this.detail(
       ctx,

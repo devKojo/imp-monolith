@@ -55,8 +55,10 @@ describe('mapping', () => {
     expect(toPublic(row(1, { archetype: 'instant' })).type).toBe('giveaway');
     expect(archetypesFor('giveaway').sort()).toEqual(['giveaway', 'instant']);
     expect(archetypesFor('quiz')).toEqual(['quiz']);
-    expect(archetypesFor('poll')).toEqual([]);
-    expect(archetypesFor('vote')).toEqual([]);
+    expect(toPublic(row(1, { archetype: 'poll' })).type).toBe('poll');
+    expect(toPublic(row(1, { archetype: 'vote' })).type).toBe('vote');
+    expect(archetypesFor('poll')).toEqual(['poll']);
+    expect(archetypesFor('vote')).toEqual(['vote']);
   });
 
   it('shows a prize value with its name, or the name alone, or nothing', () => {
@@ -153,7 +155,7 @@ describe('discovery service', () => {
     });
   });
 
-  it('passes the search and the kind to the repository, and answers polls and votes with nothing', async () => {
+  it('passes the search and the kind to the repository, including polls and votes', async () => {
     const repo = new FakeRepo([row(1)]);
     const service = new PublicDiscoveryService(repo, () => NOW);
     await service.list({ q: 'coffee', type: 'giveaway' });
@@ -162,8 +164,9 @@ describe('discovery service', () => {
       archetypes: ['giveaway', 'instant'],
       now: NOW,
     });
-    expect(await service.list({ type: 'poll' })).toEqual({ items: [], nextCursor: null });
-    expect(repo.calls).toHaveLength(1);
+    await service.list({ type: 'poll' });
+    await service.list({ type: 'vote' });
+    expect(repo.calls.map((c) => c.archetypes)).toEqual([['giveaway', 'instant'], ['poll'], ['vote']]);
   });
 
   it('answers 400 for a cursor it did not make', async () => {

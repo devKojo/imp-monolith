@@ -1,7 +1,7 @@
 import type { PrizePool } from './pool';
 /**
  * The fields of a campaign: what a participant is asked about themselves (`details`) and what the
- * campaign is about (`content`: quiz and survey questions). Which kinds a campaign may use, and how many,
+ * campaign is about (`content`: quiz, survey and poll questions, and the candidates of an image vote). Which kinds a campaign may use, and how many,
  * comes from its template; the content itself belongs to the campaign. The API's ids are lowercase; the
  * database enum is the uppercase form, mapped in the repository.
  */
@@ -18,6 +18,7 @@ export const FIELD_KINDS = [
   'long_text',
   'consent',
   'quiz_question',
+  'candidate',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -28,6 +29,7 @@ const CONTENT_KINDS: ReadonlySet<FieldKind> = new Set([
   'text',
   'long_text',
   'quiz_question',
+  'candidate',
 ]);
 export const groupOf = (kind: FieldKind): FieldGroup =>
   CONTENT_KINDS.has(kind) ? 'content' : 'details';
@@ -45,6 +47,12 @@ export const FIELD_LIMITS = {
   optionMax: 120,
   /** Answers to a survey choice. */
   optionsMax: 20,
+  /** Answers to a poll question. */
+  pollOptionsMax: 10,
+  /** Candidates of an image vote. */
+  candidatesMax: 20,
+  /** Longest picture link of a candidate. */
+  imageUrlMax: 500,
   /** Answers to a quiz question (one is correct). */
   quizOptionsMax: 6,
   optionsMin: 2,
@@ -69,6 +77,8 @@ export type FieldDraft = {
   options: string[];
   /** Index of the correct answer of a quiz question; null until one is marked, and null for other kinds. */
   correctIndex: number | null;
+  /** A candidate's picture: an https link. Empty (or left out) for every other kind of field. */
+  imageUrl?: string;
 };
 
 /** A field as stored: with its machine name (snake_case, unique in the campaign) and its id. */
@@ -82,8 +92,14 @@ export type QuizSettings = {
   /** Attempts a participant may make (1 to 5); one means no retake. */
   maxAttempts: number;
 };
-/** Settings the campaign type uses; `quiz` is only set for a quiz campaign. */
-export type CampaignSettings = { quiz?: QuizSettings; pool?: PrizePool };
+/** When people may see how a poll or image vote stands: as it runs, or only once they have voted. */
+export const RESULTS_VISIBILITY = ['after_vote', 'live'] as const;
+export type ResultsVisibility = (typeof RESULTS_VISIBILITY)[number];
+export type BallotSettings = { showResults: ResultsVisibility };
+export const DEFAULT_BALLOT_SETTINGS: BallotSettings = { showResults: 'after_vote' };
+
+/** Settings the campaign type uses; `quiz` is only set for a quiz campaign, `ballot` for a poll or image vote. */
+export type CampaignSettings = { quiz?: QuizSettings; ballot?: BallotSettings; pool?: PrizePool };
 
 export const DEFAULT_QUIZ_SETTINGS: QuizSettings = {
   timeLimitMinutes: null,

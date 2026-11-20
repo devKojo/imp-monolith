@@ -1,11 +1,11 @@
 /**
  * Campaign templates: the built-in campaign types. A template is not a form a business designs; it is a
- * type (quiz, survey, giveaway, instant win) that says which kinds of field a campaign of that type may
+ * type (quiz, survey, giveaway, instant win, poll, image vote) that says which kinds of field a campaign of that type may
  * use, how many, and what a new campaign starts with. The campaign holds the actual content.
  *
  * The vocabulary here is the API's (lowercase ids); the database enums are the uppercase forms.
  */
-export const ARCHETYPES = ['giveaway', 'quiz', 'survey', 'instant'] as const;
+export const ARCHETYPES = ['giveaway', 'quiz', 'survey', 'instant', 'poll', 'vote'] as const;
 export type Archetype = (typeof ARCHETYPES)[number];
 
 export const FIELD_KINDS = [
@@ -21,6 +21,7 @@ export const FIELD_KINDS = [
   'long_text',
   'consent',
   'quiz_question',
+  'candidate',
 ] as const;
 export type FieldKind = (typeof FIELD_KINDS)[number];
 
@@ -32,6 +33,7 @@ const CONTENT_KINDS: ReadonlySet<FieldKind> = new Set([
   'text',
   'long_text',
   'quiz_question',
+  'candidate',
 ]);
 export const groupOf = (kind: FieldKind): FieldGroup =>
   CONTENT_KINDS.has(kind) ? 'content' : 'details';

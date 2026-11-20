@@ -4,6 +4,8 @@ import { SmtpMailer, createIdentityModule } from './modules/identity';
 import { createCampaignsModule } from './modules/campaigns';
 import { createQuizModule } from './modules/quiz';
 import { createSurveyModule } from './modules/survey';
+import { createVotingModule } from './modules/voting';
+import { createGiveawayModule } from './modules/giveaway';
 import { createMyParticipationsModule } from './modules/my-participations';
 import { createParticipantsModule } from './modules/participants';
 import { createTemplatesModule } from './modules/templates';
@@ -36,6 +38,8 @@ const identity = createIdentityModule({
 const templates = createTemplatesModule({ db, identity });
 const quiz = createQuizModule({ db, identity });
 const survey = createSurveyModule({ db, identity });
+const voting = createVotingModule({ db, identity });
+const giveaway = createGiveawayModule({ db, identity });
 const participants = createParticipantsModule({ db, identity });
 const myParticipations = createMyParticipationsModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
@@ -46,6 +50,8 @@ const app = await createApp({
   campaigns,
   quiz,
   survey,
+  voting,
+  giveaway,
   participants,
   myParticipations,
 });

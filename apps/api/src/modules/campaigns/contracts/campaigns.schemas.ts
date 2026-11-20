@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from '@/shared/uuid';
-import { FIELD_KINDS, FIELD_LIMITS } from '../domain/fields';
+import { FIELD_KINDS, FIELD_LIMITS, RESULTS_VISIBILITY } from '../domain/fields';
 import { POOL_CURRENCIES, POOL_KINDS, POOL_LIMITS } from '../domain/pool';
 import { LIMITS } from '../domain/model';
 
@@ -25,6 +25,8 @@ export const fieldSchema = z
     required: z.boolean(),
     options: z.array(z.string().max(FIELD_LIMITS.optionMax)).max(FIELD_LIMITS.optionsMax),
     correctIndex: z.number().int().min(0).max(FIELD_LIMITS.optionsMax).nullable(),
+    // Only a candidate's picture; optional so a client that does not know about it still saves.
+    imageUrl: z.string().max(FIELD_LIMITS.imageUrlMax).optional(),
   })
   .strict();
 
@@ -44,6 +46,8 @@ export const settingsSchema = z
       })
       .strict()
       .nullable(),
+    // Poll and image vote: when people see the standings. Optional; dropped for any other type.
+    ballot: z.object({ showResults: z.enum(RESULTS_VISIBILITY) }).strict().nullable().optional(),
     // A draft may hold a pool that is not finished yet (it is checked in full to launch).
     pool: z
       .object({
