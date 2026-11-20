@@ -126,3 +126,62 @@ export type DrawRecord = {
   winners: PublishedDraw['winners'];
   drawnAt: Date;
 };
+
+/** An award as its winner sees it. `status` already reads as expired once the claim deadline has passed. */
+export type MyAward = {
+  id: string;
+  status: string;
+  kind: PrizeKind;
+  amountMinor: number | null;
+  currency: string | null;
+  source: Selection;
+  rank: number | null;
+  prizeName: string | null;
+  claimBy: string | null;
+  createdAt: string;
+  campaign: { id: string; title: string; slug: string | null };
+  businessName: string;
+  /** True for money and items: the winner must say where to send them. */
+  needsDestination: boolean;
+  /** Masked tail of where it will be sent, once claimed. */
+  claimHint: string | null;
+};
+
+/** One step of an award's history, as its winner may see it (no actor, no internal detail). */
+export type MyAwardEvent = {
+  type: string;
+  toStatus: string | null;
+  reasonCode: string | null;
+  at: string;
+};
+
+export type MyAwardDetail = MyAward & { events: MyAwardEvent[] };
+
+/** Points a person holds with one business: the sum of their ledger entries. */
+export type WalletBalance = { businessName: string; points: number };
+
+export type MyAwardsPage = { items: MyAward[]; total: number };
+
+/** What the repository knows about an award before it is claimed. */
+export type ClaimTarget = {
+  tenantId: string;
+  kind: PrizeKind;
+  amountMinor: number | null;
+  status: string;
+  claimBy: Date | null;
+};
+
+export type ClaimDestination = {
+  method: string;
+  accountName: string;
+  encrypted: string;
+  fingerprint: string;
+  hint: string;
+};
+
+export type ClaimOutcome =
+  | { kind: 'claimed'; status: string; hint: string | null }
+  | { kind: 'already'; status: string; hint: string | null }
+  | { kind: 'expired' }
+  | { kind: 'blocked'; status: string }
+  | { kind: 'missing' };

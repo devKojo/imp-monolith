@@ -41,7 +41,11 @@ const quiz = createQuizModule({ db, identity });
 const survey = createSurveyModule({ db, identity });
 const voting = createVotingModule({ db, identity });
 const giveaway = createGiveawayModule({ db, identity });
-const rewards = createRewardsModule({ db, identity });
+const rewards = createRewardsModule({
+  db,
+  identity,
+  dataKey: env.REWARD_DATA_KEY ?? env.SESSION_SECRET,
+});
 const participants = createParticipantsModule({ db, identity });
 const myParticipations = createMyParticipationsModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });

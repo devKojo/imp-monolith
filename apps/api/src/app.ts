@@ -69,6 +69,7 @@ export async function createApp(deps: {
   }
   if (deps.rewards) {
     app.use(deps.rewards.basePath, deps.rewards.router);
+    app.use(deps.rewards.mineBasePath, deps.rewards.mineRouter);
     app.use(deps.rewards.publicBasePath, deps.rewards.publicRouter);
   }
   await initNotificationsModule(deps);
