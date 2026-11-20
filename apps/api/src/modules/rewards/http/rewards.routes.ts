@@ -10,6 +10,8 @@ import {
   drawParamSchema,
   fulfilBodySchema,
   myListQuerySchema,
+  reportBodySchema,
+  reviewBodySchema,
 } from '../contracts/rewards.schemas';
 import type { Actor } from '../domain/model';
 
@@ -33,6 +35,7 @@ const noStore: RequestHandler = (_req, res, next) => {
  *   GET  /campaigns/:campaignId/awards/export  session       the same as a CSV (no destinations)
  *   GET  /awards/:awardId/destination       session          where to send it (decrypted; each view is recorded)
  *   POST /awards/:awardId/fulfil            session + csrf   record that it was paid or sent, with a reference
+ *   POST /awards/:awardId/review            session + csrf   release or reject an award held for review
  */
 export function rewardsRouter(service: RewardsService, guards: RequestHandler[]): Router {
   const r = Router();
@@ -64,6 +67,12 @@ export function rewardsRouter(service: RewardsService, guards: RequestHandler[])
   r.get('/awards/:awardId/destination', requireSession, async (req, res) => {
     const { awardId } = parse(awardParamSchema, req.params);
     res.json(await service.destination(actorOf(req), awardId));
+  });
+
+  r.post('/awards/:awardId/review', requireSession, requireCsrfToken, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    const { decision, reason } = parse(reviewBodySchema, req.body ?? {});
+    res.json(await service.review(actorOf(req), awardId, decision, reason ?? null));
   });
 
   r.post('/awards/:awardId/fulfil', requireSession, requireCsrfToken, async (req, res) => {
@@ -99,6 +108,7 @@ export function publicRewardsRouter(service: RewardsService): Router {
  *   GET  /            session         my awards, newest first (?limit=&offset=)
  *   GET  /wallet      session         points held with each business
  *   GET  /:awardId    session         one award with its history
+ *   POST /:awardId/report session + csrf   report that it looks like a scam (the business never sees who)
  *   POST /:awardId/claim  session + csrf   claim it (money and items also need a destination and the password)
  */
 export function myRewardsRouter(service: MyRewardsService, guards: RequestHandler[]): Router {
@@ -118,6 +128,15 @@ export function myRewardsRouter(service: MyRewardsService, guards: RequestHandle
   r.get('/:awardId', requireSession, async (req, res) => {
     const { awardId } = parse(awardParamSchema, req.params);
     res.json(await service.get(req.auth ?? null, awardId));
+  });
+
+  r.post('/:awardId/report', requireSession, requireCsrfToken, async (req, res) => {
+    const { awardId } = parse(awardParamSchema, req.params);
+    res
+      .status(201)
+      .json(
+        await service.report(req.auth ?? null, awardId, parse(reportBodySchema, req.body ?? {})),
+      );
   });
 
   r.post('/:awardId/claim', requireSession, requireCsrfToken, async (req, res) => {

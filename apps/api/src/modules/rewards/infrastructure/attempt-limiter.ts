@@ -1,5 +1,10 @@
 import { AppError } from '@/shared/errors';
 
+/** Counts one attempt for a key, or throws `TooManyClaimsError` when the key has made too many. */
+export interface RateLimit {
+  hit(key: string): Promise<void>;
+}
+
 export class TooManyClaimsError extends AppError {
   constructor(public readonly retryAfterSeconds: number) {
     super('Too many attempts, try again later', 429, 'RATE_LIMITED');
@@ -7,8 +12,8 @@ export class TooManyClaimsError extends AppError {
 }
 
 /**
- * A per-person sliding-window limit on claim attempts. In-process for now, so it holds per instance; the
- * shared, store-backed limiter in R5 replaces it behind the same two calls.
+ * A per-key sliding-window limit, in process: it holds per instance. The shared limiter
+ * (`PgRateLimiter`) is what runs in production; this one is for tests and single-instance use.
  */
 export class AttemptLimiter {
   private readonly hits = new Map<string, number[]>();
@@ -20,7 +25,7 @@ export class AttemptLimiter {
   ) {}
 
   /** Counts this attempt, or throws when the person has made too many. */
-  hit(key: string): void {
+  hit(key: string): Promise<void> {
     const now = this.clock().getTime();
     const recent = (this.hits.get(key) ?? []).filter((t) => t > now - this.windowMs);
     if (recent.length >= this.max) {
@@ -31,5 +36,6 @@ export class AttemptLimiter {
     }
     recent.push(now);
     this.hits.set(key, recent);
+    return Promise.resolve();
   }
 }

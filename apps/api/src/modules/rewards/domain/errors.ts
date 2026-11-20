@@ -61,6 +61,24 @@ export class AwardNotPayableError extends AppError {
   }
 }
 
+/** The award is flagged high risk: only the platform can release it (a business may still reject it). */
+export class PlatformReviewRequiredError extends AppError {
+  constructor() {
+    super(
+      'This award needs a platform review before it can be released',
+      403,
+      'PLATFORM_REVIEW_REQUIRED',
+    );
+  }
+}
+
+/** Only an award waiting for review or held can be released or rejected. */
+export class AwardNotReviewableError extends AppError {
+  constructor(readonly awardStatus: string) {
+    super('This award is not waiting for review', 409, 'AWARD_NOT_REVIEWABLE');
+  }
+}
+
 export class NoEntrantsError extends AppError {
   constructor() {
     super('Nobody is eligible for a reward in this campaign', 409, 'NO_ENTRANTS');

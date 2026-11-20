@@ -20,6 +20,7 @@ import type {
   WalletBalance,
   Selection,
 } from '../domain/model';
+import { NO_CLAIM_FACTS, assessClaim, type ClaimFacts } from '../domain/risk';
 import { appendPoints } from './points-ledger';
 
 const num = (v: bigint | null): number | null => (v === null ? null : Number(v));
@@ -135,7 +136,14 @@ export class PrismaMyRewardsRepository implements MyRewardsRepository {
     return withParticipant(this.db, userId, async (tx) => {
       const r = await tx.rewardAward.findFirst({
         where: { id: awardId, userId },
-        select: { tenantId: true, kind: true, amountMinor: true, status: true, claimBy: true },
+        select: {
+          tenantId: true,
+          campaignId: true,
+          kind: true,
+          amountMinor: true,
+          status: true,
+          claimBy: true,
+        },
       });
       return r ? { ...r, amountMinor: num(r.amountMinor) } : null;
     });
@@ -160,6 +168,87 @@ export class PrismaMyRewardsRepository implements MyRewardsRepository {
     return { kind: 'already', status: r.status, hint: r.claim?.destinationHint ?? null };
   }
 
+  /** The facts the claim rules need, read in the claim's own transaction. Counts of other people only. */
+  private async claimFacts(
+    tx: TenantTx,
+    q: { tenantId: string; campaignId: string; userId: string; fingerprint: string; now: Date },
+  ): Promise<ClaimFacts> {
+    const { tenantId, campaignId, userId } = q;
+    const since = new Date(q.now.getTime() - 86_400_000);
+    const sameDestination = await tx.rewardClaim.findMany({
+      where: { tenantId, destinationHash: q.fingerprint, userId: { not: userId } },
+      distinct: ['userId'],
+      select: { userId: true },
+    });
+    const joined = await tx.participationSignal.findFirst({
+      where: { tenantId, campaignId, userId, kind: 'JOIN', ipHash: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      select: { ipHash: true },
+    });
+    // The signal just recorded for this claim.
+    const claiming = await tx.participationSignal.findFirst({
+      where: { tenantId, userId, kind: 'CLAIM' },
+      orderBy: { createdAt: 'desc' },
+      select: { ipHash: true },
+    });
+    const network = claiming?.ipHash ?? null;
+    const others = network
+      ? await tx.participationSignal.findMany({
+          where: {
+            tenantId,
+            kind: 'CLAIM',
+            ipHash: network,
+            userId: { not: userId },
+            createdAt: { gte: since },
+          },
+          distinct: ['userId'],
+          select: { userId: true },
+        })
+      : [];
+    const claimsToday = await tx.participationSignal.count({
+      where: { tenantId, userId, kind: 'CLAIM', createdAt: { gte: since } },
+    });
+    return {
+      ...NO_CLAIM_FACTS,
+      destinationUsers: sameDestination.length,
+      claimNetworkUsers: others.length,
+      // The claim being made has already left its own signal.
+      recentClaims: Math.max(0, claimsToday - 1),
+      networkChanged: !!(joined?.ipHash && network && joined.ipHash !== network),
+    };
+  }
+
+  async report(
+    ctx: TenantContext,
+    input: {
+      awardId: string;
+      campaignId: string;
+      userId: string;
+      reason: string;
+      details: string;
+      severity: number;
+    },
+  ): Promise<void> {
+    await withTenant(this.db, ctx, async (tx) => {
+      // createMany does not read the row back: the business scope may insert reports but never read them.
+      await tx.scamReport.createMany({
+        data: [
+          {
+            tenantId: ctx.tenantId,
+            campaignId: input.campaignId,
+            awardId: input.awardId,
+            userId: input.userId,
+            reason: input.reason as
+              'ASKED_TO_PAY' | 'SUSPICIOUS_CONTACT' | 'NOT_RECEIVED' | 'OTHER',
+            details: input.details,
+            severity: input.severity,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    });
+  }
+
   private async claimIn(tx: TenantTx, tenantId: string, input: ClaimInput): Promise<ClaimOutcome> {
     const { awardId, userId, now, destination } = input;
     // One conditional UPDATE decides: only an available award inside its window moves, so two racing
@@ -178,7 +267,8 @@ export class PrismaMyRewardsRepository implements MyRewardsRepository {
         include: { claim: { select: { destinationHint: true } } },
       });
       if (!r) return { kind: 'missing' };
-      if (r.status === 'CLAIMED' || r.status === 'FULFILLED') {
+      // A claimed award the risk rules then held is still claimed: repeating the claim is not an error.
+      if (r.status === 'CLAIMED' || r.status === 'FULFILLED' || (r.status === 'HELD' && r.claim)) {
         return { kind: 'already', status: r.status, hint: r.claim?.destinationHint ?? null };
       }
       if (r.status === 'EXPIRED') return { kind: 'expired' };
@@ -203,6 +293,18 @@ export class PrismaMyRewardsRepository implements MyRewardsRepository {
 
     const amount = num(award.amount_minor);
     await recordSignal(tx, { tenantId, campaignId: award.campaign_id, userId, kind: 'CLAIM' });
+    // Money and items are checked against what else is known (who else used this destination, from where).
+    const claimRisk = destination
+      ? assessClaim(
+          await this.claimFacts(tx, {
+            tenantId,
+            campaignId: award.campaign_id,
+            userId,
+            fingerprint: destination.fingerprint,
+            now,
+          }),
+        )
+      : null;
     await tx.rewardEvent.create({
       data: {
         tenantId,
@@ -228,6 +330,37 @@ export class PrismaMyRewardsRepository implements MyRewardsRepository {
           destinationHint: destination.hint,
         },
       });
+    }
+
+    if (claimRisk && claimRisk.score > 0) {
+      const held = claimRisk.band !== 'ALLOW';
+      await tx.$executeRaw`UPDATE reward_awards
+        SET risk_score = LEAST(100, risk_score + ${claimRisk.score}),
+            status = CASE WHEN ${held} THEN 'HELD'::"AwardStatus" ELSE status END,
+            updated_at = ${now}
+        WHERE id = ${awardId}::uuid AND tenant_id = ${tenantId}::uuid AND status = 'CLAIMED'`;
+      if (held) {
+        await tx.rewardEvent.create({
+          data: {
+            tenantId,
+            awardId,
+            type: 'held',
+            fromStatus: 'CLAIMED',
+            toStatus: 'HELD',
+            // A generic reason: the winner sees this, never which rule fired.
+            reasonCode: 'REVIEW_REQUIRED',
+            metadata: {
+              stage: 'claim',
+              risk: {
+                score: claimRisk.score,
+                version: claimRisk.version,
+                rules: claimRisk.reasons,
+              },
+            },
+          },
+        });
+        return { kind: 'claimed', status: 'HELD', hint: destination?.hint ?? null };
+      }
     }
 
     if (amount !== null && creditsAtClaim(award.kind, amount)) {

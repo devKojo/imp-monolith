@@ -1,12 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { createTenantContext, type TenantContext } from '@/shared/database';
+import type { RateLimit } from '../infrastructure/attempt-limiter';
 import type { SecretBox } from '../infrastructure/secret-box';
+import { NO_SETTLE_FACTS, assessSettlement } from '../domain/risk';
 import { awardsCsv } from '../domain/export';
 import { newNonce, rulesHashOf, rulesOf, runDraw } from '../domain/draw';
 import {
   AlreadyAwardedError,
   AwardNotFoundError,
   AwardNotPayableError,
+  AwardNotReviewableError,
+  PlatformReviewRequiredError,
   CampaignNotEndedError,
   CampaignNotFoundError,
   DrawNotFoundError,
@@ -26,6 +30,7 @@ import type {
   DrawView,
   PayoutDestination,
   PlannedAward,
+  ReviewDecision,
   PublishedDraw,
   SettleableCampaign,
 } from '../domain/model';
@@ -58,6 +63,8 @@ export class RewardsService {
   constructor(
     private readonly repo: RewardsRepository,
     private readonly box: SecretBox,
+    /** How often one person may look at payout destinations. */
+    private readonly reveals: RateLimit,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -160,6 +167,17 @@ export class RewardsService {
 
     if (awards.length === 0) throw new NoEntrantsError();
     const now = this.now();
+    // Every winner is checked before anything can be claimed: the ones the rules cannot clear wait for review.
+    const facts = await this.repo.settlementFacts(
+      ctx,
+      campaignId,
+      awards.map((a) => a.userId),
+      now,
+    );
+    awards = awards.map((a) => ({
+      ...a,
+      risk: assessSettlement(facts.get(a.userId) ?? NO_SETTLE_FACTS),
+    }));
     await this.repo.settle(ctx, {
       campaignId,
       awards,
@@ -192,6 +210,8 @@ export class RewardsService {
    */
   async destination(actor: Actor | null, awardId: string): Promise<PayoutDestination> {
     const ctx = this.scope(actor);
+    // Reading where money goes is limited per person, so a stolen session cannot trawl the winners.
+    await this.reveals.hit(actor!.userId);
     const found = await this.repo.reveal(ctx, awardId, actor!.userId);
     if (!found) throw new AwardNotFoundError();
     const { encrypted, ...rest } = found;
@@ -218,6 +238,38 @@ export class RewardsService {
         return { status: 'FULFILLED', reference: r.reference, alreadyPaid: true };
       case 'blocked':
         throw new AwardNotPayableError(r.status);
+      case 'missing':
+        throw new AwardNotFoundError();
+    }
+  }
+
+  /**
+   * A business reviews an award the risk rules held: release it, or reject it with a reason. A release is
+   * refused for an award flagged high risk (only the platform can clear those); rejecting is always allowed.
+   */
+  async review(
+    actor: Actor | null,
+    awardId: string,
+    decision: ReviewDecision,
+    reason: string | null,
+  ): Promise<{ awardId: string; status: string }> {
+    const ctx = this.scope(actor);
+    const now = this.now();
+    const r = await this.repo.review(ctx, {
+      awardId,
+      actorId: actor!.userId,
+      decision,
+      reason,
+      now,
+      claimBy: new Date(now.getTime() + CLAIM_WINDOW_DAYS * 86_400_000),
+    });
+    switch (r.kind) {
+      case 'done':
+        return { awardId, status: r.status };
+      case 'platform':
+        throw new PlatformReviewRequiredError();
+      case 'blocked':
+        throw new AwardNotReviewableError(r.status);
       case 'missing':
         throw new AwardNotFoundError();
     }

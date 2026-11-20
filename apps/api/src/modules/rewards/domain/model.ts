@@ -1,4 +1,5 @@
 import type { PoolKind } from '@/modules/campaigns';
+import type { RiskAssessment } from './risk';
 
 export type Actor = { userId: string; tenantId: string; role: string };
 
@@ -49,6 +50,8 @@ export type PlannedAward = {
   amountMinor: number | null;
   currency: string | null;
   source: Selection;
+  /** What the risk rules said about this winner; absent means nothing was found. */
+  risk?: RiskAssessment;
 };
 
 export type DrawRules = {
@@ -99,7 +102,18 @@ export type AwardRow = {
   payoutHint: string | null;
   /** The business's own payment reference, once marked paid. */
   paidReference: string | null;
+  /** 0 to 100 from the risk rules; from 30 the award waits for review. */
+  riskScore: number;
+  /** Which rules fired (codes only), so a reviewer can see why it was held. */
+  riskReasons: string[];
 };
+
+export type ReviewDecision = 'release' | 'reject';
+export type ReviewOutcome =
+  | { kind: 'done'; status: string }
+  | { kind: 'platform' }
+  | { kind: 'blocked'; status: string }
+  | { kind: 'missing' };
 
 /** Where to send an award: shown to the business only on request, and every view is recorded. */
 export type PayoutDestination = {
@@ -191,6 +205,7 @@ export type MyAwardsPage = { items: MyAward[]; total: number };
 /** What the repository knows about an award before it is claimed. */
 export type ClaimTarget = {
   tenantId: string;
+  campaignId: string;
   kind: PrizeKind;
   amountMinor: number | null;
   status: string;

@@ -10,13 +10,9 @@ import {
   ClaimInvalidError,
   ParticipantOnlyError,
 } from '../domain/errors';
-import type {
-  ClaimDestination,
-  MyAwardDetail,
-  MyAwardsPage,
-  WalletBalance,
-} from '../domain/model';
-import type { AttemptLimiter } from '../infrastructure/attempt-limiter';
+import type { ClaimDestination, MyAwardDetail, MyAwardsPage, WalletBalance } from '../domain/model';
+import { REPORT_SEVERITY, type ReportReason } from '../domain/risk';
+import type { RateLimit } from '../infrastructure/attempt-limiter';
 import type { SecretBox } from '../infrastructure/secret-box';
 import type { MyRewardsRepository } from './my-ports';
 
@@ -42,7 +38,9 @@ export class MyRewardsService {
     private readonly repo: MyRewardsRepository,
     private readonly box: SecretBox,
     private readonly stepUp: StepUp,
-    private readonly limiter: AttemptLimiter,
+    private readonly limiter: RateLimit,
+    /** How many scam reports one person may send in a day. */
+    private readonly reports: RateLimit,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -68,10 +66,42 @@ export class MyRewardsService {
     return found;
   }
 
+  /**
+   * A winner reports that an award looks like a scam (asked to pay a fee, strange contact, never received).
+   * The report goes to the platform; the business cannot read it or tell who sent it. Limited per person, and
+   * a repeat of the same report is accepted without adding another.
+   */
+  async report(
+    who: CurrentUser | null,
+    awardId: string,
+    input: { reason: ReportReason; details?: string | undefined },
+  ): Promise<{ reported: true }> {
+    const me = this.participant(who);
+    await this.reports.hit(me.userId);
+    const target = await this.repo.locate(me.userId, awardId);
+    if (!target) throw new AwardNotFoundError();
+    await this.repo.report(
+      createTenantContext({
+        tenantId: target.tenantId,
+        actorId: me.userId,
+        requestId: randomUUID(),
+      }),
+      {
+        awardId,
+        campaignId: target.campaignId,
+        userId: me.userId,
+        reason: input.reason,
+        details: (input.details ?? '').trim(),
+        severity: REPORT_SEVERITY[input.reason],
+      },
+    );
+    return { reported: true };
+  }
+
   async claim(who: CurrentUser | null, awardId: string, input: ClaimInput): Promise<ClaimResult> {
     const me = this.participant(who);
     // Every attempt counts, so a stolen session cannot probe at speed.
-    this.limiter.hit(me.userId);
+    await this.limiter.hit(me.userId);
 
     const target = await this.repo.locate(me.userId, awardId);
     if (!target) throw new AwardNotFoundError();

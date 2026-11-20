@@ -33,6 +33,7 @@ const EXPECTED_INDEXES = [
   'points_ledger_tenant_id_idempotency_key_key',
   'reward_draws_tenant_id_campaign_id_key',
   'reward_claims_tenant_id_award_id_key',
+  'scam_reports_tenant_id_award_id_user_id_reason_key',
   'outbox_events_aggregate_id_aggregate_version_key',
 ];
 const EXPECTED_POLICIES: Array<[string, string]> = [
@@ -81,6 +82,8 @@ const EXPECTED_POLICIES: Array<[string, string]> = [
   ['points_ledger', 'participant_read'],
   ['reward_claims', 'participant_read'],
   ['reward_events', 'participant_read'],
+  ['scam_reports', 'tenant_insert'],
+  ['scam_reports', 'participant_read'],
   ['participation_signals', 'tenant_isolation'],
   ['campaigns', 'public_read'],
   ['campaign_prizes', 'public_read'],
@@ -137,6 +140,10 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_runtime', 'reward_events', 'UPDATE', false],
   ['app_runtime', 'reward_events', 'DELETE', false],
   ['app_runtime', 'points_ledger', 'UPDATE', false],
+  // Reports are inserted by the winner's claim path and never changed or removed by the runtime role.
+  ['app_runtime', 'scam_reports', 'INSERT', true],
+  ['app_runtime', 'scam_reports', 'UPDATE', false],
+  ['app_runtime', 'scam_reports', 'DELETE', false],
   ['app_runtime', 'points_ledger', 'DELETE', false],
   ['app_runtime', 'participation_signals', 'UPDATE', false],
   ['app_runtime', 'participation_signals', 'DELETE', false],

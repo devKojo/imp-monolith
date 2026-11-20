@@ -9,6 +9,22 @@ export const canManageRewards = (role: string | undefined): boolean =>
 export const needsPayment = (a: Pick<BusinessAward, 'status' | 'kind'>): boolean =>
   a.status === 'CLAIMED' && a.kind !== 'POINTS';
 
+/** Mirrors the API's bands (which still decide): review from 30, platform only from 70. */
+export const REVIEW_AT = 30;
+export const FLAG_AT = 70;
+
+/** An award the risk rules held, before or after it was claimed. */
+export const waitsForReview = (a: Pick<BusinessAward, 'status'>): boolean =>
+  a.status === 'PENDING_REVIEW' || a.status === 'HELD';
+
+/** Flagged high risk: a business may reject it but only the platform may release it. */
+export const needsPlatform = (a: Pick<BusinessAward, 'status' | 'riskScore'>): boolean =>
+  waitsForReview(a) && a.riskScore >= FLAG_AT;
+
+export type RiskBand = 'none' | 'REVIEW' | 'FLAG';
+export const riskBand = (score: number): RiskBand =>
+  score >= FLAG_AT ? 'FLAG' : score >= REVIEW_AT ? 'REVIEW' : 'none';
+
 export type AwardCounts = {
   total: number;
   toPay: number;

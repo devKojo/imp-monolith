@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { t } from '../../i18n';
+import { t, type AppTextKey } from '../../i18n';
 import { toApiError } from '../../modules/auth/errors';
 import BusinessShell from '../../modules/business/components/BusinessShell.vue';
 import { useCampaigns } from '../../modules/campaigns/useCampaigns';
 import type { CampaignSummary } from '../../modules/campaigns/types';
-import { canSettle, countAwards, needsPayment } from '../../modules/rewards/businessLogic';
+import {
+  canSettle,
+  countAwards,
+  needsPayment,
+  needsPlatform,
+  riskBand,
+  waitsForReview,
+} from '../../modules/rewards/businessLogic';
 import PayoutDialog from '../../modules/rewards/components/PayoutDialog.vue';
+import RejectDialog from '../../modules/rewards/components/RejectDialog.vue';
 import { payoutErrorKey } from '../../modules/rewards/errors';
 import { awardAmount, chipStatus } from '../../modules/rewards/logic';
-import type { BusinessAward } from '../../modules/rewards/types';
+import type { BusinessAward, RejectReason } from '../../modules/rewards/types';
 import { useBusinessRewards } from '../../modules/rewards/useBusinessRewards';
 import { downloadText } from '../../utils/download';
 
@@ -123,11 +131,35 @@ async function record(awardId: string, reference: string) {
   await loadAwards();
 }
 
+// ---- reviewing an award the risk rules held
+async function release(id: string) {
+  notice.value = null;
+  try {
+    await rewards.review(id, 'release');
+    notice.value = { tone: 'info', text: t('rewards.biz.released') };
+    await loadAwards();
+  } catch (e) {
+    fail(e);
+  }
+}
+const rejecting = ref<BusinessAward | null>(null);
+const rejectOpen = ref(false);
+function askReject(id: string) {
+  rejecting.value = awards.value.find((a) => a.id === id) ?? null;
+  rejectOpen.value = rejecting.value !== null;
+}
+async function reject(awardId: string, reason: RejectReason) {
+  await rewards.review(awardId, 'reject', reason);
+  notice.value = { tone: 'info', text: t('rewards.biz.rejected') };
+  await loadAwards();
+}
+
 const columns = [
   { key: 'place', label: t('rewards.biz.col.place'), priority: 'low' as const },
   { key: 'winner', label: t('rewards.biz.col.winner') },
   { key: 'prize', label: t('rewards.biz.col.prize') },
   { key: 'status', label: t('rewards.biz.col.status') },
+  { key: 'risk', label: t('rewards.biz.col.risk'), priority: 'medium' as const },
   { key: 'sentTo', label: t('rewards.biz.col.sentTo'), priority: 'medium' as const },
   { key: 'actions', label: t('rewards.biz.col.actions') },
 ];
@@ -140,6 +172,11 @@ const tableRows = computed(() =>
     status: a.status,
     sentTo: a.paidReference ?? a.payoutHint ?? '-',
     payable: needsPayment(a),
+    waiting: waitsForReview(a),
+    platform: needsPlatform(a),
+    score: a.riskScore,
+    band: riskBand(a.riskScore),
+    reasons: a.riskReasons,
   })),
 );
 </script>
@@ -253,7 +290,40 @@ const tableRows = computed(() =>
             <template #cell-status="{ row }">
               <UiStatusChip vocabulary="rewardUnit" :status="chipStatus(String(row.status))" />
             </template>
+            <template #cell-risk="{ row }">
+              <template v-if="row.band !== 'none'">
+                <UiBadge :tone="row.band === 'FLAG' ? 'danger' : 'warning'" icon="alert-triangle">
+                  {{ t(row.band === 'FLAG' ? 'rewards.biz.risk.FLAG' : 'rewards.biz.risk.REVIEW') }}
+                </UiBadge>
+                <ul class="reasons ui-text-caption ui-text-hint">
+                  <li v-for="code in row.reasons as string[]" :key="code">
+                    {{ t(`rewards.biz.risk.rule.${code}` as AppTextKey) }}
+                  </li>
+                </ul>
+              </template>
+              <span v-else class="ui-text-hint">{{ t('rewards.biz.risk.none') }}</span>
+            </template>
             <template #cell-actions="{ row }">
+              <div v-if="row.waiting" class="review">
+                <UiButton
+                  size="xs"
+                  variant="secondary"
+                  :disabled="Boolean(row.platform)"
+                  :disabled-reason="row.platform ? t('rewards.biz.release.platform') : undefined"
+                  @click="release(String(row.id))"
+                >
+                  {{ t('rewards.biz.release') }}
+                  <span class="ui-sr-only">{{
+                    t('rewards.biz.release.for', { name: String(row.winner) })
+                  }}</span>
+                </UiButton>
+                <UiButton size="xs" variant="danger" @click="askReject(String(row.id))">
+                  {{ t('rewards.biz.reject') }}
+                  <span class="ui-sr-only">{{
+                    t('rewards.biz.reject.for', { name: String(row.winner) })
+                  }}</span>
+                </UiButton>
+              </div>
               <UiButton
                 v-if="row.payable"
                 size="xs"
@@ -280,6 +350,7 @@ const tableRows = computed(() =>
     </template>
 
     <PayoutDialog v-model:open="dialog" :award="paying" :reveal="reveal" :submit="record" />
+    <RejectDialog v-model:open="rejectOpen" :award="rejecting" :submit="reject" />
   </BusinessShell>
 </template>
 
@@ -337,6 +408,19 @@ const tableRows = computed(() =>
 .hint {
   margin: 0;
   padding: var(--ui-space-3) var(--ui-space-6);
+}
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+  margin: var(--ui-space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.review {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
 }
 @media (min-width: 768px) {
   .stats {

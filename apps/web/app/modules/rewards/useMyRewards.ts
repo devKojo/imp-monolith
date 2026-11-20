@@ -3,7 +3,7 @@ import { SIGNIN } from '../auth/constants';
 import { toApiError } from '../auth/errors';
 import type { Fetcher } from '../auth/api';
 import { createRewardsApi } from './api';
-import type { ClaimInput, MyAwardsPage, WalletBalance } from './types';
+import type { ClaimInput, MyAwardsPage, ReportInput, WalletBalance } from './types';
 
 /**
  * A participant's rewards and wallet, and claiming. Client-side only (the page is client-rendered and
@@ -41,6 +41,7 @@ export function useMyRewards() {
     awards,
     wallet,
     claim: (id: string, input: ClaimInput) => run(() => api.claim(id, input, csrf())),
+    report: (id: string, input: ReportInput) => run(() => api.report(id, input, csrf())),
     refresh: () => Promise.all([awards.refresh(), wallet.refresh()]),
   };
 }

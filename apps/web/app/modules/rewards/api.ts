@@ -1,6 +1,13 @@
 import type { Fetcher } from '../auth/api';
 import { toApiError } from '../auth/errors';
-import type { ClaimInput, ClaimResult, MyAwardDetail, MyAwardsPage, WalletBalance } from './types';
+import type {
+  ClaimInput,
+  ClaimResult,
+  MyAwardDetail,
+  MyAwardsPage,
+  ReportInput,
+  WalletBalance,
+} from './types';
 
 type Method = 'GET' | 'POST';
 
@@ -29,6 +36,8 @@ export function createRewardsApi(fetcher: Fetcher, root = '/api/v1/my-rewards') 
     list: (limit = 50, offset = 0) => call<MyAwardsPage>('GET', `?limit=${limit}&offset=${offset}`),
     wallet: () => call<{ items: WalletBalance[] }>('GET', '/wallet'),
     get: (id: string) => call<MyAwardDetail>('GET', `/${id}`),
+    report: (id: string, input: ReportInput, csrf: string) =>
+      call<{ reported: true }>('POST', `/${id}/report`, { body: input, csrf }),
     claim: (id: string, input: ClaimInput, csrf: string) =>
       call<ClaimResult>('POST', `/${id}/claim`, { body: input, csrf }),
   };

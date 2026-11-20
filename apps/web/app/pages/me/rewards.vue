@@ -4,9 +4,10 @@ import { t } from '../../i18n';
 import { toApiError } from '../../modules/auth/errors';
 import ParticipantShell from '../../modules/participant/components/ParticipantShell.vue';
 import ClaimDialog from '../../modules/rewards/components/ClaimDialog.vue';
+import ReportDialog from '../../modules/rewards/components/ReportDialog.vue';
 import { claimErrorKey } from '../../modules/rewards/errors';
 import { awardAmount, chipStatus, daysLeft, section } from '../../modules/rewards/logic';
-import type { ClaimInput, MyAward } from '../../modules/rewards/types';
+import type { ClaimInput, MyAward, ReportInput } from '../../modules/rewards/types';
 import { useMyRewards } from '../../modules/rewards/useMyRewards';
 
 /**
@@ -47,11 +48,30 @@ async function done(a: MyAward, input: ClaimInput) {
     tone: 'success',
     text: r.alreadyClaimed
       ? t('rewards.claimed.already')
-      : a.kind === 'POINTS'
-        ? t('rewards.claimed.points')
-        : t('rewards.claimed.sent', { business: a.businessName, hint: r.claimHint ?? '' }),
+      : r.status === 'HELD'
+        ? t('rewards.claimed.held')
+        : a.kind === 'POINTS'
+          ? t('rewards.claimed.points')
+          : t('rewards.claimed.sent', { business: a.businessName, hint: r.claimHint ?? '' }),
   };
 }
+
+/** Held for a routine check, before or after it was claimed. The reason is never shown. */
+const checking = (a: MyAward) => a.status === 'PENDING_REVIEW' || a.status === 'HELD';
+
+// ---- reporting a problem
+const reporting = ref<MyAward | null>(null);
+const reportOpen = ref(false);
+function startReport(a: MyAward) {
+  notice.value = null;
+  reporting.value = a;
+  reportOpen.value = true;
+}
+const sendReport = async (input: ReportInput) => {
+  if (!reporting.value) return;
+  await rewards.report(reporting.value.id, input);
+  notice.value = { tone: 'success', text: t('rewards.report.sent') };
+};
 
 /** Points are claimed straight away; money and items ask where to send them first. */
 async function start(a: MyAward) {
@@ -148,14 +168,22 @@ const submitClaim = async (input: ClaimInput) => {
                   <template v-if="deadline(a)"> · {{ deadline(a) }}</template>
                 </p>
               </div>
-              <UiButton
-                size="xs"
-                :loading="busy === a.id"
-                :loading-label="t('rewards.action.claiming')"
-                @click="start(a)"
-              >
-                {{ t('rewards.action.claim') }}
-              </UiButton>
+              <div class="row__side">
+                <UiButton
+                  size="xs"
+                  :loading="busy === a.id"
+                  :loading-label="t('rewards.action.claiming')"
+                  @click="start(a)"
+                >
+                  {{ t('rewards.action.claim') }}
+                </UiButton>
+                <UiButton variant="tertiary" size="xs" @click="startReport(a)">
+                  {{ t('rewards.report.action') }}
+                  <span class="ui-sr-only">{{
+                    t('rewards.report.action.for', { prize: a.prizeName ?? a.campaign.title })
+                  }}</span>
+                </UiButton>
+              </div>
             </UiCard>
           </li>
         </ul>
@@ -183,8 +211,19 @@ const submitClaim = async (input: ClaimInput) => {
                     · {{ t('rewards.award.sentTo', { hint: a.claimHint }) }}
                   </template>
                 </p>
+                <p v-if="checking(a)" class="ui-text-caption ui-text-hint">
+                  {{ a.claimHint ? t('rewards.held.claimed') : t('rewards.held.checking') }}
+                </p>
               </div>
-              <UiStatusChip vocabulary="rewardUnit" :status="chipStatus(a.status)" />
+              <div class="row__side">
+                <UiStatusChip vocabulary="rewardUnit" :status="chipStatus(a.status)" />
+                <UiButton variant="tertiary" size="xs" @click="startReport(a)">
+                  {{ t('rewards.report.action') }}
+                  <span class="ui-sr-only">{{
+                    t('rewards.report.action.for', { prize: a.prizeName ?? a.campaign.title })
+                  }}</span>
+                </UiButton>
+              </div>
             </UiCard>
           </li>
         </ul>
@@ -192,6 +231,7 @@ const submitClaim = async (input: ClaimInput) => {
     </template>
 
     <ClaimDialog v-model:open="dialog" :award="claiming" :submit="submitClaim" />
+    <ReportDialog v-model:open="reportOpen" :submit="sendReport" />
   </ParticipantShell>
 </template>
 
@@ -233,6 +273,12 @@ const submitClaim = async (input: ClaimInput) => {
   align-items: center;
   justify-content: space-between;
   gap: var(--ui-space-3);
+}
+.row__side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
 }
 .row__main {
   display: flex;

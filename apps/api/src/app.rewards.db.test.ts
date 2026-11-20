@@ -210,6 +210,8 @@ describe.skipIf(!enabled)(
 
     /** Closes the campaign by moving its end into the past (the schedule would do this in time). */
     const close = async (id: string) => {
+      // One address and browser for every test request would trip the risk rules; start from no signals.
+      await platform.participationSignal.deleteMany({ where: { campaignId: id } });
       // The seal happened while the campaign was open, so it predates the new end date.
       await platform.rewardDraw.updateMany({
         where: { campaignId: id },

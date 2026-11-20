@@ -8,6 +8,27 @@ export const drawParamSchema = z.object({ drawId: uuidSchema }).strict();
 
 export const awardParamSchema = z.object({ awardId: uuidSchema }).strict();
 
+/** A business reviewing an award the risk rules held. */
+export const reviewBodySchema = z
+  .object({
+    decision: z.enum(['release', 'reject']),
+    // Why it was rejected; a release needs none.
+    reason: z.enum(['NOT_ELIGIBLE', 'SUSPECTED_ABUSE', 'OTHER']).optional(),
+  })
+  .strict()
+  .refine((b) => b.decision === 'release' || b.reason !== undefined, {
+    message: 'Say why the award is rejected',
+    path: ['reason'],
+  });
+
+/** A winner's scam report. */
+export const reportBodySchema = z
+  .object({
+    reason: z.enum(['ASKED_TO_PAY', 'SUSPICIOUS_CONTACT', 'NOT_RECEIVED', 'OTHER']),
+    details: z.string().trim().max(1000).optional(),
+  })
+  .strict();
+
 /** The business's own payment reference (a transfer id, receipt number or tracking number). */
 export const fulfilBodySchema = z.object({ reference: z.string().trim().min(3).max(80) }).strict();
 

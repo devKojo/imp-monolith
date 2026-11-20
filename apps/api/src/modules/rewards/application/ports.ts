@@ -1,4 +1,5 @@
 import type { TenantContext } from '@/shared/database';
+import type { SettleFacts } from '../domain/risk';
 import type {
   AwardRow,
   DrawRecord,
@@ -6,6 +7,8 @@ import type {
   Entrant,
   FulfilOutcome,
   PayoutRecord,
+  ReviewDecision,
+  ReviewOutcome,
   PlannedAward,
   PublishedDraw,
   SettleableCampaign,
@@ -44,6 +47,28 @@ export interface RewardsRepository {
     },
   ): Promise<void>;
   awards(ctx: TenantContext, campaignId: string): Promise<AwardRow[]>;
+  /** What the winners' join signals, accounts and history say, for the risk rules. Keyed by user id. */
+  settlementFacts(
+    ctx: TenantContext,
+    campaignId: string,
+    userIds: readonly string[],
+    now: Date,
+  ): Promise<Map<string, SettleFacts>>;
+  /**
+   * Releases or rejects an award that is waiting for review or held. One locked read decides, so two
+   * reviewers cannot both act. A release of an award at or above the flag line is refused (`platform`).
+   */
+  review(
+    ctx: TenantContext,
+    input: {
+      awardId: string;
+      actorId: string;
+      decision: ReviewDecision;
+      reason: string | null;
+      now: Date;
+      claimBy: Date;
+    },
+  ): Promise<ReviewOutcome>;
   /**
    * A claimed award's destination, still encrypted. Writes a `destination_viewed` event in the same
    * transaction, so no one can read where money goes without it being recorded. Null when there is nothing

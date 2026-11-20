@@ -49,3 +49,10 @@ in-memory one used by authentication.
 
 R1 schema and signal capture; R2 award engine, draws and ledger; R3 participant claim flow; R4 business
 console; R5 rule engine, holds, rate limiting, scam reporting; R6 platform review and payouts.
+
+### R5 as built
+
+Weights and bands are in `apps/api/src/modules/rewards/MODULE.md`. Two choices worth recording: the claim-time
+hold is decided by the claim rules alone (an award a business already reviewed and released is not held again
+for what it was released for), while the cap on who may release uses the award's total score; and scam reports
+carry a severity from the reason only, because the business scope cannot read them to count reporters.

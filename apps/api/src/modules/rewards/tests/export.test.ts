@@ -19,6 +19,8 @@ const row = (over: Partial<AwardRow>): AwardRow => ({
   payoutMethod: 'MOBILE_MONEY',
   payoutHint: '••••4567',
   paidReference: null,
+  riskScore: 0,
+  riskReasons: [],
   ...over,
 });
 
