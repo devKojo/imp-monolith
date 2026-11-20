@@ -78,9 +78,11 @@ const ARCHETYPE_TYPE: Record<string, PublicType> = {
   instant: 'giveaway',
   quiz: 'quiz',
   survey: 'survey',
+  poll: 'poll',
+  vote: 'vote',
 };
 
-/** The template kinds that show up under a public type; polls and votes have no template yet. */
+/** The template kinds that show up under a public type. */
 export function archetypesFor(type: PublicType): string[] {
   return Object.entries(ARCHETYPE_TYPE)
     .filter(([, t]) => t === type)

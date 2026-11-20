@@ -7,6 +7,8 @@ export const SEEDED = {
   survey: '01a1e000-0000-7000-8000-000000000002',
   giveaway: '01a1e000-0000-7000-8000-000000000003',
   instant: '01a1e000-0000-7000-8000-000000000004',
+  poll: '01a1e000-0000-7000-8000-000000000005',
+  vote: '01a1e000-0000-7000-8000-000000000006',
 } as const;
 
 const allow = (
@@ -77,6 +79,36 @@ export const giveawayTemplate: TemplateRef = {
     allow('address', 1, 0, 'Delivery address', false),
     allow('wallet', 1, 0, 'Wallet address', false),
     allow('consent', 1, 1, 'I agree to the rules and the privacy notice', true),
+  ],
+};
+
+export const pollTemplate: TemplateRef = {
+  id: SEEDED.poll,
+  slug: 'poll',
+  name: 'Poll',
+  archetype: 'poll',
+  description: '',
+  minContentFields: 1,
+  requiresPrizes: false,
+  fields: [
+    ...details,
+    allow('consent', 1, 1, 'I agree to the privacy notice', true),
+    allow('choice', 1, 1, 'Question', true),
+  ],
+};
+
+export const voteTemplate: TemplateRef = {
+  id: SEEDED.vote,
+  slug: 'vote',
+  name: 'Image vote',
+  archetype: 'vote',
+  description: '',
+  minContentFields: 2,
+  requiresPrizes: false,
+  fields: [
+    ...details,
+    allow('consent', 1, 1, 'I agree to the privacy notice', true),
+    allow('candidate', 20, 2, 'Candidate', true),
   ],
 };
 

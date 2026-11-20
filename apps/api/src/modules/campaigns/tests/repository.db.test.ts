@@ -13,7 +13,14 @@ import {
   withTenant,
 } from '@/shared/database';
 import { PrismaCampaignRepository } from '../infrastructure/prisma-campaign.repository';
-import { SEEDED, giveawayTemplate, quizTemplate, surveyTemplate } from './fixtures';
+import {
+  SEEDED,
+  giveawayTemplate,
+  pollTemplate,
+  quizTemplate,
+  surveyTemplate,
+  voteTemplate,
+} from './fixtures';
 import { repositoryContract, type ContractWorld } from './repository.contract';
 
 config({ path: ['.env', '../../.env'], quiet: true });
@@ -267,7 +274,7 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     await expect(make({ key: 'email' })).rejects.toThrow(); // already used in this campaign
   });
 
-  it('seeds the four built-in types exactly as the test fixtures say, and keeps them read-only', async () => {
+  it('seeds the six built-in types exactly as the test fixtures say, and keeps them read-only', async () => {
     const found = await db.campaignTemplate.findMany({
       orderBy: { position: 'asc' },
       include: { fields: { orderBy: { position: 'asc' } } },
@@ -303,7 +310,16 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     expect(bySlug.quiz).toEqual(fixture(quizTemplate));
     expect(bySlug.survey).toEqual(fixture(surveyTemplate));
     expect(bySlug.giveaway).toEqual(fixture(giveawayTemplate));
-    expect(Object.keys(bySlug).sort()).toEqual(['giveaway', 'instant', 'quiz', 'survey']);
+    expect(bySlug.poll).toEqual(fixture(pollTemplate));
+    expect(bySlug.vote).toEqual(fixture(voteTemplate));
+    expect(Object.keys(bySlug).sort()).toEqual([
+      'giveaway',
+      'instant',
+      'poll',
+      'quiz',
+      'survey',
+      'vote',
+    ]);
 
     await expect(
       db.campaignTemplate.create({

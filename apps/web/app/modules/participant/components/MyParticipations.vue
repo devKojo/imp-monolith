@@ -3,7 +3,7 @@ import { t } from '../../../i18n';
 import type { MyParticipation } from '../useMyParticipations';
 
 /**
- * "My participation" on the participant hub: one row per quiz attempt or survey response, newest
+ * "My participation" on the participant hub: one row per quiz attempt, survey response, vote or giveaway entry, newest
  * first. A campaign with a public address links back to its page.
  */
 defineProps<{
@@ -34,7 +34,7 @@ function result(p: MyParticipation): string | null {
             <UiLink v-if="p.slug" :to="`/c/${p.slug}`" class="mine__title">{{ p.title }}</UiLink>
             <span v-else class="mine__title">{{ p.title }}</span>
             <span class="mine__meta ui-text-caption">
-              {{ t(p.kind === 'quiz' ? 'type.quiz.one' : 'type.survey.one') }} ·
+              {{ t(`type.${p.kind}.one`) }} ·
               {{ dateOf(p.submittedAt ?? p.startedAt) }}
               <template v-if="result(p)"> · {{ result(p) }}</template>
             </span>

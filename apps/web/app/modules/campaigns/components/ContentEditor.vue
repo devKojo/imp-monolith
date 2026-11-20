@@ -6,9 +6,11 @@ import {
   addAnswer,
   addField,
   addable,
+  ballotSettingsOf,
   fieldProblem,
   fieldsOf,
   hasOptions,
+  isHttpsLink,
   maxLabel,
   maxOptions,
   moveField,
@@ -21,12 +23,13 @@ import {
   removeField,
   setAnswer,
   updateField,
+  type FieldProblem,
 } from '../fields';
 import type {
   CampaignField,
   CampaignSettings,
   FieldKind,
-  FieldProblem,
+  ResultsVisibility,
   TemplateRef,
 } from '../types';
 
@@ -64,15 +67,26 @@ const addableContent = computed(() => addable(props.template, props.fields, 'con
 /** Whether this type has content (questions) at all, even when the limit has been reached. */
 const hasContent = computed(() => props.template?.fields.some((a) => a.group === 'content'));
 const isQuiz = computed(() => props.template?.archetype === 'quiz');
+const isPoll = computed(() => props.template?.archetype === 'poll');
+const isVote = computed(() => props.template?.archetype === 'vote');
+const isBallot = computed(() => isPoll.value || isVote.value);
+const archetype = computed(() => props.template?.archetype);
+const questionsTitle = computed(() =>
+  t(isVote.value ? 'vote.builder.title' : isPoll.value ? 'poll.builder.title' : 'cmp.questions'),
+);
 
 const kindLabel = (kind: FieldKind) => t(`cmp.field.kind.${kind}` as AppTextKey);
 const addLabel = (kind: FieldKind) => t('cmp.field.add', { kind: kindLabel(kind).toLowerCase() });
 const problemOf = (f: CampaignField): FieldProblem | null =>
   props.showProblems ? fieldProblem(f) : null;
 const problemText = (f: CampaignField, problem: FieldProblem) =>
-  f.kind === 'quiz_question' || problem !== 'label'
-    ? t(`quiz.q.problem.${problem === 'label' ? 'prompt' : problem}` as AppTextKey)
-    : t('cmp.field.problem.label');
+  problem === 'image'
+    ? t('vote.candidate.problem.image')
+    : f.kind === 'candidate' && problem === 'label'
+      ? t('vote.candidate.problem.name')
+      : f.kind === 'quiz_question' || problem !== 'label'
+        ? t(`quiz.q.problem.${problem === 'label' ? 'prompt' : problem}` as AppTextKey)
+        : t('cmp.field.problem.label');
 
 // The quiz number fields keep what is typed; the settings only take a value once it is a valid one.
 const quiz = computed(() => quizSettingsOf(props.settings));
@@ -91,6 +105,18 @@ watch(
   () => quiz.value.passPercent,
   (v) => parsePassPercent(passText.value, -1) !== v && (passText.value = String(v)),
 );
+// Poll and image vote: when people may see how it stands.
+const ballot = computed(() => ballotSettingsOf(props.settings));
+const resultsOptions: Array<{ value: ResultsVisibility; label: string }> = [
+  { value: 'after_vote', label: t('ballot.settings.results.after') },
+  { value: 'live', label: t('ballot.settings.results.live') },
+];
+const onResults = (value: string) =>
+  emit('update:settings', {
+    ballot: { showResults: value === 'live' ? 'live' : 'after_vote' },
+  });
+const imageOk = (f: CampaignField) => isHttpsLink(f.imageUrl ?? '');
+
 const setQuiz = (p: Partial<typeof quiz.value>) =>
   emit('update:settings', { quiz: { ...quiz.value, ...p } });
 const onTime = (text: string) => {
@@ -163,14 +189,18 @@ const onPass = (text: string) => {
 
     <UiCard v-if="hasContent" as="section" aria-labelledby="questions-title" class="block">
       <div class="block__head">
-        <h2 id="questions-title" class="ui-text-h3">{{ t('cmp.questions') }}</h2>
+        <h2 id="questions-title" class="ui-text-h3">{{ questionsTitle }}</h2>
         <p class="ui-text-caption ui-text-hint">
           {{
             readonly
               ? t('quiz.builder.locked')
               : isQuiz
                 ? t('quiz.builder.hint')
-                : t('cmp.questions.hint')
+                : isVote
+                  ? t('vote.builder.hint')
+                  : isPoll
+                    ? t('poll.builder.hint')
+                    : t('cmp.questions.hint')
           }}
         </p>
       </div>
@@ -206,16 +236,30 @@ const onPass = (text: string) => {
         />
       </div>
 
+      <div v-if="isBallot" class="settings">
+        <UiSelect
+          id="ballot-results"
+          :model-value="ballot.showResults"
+          :label="t('ballot.settings.results')"
+          :hint="t('ballot.settings.resultsHint')"
+          :options="resultsOptions"
+          :disabled="readonly"
+          @update:model-value="onResults"
+        />
+      </div>
+
       <p v-if="questions.length === 0" class="ui-text-caption ui-text-hint">
-        {{ t('quiz.builder.empty') }}
+        {{ isVote ? t('vote.builder.empty') : t('quiz.builder.empty') }}
       </p>
 
       <ol class="questions">
         <li v-for="(q, i) in questions" :key="q.id" class="question">
           <div class="question__head">
             <h3 class="ui-text-label">
-              {{ t('quiz.q.title', { n: i + 1 }) }}
-              <UiBadge v-if="!isQuiz" shape="pill">{{ kindLabel(q.kind) }}</UiBadge>
+              {{
+                t(q.kind === 'candidate' ? 'vote.candidate.title' : 'quiz.q.title', { n: i + 1 })
+              }}
+              <UiBadge v-if="!isQuiz && !isBallot" shape="pill">{{ kindLabel(q.kind) }}</UiBadge>
             </h3>
             <div v-if="!readonly" class="question__tools">
               <UiButton
@@ -251,11 +295,42 @@ const onPass = (text: string) => {
             :id="`question-prompt-${q.id}`"
             class="question__prompt"
             :model-value="q.label"
-            :label="t('quiz.q.prompt')"
+            :label="q.kind === 'candidate' ? t('vote.candidate.name') : t('quiz.q.prompt')"
             :maxlength="FIELD_LIMITS.prompt"
             :readonly="readonly"
             @update:model-value="patch(q, { label: $event })"
           />
+
+          <template v-if="q.kind === 'candidate'">
+            <UiTextInput
+              :id="`candidate-description-${q.id}`"
+              class="question__prompt"
+              :model-value="q.helper"
+              :label="t('vote.candidate.description')"
+              :maxlength="FIELD_LIMITS.helper"
+              :readonly="readonly"
+              @update:model-value="patch(q, { helper: $event })"
+            />
+            <UiTextInput
+              :id="`candidate-image-${q.id}`"
+              class="question__prompt"
+              type="url"
+              :model-value="q.imageUrl ?? ''"
+              :label="t('vote.candidate.image')"
+              :hint="t('vote.candidate.imageHint')"
+              :maxlength="FIELD_LIMITS.imageUrl"
+              :readonly="readonly"
+              @update:model-value="patch(q, { imageUrl: $event })"
+            />
+            <img
+              v-if="imageOk(q)"
+              class="question__image"
+              :src="(q.imageUrl ?? '').trim()"
+              :alt="t('vote.candidate.imageAlt', { name: q.label || String(i + 1) })"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+          </template>
 
           <template v-if="hasOptions(q.kind)">
             <ol class="answers">
@@ -298,15 +373,15 @@ const onPass = (text: string) => {
               variant="secondary"
               size="xs"
               icon="plus"
-              :disabled="q.options.length >= maxOptions(q.kind)"
-              @click="replace(addAnswer(q))"
+              :disabled="q.options.length >= maxOptions(q.kind, archetype)"
+              @click="replace(addAnswer(q, archetype))"
             >
               {{ t('quiz.q.addAnswer') }}
             </UiButton>
           </template>
 
           <UiCheckbox
-            v-if="q.kind !== 'quiz_question'"
+            v-if="q.kind !== 'quiz_question' && q.kind !== 'candidate' && !isPoll"
             :id="`question-required-${q.id}`"
             :model-value="q.required"
             :label="t('cmp.field.required')"
@@ -330,7 +405,13 @@ const onPass = (text: string) => {
           icon="plus"
           @click="add(a.kind)"
         >
-          {{ a.kind === 'quiz_question' ? t('quiz.builder.add') : addLabel(a.kind) }}
+          {{
+            a.kind === 'quiz_question'
+              ? t('quiz.builder.add')
+              : a.kind === 'candidate'
+                ? t('vote.builder.add')
+                : addLabel(a.kind)
+          }}
         </UiButton>
       </div>
     </UiCard>
@@ -407,6 +488,14 @@ const onPass = (text: string) => {
   gap: var(--ui-space-3);
   align-items: flex-start;
   padding: var(--ui-space-4);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-md);
+}
+.question__image {
+  inline-size: 100%;
+  max-inline-size: calc(var(--ui-space-12) * 5);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-radius-md);
 }

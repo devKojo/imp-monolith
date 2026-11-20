@@ -46,6 +46,7 @@ function settingsOf(value: unknown): CampaignSettings {
     } | null
   )?.quiz;
   const pool = poolOf(value);
+  const ballot = (value as { ballot?: { showResults?: unknown } } | null)?.ballot;
   return {
     ...(quiz && typeof quiz.passPercent === 'number'
       ? {
@@ -56,6 +57,9 @@ function settingsOf(value: unknown): CampaignSettings {
             maxAttempts: typeof quiz.maxAttempts === 'number' ? quiz.maxAttempts : 1,
           },
         }
+      : {}),
+    ...(ballot
+      ? { ballot: { showResults: ballot.showResults === 'live' ? ('live' as const) : ('after_vote' as const) } }
       : {}),
     ...(pool ? { pool } : {}),
   };
@@ -70,6 +74,7 @@ const fieldOf = (f: Row['fields'][number]): CampaignField => ({
   required: f.required,
   options: f.options,
   correctIndex: f.correctIndex,
+  imageUrl: f.imageUrl,
 });
 
 function detailOf(r: Row): StoredCampaign {
@@ -128,6 +133,7 @@ const fieldRows = (ctx: TenantContext, campaignId: string, fields: readonly Fiel
     required: f.required,
     options: f.options,
     correctIndex: f.correctIndex,
+    imageUrl: f.imageUrl ?? '',
   }));
 
 /**

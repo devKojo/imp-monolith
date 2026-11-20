@@ -5,11 +5,14 @@ import {
   addAnswer,
   addField,
   addable,
+  ballotSettingsOf,
   defaultSettingsFor,
   fieldProblem,
   fieldsOf,
   fitToTemplate,
   groupOf,
+  isHttpsLink,
+  maxOptions,
   moveField,
   newField,
   parsePassPercent,
@@ -28,7 +31,7 @@ const allow = (
   kind: FieldKind,
   maxCount: number | null,
   defaultCount: number,
-  defaultLabel = kind,
+  defaultLabel: string = kind,
   defaultRequired = false,
 ): AllowedField => ({
   kind,
@@ -214,5 +217,56 @@ describe('parseMaxAttempts', () => {
     expect(parseMaxAttempts('2.9', 1)).toBe(2);
     expect(parseMaxAttempts('', 4)).toBe(4);
     expect(parseMaxAttempts('abc', 4)).toBe(4);
+  });
+});
+
+describe('poll and image vote', () => {
+  const candidate = (over: Partial<CampaignField> = {}): CampaignField => ({
+    ...newField('candidate', null, 'c1'),
+    label: 'Aether Pod',
+    imageUrl: 'https://img.example.com/a.png',
+    ...over,
+  });
+  const poll = { archetype: 'poll' } as TemplateRef;
+  const vote = { archetype: 'vote' } as TemplateRef;
+
+  it('treats a candidate as content, without answers', () => {
+    expect(groupOf('candidate')).toBe('content');
+    expect(newField('candidate', null, 'x')).toMatchObject({ options: [], imageUrl: '' });
+  });
+
+  it('starts a poll or image vote with standings shown after the vote', () => {
+    expect(defaultSettingsFor(poll)).toEqual({ ballot: { showResults: 'after_vote' } });
+    expect(defaultSettingsFor(vote)).toEqual({ ballot: { showResults: 'after_vote' } });
+    expect(ballotSettingsOf({})).toEqual({ showResults: 'after_vote' });
+    expect(ballotSettingsOf({ ballot: { showResults: 'live' } })).toEqual({ showResults: 'live' });
+  });
+
+  it('limits a poll to ten answers and leaves a survey question at twenty', () => {
+    expect(maxOptions('choice', 'poll')).toBe(FIELD_LIMITS.pollOptionsMax);
+    expect(maxOptions('choice', 'survey')).toBe(FIELD_LIMITS.optionsMax);
+    const full = {
+      ...newField('choice', null, 'q'),
+      options: Array.from({ length: 10 }, () => 'a'),
+    };
+    expect(addAnswer(full, 'poll').options).toHaveLength(10);
+    expect(addAnswer(full, 'survey').options).toHaveLength(11);
+  });
+
+  it('needs a name and an https picture link before a candidate can launch', () => {
+    expect(fieldProblem(candidate())).toBeNull();
+    expect(fieldProblem(candidate({ label: ' ' }))).toBe('label');
+    expect(fieldProblem(candidate({ imageUrl: '' }))).toBe('image');
+    expect(fieldProblem(candidate({ imageUrl: 'http://img.example.com/a.png' }))).toBe('image');
+    expect(fieldProblem(candidate({ imageUrl: 'javascript:alert(1)' }))).toBe('image');
+  });
+
+  it('accepts only a real https link without spaces', () => {
+    expect(isHttpsLink('https://img.example.com/a.png')).toBe(true);
+    expect(isHttpsLink('  https://img.example.com/a.png  ')).toBe(true);
+    expect(isHttpsLink('https://localhost/a.png')).toBe(false);
+    expect(isHttpsLink('https://img.example.com/a b.png')).toBe(false);
+    expect(isHttpsLink('ftp://img.example.com/a.png')).toBe(false);
+    expect(isHttpsLink('')).toBe(false);
   });
 });

@@ -2,7 +2,7 @@ export type MyParticipation = {
   campaignId: string;
   title: string;
   slug: string | null;
-  kind: 'quiz' | 'survey';
+  kind: 'quiz' | 'survey' | 'poll' | 'vote' | 'giveaway';
   status: 'in_progress' | 'completed';
   startedAt: string;
   submittedAt: string | null;

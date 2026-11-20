@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '../../../i18n';
+import { isHttpsLink } from '../fields';
 import type { CampaignField } from '../types';
 
 /**
@@ -60,6 +61,18 @@ const choices = (b: CampaignField) =>
             :label="b.label"
             :options="likert.map((v) => ({ value: v, label: v }))"
           />
+          <div v-else-if="b.kind === 'candidate'" class="candidate">
+            <img
+              v-if="isHttpsLink(b.imageUrl ?? '')"
+              class="candidate__image"
+              :src="(b.imageUrl ?? '').trim()"
+              alt=""
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+            <p class="ui-text-label">{{ b.label }}</p>
+            <p v-if="b.helper" class="ui-text-caption ui-text-hint">{{ b.helper }}</p>
+          </div>
           <div v-else-if="b.kind === 'upload'" class="upload">
             <p class="ui-text-label">{{ b.label }}</p>
             <UiButton variant="secondary" size="xs" icon="upload">{{
@@ -161,6 +174,20 @@ const choices = (b: CampaignField) =>
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-4);
+}
+.candidate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+}
+.candidate p {
+  margin: 0;
+}
+.candidate__image {
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--ui-radius-md);
 }
 .upload {
   display: flex;

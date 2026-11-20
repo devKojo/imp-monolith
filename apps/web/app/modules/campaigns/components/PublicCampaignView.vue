@@ -3,7 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t, type AppTextKey } from '../../../i18n';
 import type { PublicCampaignPage, QuizInfo } from '../../quiz/types';
+import type { GiveawayInfo } from '../../giveaway/types';
 import type { SurveyInfo } from '../../survey/types';
+import type { BallotInfo } from '../../voting/types';
 import { winnersLabelKey } from '../logic';
 import { canEnter, timeLeft, totalWinners } from '../publicPage';
 import ShareCampaign from './ShareCampaign.vue';
@@ -21,6 +23,10 @@ const props = defineProps<{
   info: QuizInfo | null;
   /** The facts of a survey campaign; null for any other kind. */
   survey: SurveyInfo | null;
+  /** The facts of a poll or image vote campaign; null for any other kind. */
+  ballot: BallotInfo | null;
+  /** The facts of a giveaway campaign; null for any other kind (an instant win is not enterable yet). */
+  giveaway: GiveawayInfo | null;
   /** Label of the main action, or empty when this visitor cannot enter (for example a business account). */
   actionLabel: string;
   /** Where the action goes when the visitor is not signed in; otherwise the action is a click. */
@@ -62,7 +68,10 @@ const kind = computed(() => props.campaign.type);
 const kicker = computed(() => t(`type.${kind.value}.one` as AppTextKey));
 const tagline = computed(() => t(`pub.tagline.${kind.value}` as AppTextKey));
 const intro = computed(() => props.campaign.summary || tagline.value);
-const enterable = computed(() => canEnter(kind.value));
+// An instant win shows as a giveaway to a visitor but has no entry yet, so it has no giveaway facts.
+const enterable = computed(
+  () => canEnter(kind.value) && (kind.value !== 'giveaway' || props.giveaway !== null),
+);
 
 // ---- prizes
 const tiers = computed(() => props.campaign.prizes);
@@ -78,6 +87,23 @@ const prizeSummary = computed(() =>
 
 // ---- details: what a participant should know before starting
 const details = computed(() => {
+  const b = props.ballot;
+  if (b) {
+    return [
+      t('ballot.rules.options', { n: b.optionCount }),
+      t('ballot.rules.once'),
+      t('ballot.rules.final'),
+    ];
+  }
+  const g = props.giveaway;
+  if (g) {
+    return [
+      t('giveaway.rules.once'),
+      ...(g.entryCount > 0
+        ? [t('giveaway.rules.entries', { n: g.entryCount.toLocaleString() })]
+        : []),
+    ];
+  }
   const s = props.survey;
   if (s) {
     return [
@@ -96,12 +122,40 @@ const details = computed(() => {
   ];
 });
 const questionCount = computed(
-  () => props.survey?.questionCount ?? props.info?.questionCount ?? null,
+  () =>
+    props.survey?.questionCount ??
+    props.info?.questionCount ??
+    props.ballot?.optionCount ??
+    // A giveaway has nothing to answer, so it is ready whenever it can be entered.
+    (props.giveaway ? 1 : null),
 );
 const ready = computed(
   () => enterable.value && questionCount.value !== null && questionCount.value > 0,
 );
 const isSurvey = computed(() => kind.value === 'survey');
+const isBallot = computed(() => props.ballot !== null);
+const isGiveaway = computed(() => props.giveaway !== null);
+const emptyText = computed(() =>
+  isBallot.value ? t('ballot.empty') : isSurvey.value ? t('survey.empty') : t('quiz.empty'),
+);
+const signinHint = computed(() =>
+  isBallot.value
+    ? t('ballot.signin.hint')
+    : isGiveaway.value
+      ? t('giveaway.signin.hint')
+      : isSurvey.value
+        ? t('survey.signin.hint')
+        : t('quiz.signin.hint'),
+);
+const detailsText = computed(() =>
+  isBallot.value
+    ? t('pub.details.ballot')
+    : isGiveaway.value
+      ? t('pub.details.giveaway')
+      : isSurvey.value
+        ? t('pub.details.survey')
+        : t('pub.details.quiz'),
+);
 const hasSections = computed(() => ({
   prizes: tiers.value.length > 0 || pool.value !== null,
   details: details.value.length > 0,
@@ -151,7 +205,7 @@ const hasSections = computed(() => ({
         </ul>
 
         <UiBanner v-if="questionCount === 0" tone="info">
-          {{ isSurvey ? t('survey.empty') : t('quiz.empty') }}
+          {{ emptyText }}
         </UiBanner>
         <UiBanner v-else-if="!enterable" tone="info">{{ t('quiz.notQuiz') }}</UiBanner>
         <UiBanner v-else-if="businessAccount" tone="info">{{ t('quiz.businessAccount') }}</UiBanner>
@@ -178,7 +232,7 @@ const hasSections = computed(() => ({
           <ShareCampaign :slug="campaign.slug" :title="campaign.title" variant="secondary" />
         </div>
         <p v-if="ready && actionTo" class="ui-text-caption ui-text-hint">
-          {{ isSurvey ? t('survey.signin.hint') : t('quiz.signin.hint') }}
+          {{ signinHint }}
         </p>
       </div>
 
@@ -236,7 +290,7 @@ const hasSections = computed(() => ({
     <section v-if="hasSections.details" id="details" class="band" aria-labelledby="details-title">
       <p class="eyebrow ui-text-label-sm">{{ t('pub.details.eyebrow') }}</p>
       <h2 id="details-title" class="ui-text-h1">{{ t('pub.details.title') }}</h2>
-      <p class="ui-text-body">{{ isSurvey ? t('pub.details.survey') : t('pub.details.quiz') }}</p>
+      <p class="ui-text-body">{{ detailsText }}</p>
       <ul class="rules">
         <li v-for="d in details" :key="d" class="ui-text-body">{{ d }}</li>
         <li class="ui-text-body">{{ closes }}</li>

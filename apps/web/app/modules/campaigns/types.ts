@@ -4,7 +4,7 @@
  */
 export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'LIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
 
-export type Archetype = 'giveaway' | 'quiz' | 'survey' | 'instant';
+export type Archetype = 'giveaway' | 'quiz' | 'survey' | 'instant' | 'poll' | 'vote';
 
 export type FieldKind =
   | 'full_name'
@@ -18,7 +18,8 @@ export type FieldKind =
   | 'text'
   | 'long_text'
   | 'consent'
-  | 'quiz_question';
+  | 'quiz_question'
+  | 'candidate';
 
 /** `details` are what a participant is asked about themselves; `content` is what the campaign is about. */
 export type FieldGroup = 'details' | 'content';
@@ -72,6 +73,8 @@ export type CampaignField = {
   options: string[];
   /** Index of the correct answer of a quiz question; null until one is marked. */
   correctIndex: number | null;
+  /** A candidate's picture in an image vote (an https link); empty for every other kind. */
+  imageUrl?: string;
 };
 
 export type QuizSettings = {
@@ -81,6 +84,9 @@ export type QuizSettings = {
   /** Attempts a participant may make (1 to 5); one means no retake. */
   maxAttempts: number;
 };
+/** When people may see how a poll or image vote stands: only once they have voted, or as it runs. */
+export type ResultsVisibility = 'after_vote' | 'live';
+export type BallotSettings = { showResults: ResultsVisibility };
 export type PoolKind = 'POINTS' | 'MONEY';
 /** One amount shared equally by a limited number of participants, instead of prize tiers. */
 export type PrizePool = {
@@ -99,7 +105,12 @@ export type PoolView = PrizePool & {
   shareLabel: string;
 };
 /** What the campaign type uses: `quiz` is only present for a quiz; `pool` for a prize pool campaign. */
-export type CampaignSettings = { quiz?: QuizSettings; pool?: PrizePool };
+export type CampaignSettings = {
+  quiz?: QuizSettings;
+  /** Only present for a poll or an image vote. */
+  ballot?: BallotSettings;
+  pool?: PrizePool;
+};
 
 export type Campaign = {
   id: string;

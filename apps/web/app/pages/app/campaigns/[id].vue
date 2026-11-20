@@ -38,6 +38,7 @@ import type {
 import { isPublicNow, pagePath } from '../../../modules/campaigns/publicPage';
 import { useCampaigns } from '../../../modules/campaigns/useCampaigns';
 import { useTemplates } from '../../../modules/templates/useTemplates';
+import CampaignBallotResults from '../../../modules/voting/components/CampaignBallotResults.vue';
 
 /**
  * Campaign builder. The page edits a working copy of the campaign it loaded from the API: Save sends
@@ -73,6 +74,10 @@ useHead({ title: computed(() => draft.value?.title || t('cmp.title')) });
 const canManage = store.canManage;
 const canOperate = store.canOperate;
 const isDraft = computed(() => draft.value?.status === 'DRAFT');
+// A poll or an image vote that has been launched shows how it stands.
+const hasBallot = computed(
+  () => draft.value?.template?.archetype === 'poll' || draft.value?.template?.archetype === 'vote',
+);
 const isArchived = computed(() => Boolean(draft.value?.archivedAt));
 const archivable = computed(() => !!draft.value && isArchivable(draft.value.status));
 const readonly = computed(() => !isDraft.value || !canManage.value || isArchived.value);
@@ -323,7 +328,9 @@ const canReturnToDraft = computed(
   () =>
     canManage.value &&
     !isArchived.value &&
-    (runningStatus.value || draft.value?.status === 'PAUSED' || draft.value?.status === 'CANCELLED'),
+    (runningStatus.value ||
+      draft.value?.status === 'PAUSED' ||
+      draft.value?.status === 'CANCELLED'),
 );
 const deleteOpen = ref(false);
 // The name to type; never empty, so the confirmation cannot be skipped by clearing the title.
@@ -624,6 +631,11 @@ const crumbs = computed(() => [
             </p>
           </UiCard>
           <CampaignChecks v-if="isDraft" :checks="checks" />
+          <CampaignBallotResults
+            v-if="!isDraft && hasBallot"
+            :key="draft.id"
+            :campaign-id="draft.id"
+          />
         </aside>
       </div>
 

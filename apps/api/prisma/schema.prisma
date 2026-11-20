@@ -38,6 +38,8 @@ enum TemplateArchetype {
   QUIZ
   SURVEY
   INSTANT
+  POLL
+  VOTE
 }
 
 enum CampaignFieldKind {
@@ -53,6 +55,7 @@ enum CampaignFieldKind {
   LONG_TEXT
   CONSENT
   QUIZ_QUESTION
+  CANDIDATE
 }
 
 enum CampaignStatus {
@@ -99,6 +102,8 @@ model User {
   passwordResets     PasswordReset[]
   quizAttempts       QuizAttempt[]
   surveyResponses    SurveyResponse[]
+  votes              Vote[]
+  giveawayEntries    GiveawayEntry[]
 
   @@map("users")
 }
@@ -262,6 +267,8 @@ model Campaign {
   fields          CampaignField[]
   attempts        QuizAttempt[]
   surveyResponses SurveyResponse[]
+  votes           Vote[]
+  giveawayEntries GiveawayEntry[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status])
@@ -331,10 +338,13 @@ model CampaignField {
   /// Answers of a choice or quiz question; empty for other kinds.
   options      String[]          @default([])
   correctIndex Int?              @map("correct_index")
+  /// A candidate's picture in an image vote (an https link); empty for every other kind of field.
+  imageUrl     String            @default("") @map("image_url")
 
   campaign      Campaign       @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
   answers       QuizAnswer[]
   surveyAnswers SurveyAnswer[]
+  votes         Vote[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, campaignId, key])
@@ -443,4 +453,48 @@ model SurveyAnswer {
 
   @@unique([tenantId, responseId, questionId])
   @@map("survey_answers")
+}
+
+/// @owner vote
+/// One participant's vote in a poll or an image vote: final, one per participant per campaign. `fieldId` is
+/// the poll's question or the candidate chosen; `choiceIndex` is the answer of a poll (null for an image vote).
+model Vote {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  campaignId  String   @map("campaign_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  fieldId     String   @map("field_id") @db.Uuid
+  choiceIndex Int?     @map("choice_index")
+  castAt      DateTime @default(now()) @map("cast_at") @db.Timestamptz
+
+  campaign Campaign      @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id])
+  field    CampaignField @relation(fields: [tenantId, fieldId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, campaignId, userId])
+  @@index([tenantId, campaignId, fieldId])
+  @@index([tenantId, userId])
+  @@map("votes")
+}
+
+/// @owner giveaway
+/// One participant's entry in a giveaway: one per participant per campaign, with a ticket number
+/// (1, 2, 3... in the order people entered).
+model GiveawayEntry {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  campaignId   String   @map("campaign_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  ticketNumber Int      @map("ticket_number")
+  enteredAt    DateTime @default(now()) @map("entered_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, campaignId, userId])
+  @@unique([tenantId, campaignId, ticketNumber])
+  @@index([tenantId, userId])
+  @@map("giveaway_entries")
 }

@@ -8,6 +8,8 @@ import type { CampaignsModule } from '@/modules/campaigns';
 import type { TemplatesModule } from '@/modules/templates';
 import type { QuizModule } from '@/modules/quiz';
 import type { SurveyModule } from '@/modules/survey';
+import type { VotingModule } from '@/modules/voting';
+import type { GiveawayModule } from '@/modules/giveaway';
 import type { MyParticipationsModule } from '@/modules/my-participations';
 import type { ParticipantsModule } from '@/modules/participants';
 
@@ -19,6 +21,8 @@ export async function createApp(deps: {
   campaigns?: CampaignsModule;
   quiz?: QuizModule;
   survey?: SurveyModule;
+  voting?: VotingModule;
+  giveaway?: GiveawayModule;
   participants?: ParticipantsModule;
   myParticipations?: MyParticipationsModule;
 }) {
@@ -45,6 +49,14 @@ export async function createApp(deps: {
   if (deps.survey) {
     app.use(deps.survey.participationBasePath, deps.survey.participationRouter);
     app.use(deps.survey.publicBasePath, deps.survey.publicRouter);
+  }
+  if (deps.voting) {
+    app.use(deps.voting.basePath, deps.voting.router);
+    app.use(deps.voting.publicBasePath, deps.voting.publicRouter);
+  }
+  if (deps.giveaway) {
+    app.use(deps.giveaway.basePath, deps.giveaway.router);
+    app.use(deps.giveaway.publicBasePath, deps.giveaway.publicRouter);
   }
   await initNotificationsModule(deps);
 

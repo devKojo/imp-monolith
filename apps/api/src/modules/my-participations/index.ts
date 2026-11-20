@@ -11,7 +11,7 @@ export type MyParticipation = {
   title: string;
   /** Null when the campaign has no public address (yet). */
   slug: string | null;
-  kind: 'quiz' | 'survey';
+  kind: 'quiz' | 'survey' | 'poll' | 'vote' | 'giveaway';
   /** Finished (submitted) or still in progress. */
   status: 'in_progress' | 'completed';
   startedAt: string;
@@ -42,43 +42,65 @@ export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
     withParticipant(cfg.db, userId, async (tx) => {
       // Only participation in a campaign that still exists counts, so the total matches the rows.
       const where = { userId, campaign: { is: { deletedAt: null } } };
-      // Two tables, one newest-first list: take enough from each to fill the page after the offset.
+      // Four tables, one newest-first list: take enough from each to fill the page after the offset.
       const take = offset + limit;
-      const [quizTotal, surveyTotal, attempts, responses] = await Promise.all([
-        tx.quizAttempt.count({ where }),
-        tx.surveyResponse.count({ where }),
-        tx.quizAttempt.findMany({
-          where,
-          orderBy: { startedAt: 'desc' },
-          take,
-          select: {
-            campaignId: true,
-            startedAt: true,
-            submittedAt: true,
-            score: true,
-            total: true,
-            passed: true,
-          },
-        }),
-        tx.surveyResponse.findMany({
-          where,
-          orderBy: { startedAt: 'desc' },
-          take,
-          select: { campaignId: true, startedAt: true, submittedAt: true },
-        }),
-      ]);
-      const ids = [...new Set([...attempts, ...responses].map((r) => r.campaignId))];
+      const [quizTotal, surveyTotal, voteTotal, entryTotal, attempts, responses, votes, entries] =
+        await Promise.all([
+          tx.quizAttempt.count({ where }),
+          tx.surveyResponse.count({ where }),
+          tx.vote.count({ where }),
+          tx.giveawayEntry.count({ where }),
+          tx.quizAttempt.findMany({
+            where,
+            orderBy: { startedAt: 'desc' },
+            take,
+            select: {
+              campaignId: true,
+              startedAt: true,
+              submittedAt: true,
+              score: true,
+              total: true,
+              passed: true,
+            },
+          }),
+          tx.surveyResponse.findMany({
+            where,
+            orderBy: { startedAt: 'desc' },
+            take,
+            select: { campaignId: true, startedAt: true, submittedAt: true },
+          }),
+          tx.vote.findMany({
+            where,
+            orderBy: { castAt: 'desc' },
+            take,
+            select: { campaignId: true, castAt: true },
+          }),
+          tx.giveawayEntry.findMany({
+            where,
+            orderBy: { enteredAt: 'desc' },
+            take,
+            select: { campaignId: true, enteredAt: true },
+          }),
+        ]);
+      const ids = [
+        ...new Set([...attempts, ...responses, ...votes, ...entries].map((r) => r.campaignId)),
+      ];
       const campaigns = new Map(
         (
           await tx.campaign.findMany({
             where: { id: { in: ids } },
-            select: { id: true, title: true, slug: true },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              template: { select: { archetype: true } },
+            },
           })
         ).map((c) => [c.id, c]),
       );
       const rows: MyParticipation[] = [];
       const add = (
-        kind: 'quiz' | 'survey',
+        kind: MyParticipation['kind'],
         r: { campaignId: string; startedAt: Date; submittedAt: Date | null },
         quiz?: { score: number | null; total: number | null; passed: boolean | null },
       ) => {
@@ -99,8 +121,26 @@ export function createMyParticipationsModule(cfg: MyParticipationsConfig) {
       };
       attempts.forEach((a) => add('quiz', a, a));
       responses.forEach((s) => add('survey', s));
+      // A vote or an entry is done the moment it is made.
+      votes.forEach((v) =>
+        add(campaigns.get(v.campaignId)?.template?.archetype === 'POLL' ? 'poll' : 'vote', {
+          campaignId: v.campaignId,
+          startedAt: v.castAt,
+          submittedAt: v.castAt,
+        }),
+      );
+      entries.forEach((e) =>
+        add('giveaway', {
+          campaignId: e.campaignId,
+          startedAt: e.enteredAt,
+          submittedAt: e.enteredAt,
+        }),
+      );
       rows.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-      return { items: rows.slice(offset, offset + limit), total: quizTotal + surveyTotal };
+      return {
+        items: rows.slice(offset, offset + limit),
+        total: quizTotal + surveyTotal + voteTotal + entryTotal,
+      };
     });
 
   const noStore: RequestHandler = (_req, res, next) => {
