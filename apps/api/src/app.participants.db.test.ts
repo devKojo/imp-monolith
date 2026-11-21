@@ -390,4 +390,59 @@ describe.skipIf(!enabled)('participants API end to end (real guards, real Postgr
     expect((await read(people.owner, 'me/participations')).body).toEqual({ items: [], total: 0 });
     expect((await read(null, 'me/participations')).status).toBe(401);
   });
+
+  it('splits the last days by campaign type, so polls, image votes and giveaways each have a line', async () => {
+    const make = async (title: string, templateId: string) =>
+      platform.campaign.create({
+        data: { tenantId: tenantA, title, templateId, createdById: people.owner.userId },
+      });
+    const poll = await make('A poll', SEEDED.poll);
+    const vote = await make('An image vote', SEEDED.vote);
+    const giveaway = await make('A giveaway', SEEDED.giveaway);
+    const field = (campaignId: string, kind: 'CHOICE' | 'CANDIDATE') =>
+      platform.campaignField.create({
+        data: { tenantId: tenantA, campaignId, position: 0, kind, key: 'q', label: 'Q' },
+      });
+    const pollField = await field(poll.id, 'CHOICE');
+    const voteField = await field(vote.id, 'CANDIDATE');
+    const cast = (campaignId: string, fieldId: string, userId: string) =>
+      platform.vote.create({
+        data: { tenantId: tenantA, campaignId, fieldId, userId, choiceIndex: 0 },
+      });
+    await cast(poll.id, pollField.id, people.ama.userId);
+    await cast(poll.id, pollField.id, people.kofi.userId);
+    await cast(vote.id, voteField.id, people.ama.userId);
+    await platform.giveawayEntry.create({
+      data: {
+        tenantId: tenantA,
+        campaignId: giveaway.id,
+        userId: people.ama.userId,
+        ticketNumber: 1,
+      },
+    });
+
+    const res = await read(people.owner, 'participants/activity');
+    expect(res.status).toBe(200);
+    const last = (kind: string) => res.body.byKind[kind].at(-1);
+    expect(Object.keys(res.body.byKind).sort()).toEqual([
+      'giveaway',
+      'poll',
+      'quiz',
+      'survey',
+      'vote',
+    ]);
+    expect(res.body.byKind.poll).toHaveLength(14);
+    expect(last('poll')).toBe(2);
+    expect(last('vote')).toBe(1);
+    expect(last('giveaway')).toBe(1);
+    // The earlier quiz and survey activity is still there, and the combined line adds up.
+    expect(last('quiz')).toBeGreaterThanOrEqual(1);
+    const sum = Object.values(res.body.byKind as Record<string, number[]>).reduce(
+      (n, days) => n + days.at(-1)!,
+      0,
+    );
+    expect(res.body.daily.at(-1).started).toBe(sum);
+    // Another business sees none of it.
+    expect((await read(people.outsider, 'participants/activity')).body.byKind.poll.at(-1)).toBe(0);
+  });
 });

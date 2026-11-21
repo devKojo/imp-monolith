@@ -5,7 +5,7 @@ import {
   campaignBars,
   leadingOption,
   participationByType,
-  shortLabel,
+  kindSeries,
   standingsBars,
   statusCounts,
 } from './overview';
@@ -30,14 +30,6 @@ describe('statusCounts', () => {
   });
   it('is empty when there are no campaigns', () => {
     expect(statusCounts([], label)).toEqual([]);
-  });
-});
-
-describe('shortLabel', () => {
-  it('keeps a short title and cuts a long one with an ellipsis', () => {
-    expect(shortLabel('Quiz')).toBe('Quiz');
-    expect(shortLabel('Community Pulse Survey')).toBe('Community Pul…');
-    expect(shortLabel('abcdef', 4)).toBe('abc…');
   });
 });
 
@@ -129,5 +121,40 @@ describe('ballot standings', () => {
   });
   it('has no leader before the first vote', () => {
     expect(leadingOption({ total: 0, options: results.options })).toBeNull();
+  });
+});
+
+describe('kindSeries', () => {
+  const daily = [{ date: '2026-11-19' }, { date: '2026-11-20' }];
+  it('makes one line per type that had participation, in a fixed order', () => {
+    const series = kindSeries(
+      daily,
+      { quiz: [0, 0], poll: [1, 2], vote: [0, 3], giveaway: [4, 0], survey: [0, 0] },
+      (k) => k.toUpperCase(),
+      (d) => d.slice(5),
+    );
+    expect(series.map((s) => s.name)).toEqual(['POLL', 'VOTE', 'GIVEAWAY']);
+    expect(series[0]!.points.map((p) => p.label)).toEqual(['11-19', '11-20']);
+    expect(series[0]!.points.map((p) => p.value)).toEqual([1, 2]);
+    expect(series[2]!.points.map((p) => p.value)).toEqual([4, 0]);
+    expect(series[0]!.points).toHaveLength(2);
+  });
+  it('is empty when nothing happened', () => {
+    expect(
+      kindSeries(
+        daily,
+        { quiz: [0, 0] },
+        (k) => k,
+        (d) => d,
+      ),
+    ).toEqual([]);
+    expect(
+      kindSeries(
+        daily,
+        {},
+        (k) => k,
+        (d) => d,
+      ),
+    ).toEqual([]);
   });
 });

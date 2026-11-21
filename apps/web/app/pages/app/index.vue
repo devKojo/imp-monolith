@@ -7,6 +7,7 @@ import BusinessShell from '../../modules/business/components/BusinessShell.vue';
 import {
   barsOfKinds,
   campaignBars,
+  kindSeries,
   leadingOption,
   participationByType,
   standingsBars,
@@ -129,6 +130,17 @@ const byCampaignSummary = computed(() => {
 });
 
 // ---- every campaign type has a place on the dashboard
+const kindDaily = computed(() =>
+  activity.value ? kindSeries(activity.value.daily, activity.value.byKind, typeName, dayLabel) : [],
+);
+const kindDailySummary = computed(() => {
+  const top = kindDaily.value
+    .map((s) => ({ name: s.name, n: s.points.reduce((sum, p) => sum + p.value, 0) }))
+    .sort((a, b) => b.n - a.n)[0];
+  return top
+    ? t('overview.chart.byKindDaily.summary', { type: top.name, n: top.n })
+    : t('participants.chart.activity.none');
+});
 const typeName = (k: 'quiz' | 'survey' | 'poll' | 'vote' | 'giveaway') =>
   t(`type.${k}.one` as 'type.quiz.one');
 const typePoints = computed(() => participationByType(campaigns.value, typeName));
@@ -355,6 +367,16 @@ async function onSwitch(membershipId: string) {
               :title="t('overview.chart.activity')"
               :series="daily"
               :summary="dailySummary"
+              :table-limit="5"
+            />
+          </UiCard>
+
+          <UiCard v-if="kindDaily.length > 0" as="section" class="chart">
+            <UiChart
+              type="line"
+              :title="t('overview.chart.byKindDaily')"
+              :series="kindDaily"
+              :summary="kindDailySummary"
               :table-limit="5"
             />
           </UiCard>

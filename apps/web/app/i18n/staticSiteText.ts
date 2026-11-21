@@ -887,6 +887,9 @@ export const staticSiteText = {
   'result.giveaway.details.closes': 'Closes',
   'result.giveaway.details.ticket': 'Ticket number',
   'overview.chart.byType': 'Participation by campaign type',
+  'overview.chart.byKindDaily': 'Participation by type, last 14 days',
+  'overview.chart.byKindDaily.summary':
+    '{type} had the most over the period, with {n} participations.',
   'overview.chart.byType.summary': '{type} leads with {n} participations.',
   'overview.chart.entries': 'Entries by giveaway',
   'overview.chart.entries.summary': '{title} has the most entries, with {n}.',
