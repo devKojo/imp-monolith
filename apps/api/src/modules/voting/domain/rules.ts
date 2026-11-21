@@ -2,40 +2,61 @@ import type {
   Ballot,
   BallotField,
   BallotKind,
+  BallotQuestion,
   OptionResult,
   Results,
   StoredVote,
   TallyRow,
+  VoteTarget,
 } from './model';
 
 /** Pure rules for voting: no I/O and no clock of their own. */
 
+const toOptions = (labels: readonly string[]) =>
+  labels.map((label, index) => ({ index, label, description: '', imageUrl: '' }));
+
 /**
- * The options of a ballot, from the campaign's fields in order. A poll has one question whose answers are
- * the options; an image vote has one candidate field per option.
+ * The questions of a ballot, from the campaign's fields in order. A poll has one question per choice field,
+ * whose answers are the options; an image vote has one question made of its candidate fields.
  */
-export function buildBallot(kind: BallotKind, fields: readonly BallotField[]): Ballot {
+export function buildQuestions(kind: BallotKind, fields: readonly BallotField[]): BallotQuestion[] {
   if (kind === 'poll') {
-    const question = fields.find((f) => f.kind === 'choice');
-    return {
-      kind,
-      question: question?.label ?? '',
-      helper: question?.helper ?? '',
-      options: (question?.options ?? []).map((label, index) => ({
-        index,
-        label,
-        description: '',
-        imageUrl: '',
-      })),
-    };
+    return fields
+      .filter((f) => f.kind === 'choice')
+      .map((f) => ({
+        id: f.id,
+        question: f.label,
+        helper: f.helper,
+        options: toOptions(f.options),
+      }));
   }
+  return [
+    {
+      id: 'candidates',
+      question: '',
+      helper: '',
+      options: fields
+        .filter((f) => f.kind === 'candidate')
+        .map((f, index) => ({
+          index,
+          label: f.label,
+          description: f.helper,
+          imageUrl: f.imageUrl,
+        })),
+    },
+  ];
+}
+
+/** The ballot. Its top-level question, helper and options are the first question's. */
+export function buildBallot(kind: BallotKind, fields: readonly BallotField[]): Ballot {
+  const questions = buildQuestions(kind, fields);
+  const first = questions[0];
   return {
     kind,
-    question: '',
-    helper: '',
-    options: fields
-      .filter((f) => f.kind === 'candidate')
-      .map((f, index) => ({ index, label: f.label, description: f.helper, imageUrl: f.imageUrl })),
+    question: first?.question ?? '',
+    helper: first?.helper ?? '',
+    options: first?.options ?? [],
+    questions,
   };
 }
 
@@ -100,4 +121,52 @@ export function toResults(
     percent: floor[index]!,
   }));
   return { total, options };
+}
+
+/**
+ * What is stored for a ballot answered with `choices` (one per question, in order), or null when the answers do
+ * not fit: the wrong number of them, or one that is not an option of its question.
+ */
+export function targetOfChoices(
+  kind: BallotKind,
+  fields: readonly BallotField[],
+  choices: readonly number[],
+): VoteTarget | null {
+  const questions = buildQuestions(kind, fields);
+  if (questions.length === 0 || choices.length !== questions.length) return null;
+  if (kind === 'vote') {
+    const one = targetOf(kind, fields, choices[0]!);
+    return one ? { ...one, answers: {} } : null;
+  }
+  const answers: Record<string, number> = {};
+  for (const [i, q] of questions.entries()) {
+    const c = choices[i]!;
+    if (!Number.isInteger(c) || c < 0 || c >= q.options.length) return null;
+    answers[q.id] = c;
+  }
+  const first = questions[0]!;
+  return { fieldId: first.id, choiceIndex: answers[first.id]!, answers };
+}
+
+/** The answer a stored vote gives to one question of a poll, or null (a question added since, for example). */
+export function answerTo(vote: StoredVote, questionId: string): number | null {
+  const given = vote.answers[questionId];
+  if (typeof given === 'number') return given;
+  // A poll cast when it had one question has no `answers`: its field and choice are the answer.
+  return Object.keys(vote.answers).length === 0 && vote.fieldId === questionId
+    ? vote.choiceIndex
+    : null;
+}
+
+/** The standings of question number `at`: the tally rows that belong to it, counted like a single ballot. */
+export function questionResults(
+  kind: BallotKind,
+  fields: readonly BallotField[],
+  at: number,
+  tally: readonly TallyRow[],
+): Results {
+  const question = buildQuestions(kind, fields)[at];
+  if (!question) return { total: 0, options: [] };
+  const rows = kind === 'poll' ? tally.filter((r) => r.fieldId === question.id) : tally;
+  return toResults(kind, fields, question.options.length, rows);
 }

@@ -4,13 +4,13 @@
 > Browse every component, state and composition live at `/ui/components` (run `npm run dev -w @imp/web`).
 > **Before building a new component, search this list** (see `docs/frontend/README.md`, decision ADR-F002).
 
-70 components.
+71 components.
 
 ## Foundation
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPortalShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiCollapsible`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPortalShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
 | `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiActionMenu`, `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
 | `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
 | `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
@@ -90,6 +90,7 @@
 | `UiStepper` | Builder stages (with status) and participant "Step n of N" progress. | `UiIcon`, `UiProgress` | - | UI-BLD-01, UI-PUB-05 |
 | `UiTabs` | Tabs with arrow-key navigation. | - | - | Spec 5 |
 | `UiAccordion` | Disclosure list for how-it-works and FAQ. | `UiIcon` | - | Spec 5, UI-PUB-01 |
+| `UiCollapsible` | Card section that folds away, with a one-line summary while folded. | `UiIcon` | - | Spec 5 |
 | `UiCarousel` | A titled section showing one slide at a time, with previous/next buttons and a dot per slide. | `UiBadge`, `UiButton` | - | UI-PRT-01, UI-A11Y-05 |
 | `UiBreadcrumbs` | Breadcrumb trail with the current page marked. | `UiIcon`, `UiLink` | `UiAuthShell` | UI-DSH-01 |
 | `UiSidebarNav` | Primary navigation filtered by role by the caller. | `UiIcon`, `UiLink` | `UiConsoleShell`, `UiDashboardShell` | UI-DSH-01, Spec 2.2 |
@@ -118,7 +119,7 @@
 
 ## Most reused
 
-- `UiIcon`: used by 30 components
+- `UiIcon`: used by 31 components
 - `UiButton`: used by 26 components
 - `UiLink`: used by 9 components
 - `UiBadge`: used by 8 components

@@ -60,6 +60,10 @@ const replace = (next: CampaignField) =>
 const add = (kind: FieldKind) =>
   setFields(addField(props.fields, newField(kind, props.template, crypto.randomUUID())));
 
+const openDetails = ref(true);
+const openQuestions = ref(true);
+const count = (n: number, one: AppTextKey, many: AppTextKey) => (n === 1 ? t(one) : t(many, { n }));
+
 const details = computed(() => fieldsOf(props.fields, 'details'));
 const questions = computed(() => fieldsOf(props.fields, 'content'));
 const addableDetails = computed(() => addable(props.template, props.fields, 'details'));
@@ -139,11 +143,13 @@ const onPass = (text: string) => {
 
 <template>
   <div class="content">
-    <UiCard as="section" aria-labelledby="details-title" class="block">
-      <div class="block__head">
-        <h2 id="details-title" class="ui-text-h3">{{ t('cmp.details') }}</h2>
-        <p class="ui-text-caption ui-text-hint">{{ t('cmp.details.hint') }}</p>
-      </div>
+    <UiCollapsible
+      v-model:open="openDetails"
+      :title="t('cmp.details')"
+      :summary="count(details.length, 'cmp.details.summary.one', 'cmp.details.summary')"
+     
+    >
+      <p class="ui-text-caption ui-text-hint block__hint">{{ t('cmp.details.hint') }}</p>
 
       <p v-if="!template" class="ui-text-caption ui-text-hint">{{ t('cmp.content.noType') }}</p>
       <ul v-else class="rows">
@@ -191,25 +197,32 @@ const onPass = (text: string) => {
           {{ addLabel(a.kind) }}
         </UiButton>
       </div>
-    </UiCard>
+    </UiCollapsible>
 
-    <UiCard v-if="hasContent" as="section" aria-labelledby="questions-title" class="block">
-      <div class="block__head">
-        <h2 id="questions-title" class="ui-text-h3">{{ questionsTitle }}</h2>
-        <p class="ui-text-caption ui-text-hint">
-          {{
-            readonly
-              ? t('quiz.builder.locked')
-              : isQuiz
-                ? t('quiz.builder.hint')
-                : isVote
-                  ? t('vote.builder.hint')
-                  : isPoll
-                    ? t('poll.builder.hint')
-                    : t('cmp.questions.hint')
-          }}
-        </p>
-      </div>
+    <UiCollapsible
+      v-if="hasContent"
+      v-model:open="openQuestions"
+      :title="questionsTitle"
+      :summary="
+        isVote
+          ? count(questions.length, 'cmp.candidates.summary.one', 'cmp.candidates.summary')
+          : count(questions.length, 'cmp.questions.summary.one', 'cmp.questions.summary')
+      "
+     
+    >
+      <p class="ui-text-caption ui-text-hint block__hint">
+        {{
+          readonly
+            ? t('quiz.builder.locked')
+            : isQuiz
+              ? t('quiz.builder.hint')
+              : isVote
+                ? t('vote.builder.hint')
+                : isPoll
+                  ? t('poll.builder.hint')
+                  : t('cmp.questions.hint')
+        }}
+      </p>
 
       <div v-if="isQuiz" class="settings">
         <UiTextInput
@@ -255,7 +268,9 @@ const onPass = (text: string) => {
       </div>
 
       <p v-if="questions.length === 0" class="ui-text-caption ui-text-hint">
-        {{ isVote ? t('vote.builder.empty') : t('quiz.builder.empty') }}
+        {{
+          isVote ? t('vote.builder.empty') : isPoll ? t('poll.builder.empty') : t('quiz.builder.empty')
+        }}
       </p>
 
       <ol class="questions">
@@ -416,11 +431,13 @@ const onPass = (text: string) => {
               ? t('quiz.builder.add')
               : a.kind === 'candidate'
                 ? t('vote.builder.add')
-                : addLabel(a.kind)
+                : isPoll
+                  ? t('poll.builder.add')
+                  : addLabel(a.kind)
           }}
         </UiButton>
       </div>
-    </UiCard>
+    </UiCollapsible>
   </div>
 </template>
 
@@ -430,18 +447,7 @@ const onPass = (text: string) => {
   flex-direction: column;
   gap: var(--ui-space-4);
 }
-.block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-4);
-}
-.block__head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-1);
-}
-.block__head h2,
-.block__head p {
+.block__hint {
   margin: 0;
 }
 .rows,

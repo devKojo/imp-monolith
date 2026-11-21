@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useToast } from '@imp/ui/app/composables/useToast';
 import { t, type AppTextKey } from '../../../i18n';
 import { toApiError } from '../../../modules/auth/errors';
@@ -128,6 +128,8 @@ const publicSlug = computed(() =>
 const zone = ref(browserZone());
 const startParts = ref<DateParts>(toParts(null, zone.value));
 const endParts = ref<DateParts>(toParts(null, zone.value));
+/** Which editor sections are open; they start open so nothing the business must fill in is hidden. */
+const sectionOpen = reactive({ basics: true, schedule: true });
 const syncParts = () => {
   startParts.value = toParts(draft.value?.startAt ?? null, zone.value);
   endParts.value = toParts(draft.value?.endAt ?? null, zone.value);
@@ -529,7 +531,12 @@ const crumbs = computed(() => [
 
       <div class="layout">
         <div class="layout__main">
-          <UiCard as="section" class="details">
+          <UiCollapsible
+            v-model:open="sectionOpen.basics"
+            :title="t('cmp.basics')"
+            :summary="draft.title || t('cmp.field.title')"
+            class="details"
+          >
             <UiTextInput
               id="campaign-title"
               :model-value="draft.title"
@@ -560,7 +567,7 @@ const crumbs = computed(() => [
               :disabled="readonly"
               @update:model-value="chooseTemplate"
             />
-          </UiCard>
+          </UiCollapsible>
 
           <PrizeEditor
             :prizes="draft.prizes"
@@ -587,8 +594,12 @@ const crumbs = computed(() => [
             @update:settings="setSettings"
           />
 
-          <UiCard as="section" aria-labelledby="schedule-title" class="schedule">
-            <h2 id="schedule-title" class="ui-text-h3">{{ t('cmp.schedule') }}</h2>
+          <UiCollapsible
+            v-model:open="sectionOpen.schedule"
+            :title="t('cmp.schedule')"
+            :summary="startNow ? t('cmp.startNow') : undefined"
+            class="schedule"
+          >
             <UiCheckbox
               id="campaign-start-now"
               v-model="startNow"
@@ -609,7 +620,7 @@ const crumbs = computed(() => [
               :hint="t('cmp.end.hint')"
               @update:model-value="!readonly && setEnd($event)"
             />
-          </UiCard>
+          </UiCollapsible>
         </div>
 
         <aside class="layout__side">
@@ -735,15 +746,6 @@ const crumbs = computed(() => [
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-4);
-}
-.details,
-.schedule {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-4);
-}
-.schedule h2 {
-  margin: 0;
 }
 .preview {
   display: flex;

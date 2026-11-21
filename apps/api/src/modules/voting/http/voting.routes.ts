@@ -25,7 +25,8 @@ const noStore: RequestHandler = (_req, res, next) => {
  *
  *   GET  /campaigns/:campaignId/results   session   the business's own standings
  *   GET  /:slug                           session   options, own vote, standings when allowed
- *   POST /:slug/vote                      session + csrf   { optionIndex }; one vote, final
+ *   POST /:slug/vote                      session + csrf   { choices: [answer per question] } or
+ *                                                          { optionIndex }; one vote, final
  */
 export function votingRouter(service: VotingService, guards: RequestHandler[]): Router {
   const r = Router();
@@ -41,8 +42,9 @@ export function votingRouter(service: VotingService, guards: RequestHandler[]): 
   });
   r.post('/:slug/vote', requireSession, requireCsrfToken, async (req, res) => {
     const { slug } = parse(slugParamSchema, req.params);
-    const { optionIndex } = parse(voteSchema, req.body);
-    res.json(await service.cast(participantOf(req), slug, optionIndex));
+    const body = parse(voteSchema, req.body);
+    const choices = 'choices' in body ? body.choices : [body.optionIndex];
+    res.json(await service.cast(participantOf(req), slug, choices));
   });
   return r;
 }

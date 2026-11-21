@@ -31,7 +31,7 @@ export function useVoting() {
     campaign: (slug: string) => api.campaign(slug),
     info: (slug: string) => api.info(slug),
     current: (slug: string) => run(() => api.current(slug)),
-    cast: (slug: string, optionIndex: number) => run(() => api.cast(slug, optionIndex, csrf())),
+    cast: (slug: string, choices: number[]) => run(() => api.cast(slug, choices, csrf())),
   };
 }
 

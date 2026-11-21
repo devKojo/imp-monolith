@@ -207,6 +207,56 @@ describe.skipIf(!enabled)(
       return { id: created.body.id as string, slug: launch.body.slug as string };
     }
 
+    describe('poll with several questions', () => {
+      const second = field('choice', 'Which chain?', { required: true, options: ['a', 'b'] });
+      it('takes every answer together, once, and counts each question', async () => {
+        const { id, slug } = await launched('Two questions', SEEDED.poll, {
+          fields: [pollQuestion, second],
+        });
+        const { ama, kofi } = people;
+        expect((await read(null, `public/voting/${slug}`)).body.questionCount).toBe(2);
+
+        const view = await read(ama, `voting/${slug}`);
+        expect(view.body.questions).toHaveLength(2);
+        expect(view.body.questions[1].options.map((o: { label: string }) => o.label)).toEqual([
+          'a',
+          'b',
+        ]);
+
+        // One answer per question: a short or out-of-range ballot saves nothing.
+        expect((await write(ama, 'post', `voting/${slug}/vote`, { choices: [0] })).status).toBe(
+          422,
+        );
+        expect((await write(ama, 'post', `voting/${slug}/vote`, { choices: [0, 5] })).status).toBe(
+          422,
+        );
+        expect((await read(ama, `voting/${slug}`)).body.castAt).toBeNull();
+
+        const voted = await write(ama, 'post', `voting/${slug}/vote`, { choices: [2, 1] });
+        expect(voted.status, JSON.stringify(voted.body)).toBe(200);
+        expect(voted.body.questions.map((q: { choice: number }) => q.choice)).toEqual([2, 1]);
+        expect(voted.body.questions[1].results.total).toBe(1);
+        expect((await write(ama, 'post', `voting/${slug}/vote`, { choices: [0, 0] })).status).toBe(
+          409,
+        );
+
+        expect((await write(kofi, 'post', `voting/${slug}/vote`, { choices: [2, 0] })).status).toBe(
+          200,
+        );
+        const mine = await read(people.owner, `voting/campaigns/${id}/results`);
+        expect(mine.status).toBe(200);
+        expect(mine.body.questions).toHaveLength(2);
+        expect(mine.body.questions[0].options.map((o: { votes: number }) => o.votes)).toEqual([
+          0, 0, 2,
+        ]);
+        expect(mine.body.questions[1].options.map((o: { votes: number }) => o.votes)).toEqual([
+          1, 1,
+        ]);
+        // One ballot per person: the participants summary still counts people, not answers.
+        expect(mine.body.total).toBe(2);
+      });
+    });
+
     describe('poll', () => {
       it('starts a new poll with its question and shows visitors the facts but not the standings', async () => {
         const created = await write(people.owner, 'post', 'campaigns', {

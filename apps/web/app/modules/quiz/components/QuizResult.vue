@@ -107,7 +107,7 @@ const nextEnds = computed(() =>
   <div class="page">
     <UiConfetti v-if="passed && celebrate" />
 
-    <UiCard as="header" class="head">
+    <UiCard as="div" class="head">
       <div class="head__tags">
         <UiBadge shape="pill" tone="info">{{ t('type.quiz.one') }}</UiBadge>
         <span v-if="info" class="ui-text-caption ui-text-hint">

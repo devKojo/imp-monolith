@@ -5,6 +5,7 @@ import type {
   RunnableBallot,
   StoredVote,
   TallyRow,
+  VoteTarget,
 } from '../domain/model';
 
 /**
@@ -28,13 +29,7 @@ export interface VotingRepository {
    */
   cast(
     ctx: TenantContext,
-    input: {
-      campaignId: string;
-      userId: string;
-      fieldId: string;
-      choiceIndex: number | null;
-      at: Date;
-    },
+    input: { campaignId: string; userId: string; at: Date } & VoteTarget,
   ): Promise<StoredVote | null>;
   tally(ctx: TenantContext, campaignId: string): Promise<TallyRow[]>;
 }

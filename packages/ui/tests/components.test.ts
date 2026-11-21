@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
 import UiBanner from '../app/components/UiBanner.vue';
 import UiButton from '../app/components/UiButton.vue';
+import UiCollapsible from '../app/components/UiCollapsible.vue';
 import UiChart from '../app/components/UiChart.vue';
 import UiConfirmDialog from '../app/components/UiConfirmDialog.vue';
 import UiConsentGroup from '../app/components/UiConsentGroup.vue';
@@ -707,5 +708,23 @@ describe('UiChart (UI-A11Y-10)', () => {
     await slice.trigger('mouseover');
     expect(w.get('.ui-chart__tip').text()).toContain('3 (75%)');
     expect(w.get('.ui-chart__tip').text()).toContain('A very long campaign type name');
+  });
+});
+
+describe('UiCollapsible', () => {
+  it('folds and opens from its heading, and says what is inside while folded', async () => {
+    const wrapper = mount(UiCollapsible, {
+      props: { title: 'Prizes', summary: '3 prizes', open: true },
+      slots: { default: '<p>Body</p>' },
+    });
+    const button = wrapper.get('button');
+    expect(button.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.text()).not.toContain('3 prizes');
+    await button.trigger('click');
+    expect(wrapper.emitted('update:open')?.[0]).toEqual([false]);
+    await wrapper.setProps({ open: false });
+    expect(button.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.text()).toContain('3 prizes');
+    expect(wrapper.get('[id$="-p"]').attributes('style')).toContain('display: none');
   });
 });

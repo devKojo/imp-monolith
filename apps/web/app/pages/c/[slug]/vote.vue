@@ -10,7 +10,7 @@ import { useOpenCampaigns } from '../../../modules/participant/useOpenCampaigns'
 import BallotResults from '../../../modules/voting/components/BallotResults.vue';
 import { ballotErrorKey } from '../../../modules/voting/errors';
 import { isOption, labelOf, rankOf, resultFor } from '../../../modules/voting/logic';
-import type { BallotView } from '../../../modules/voting/types';
+import type { BallotView, QuestionView } from '../../../modules/voting/types';
 import { useVoting } from '../../../modules/voting/useVoting';
 
 /**
@@ -33,20 +33,27 @@ const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const state = ref<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
 const view = ref<BallotView | null>(null);
-const selected = ref<number | null>(null);
+/** The answer picked for each question, in order; null until picked. */
+const picks = ref<Array<number | null>>([]);
 const confirmOpen = ref(false);
 const submitting = ref(false);
 const problem = ref('');
 
 const isPoll = computed(() => view.value?.kind === 'poll');
 const voted = computed(() => view.value?.vote ?? null);
-const heading = computed(() => (isPoll.value && view.value?.question) || view.value?.title || '');
+const questions = computed(() => view.value?.questions ?? []);
+/** A poll can ask several questions; then the campaign title is the heading and each question has its own. */
+const many = computed(() => questions.value.length > 1);
+const heading = computed(
+  () => (isPoll.value && !many.value && view.value?.question) || view.value?.title || '',
+);
 useHead({ title: computed(() => view.value?.title || t('ballot.page.title.poll')) });
 
 async function load() {
   state.value = 'loading';
   try {
     view.value = await voting.current(slug);
+    picks.value = (view.value.questions ?? []).map(() => null);
     state.value = 'ready';
   } catch (e) {
     const err = toApiError(e);
@@ -57,28 +64,32 @@ async function load() {
 }
 onMounted(load);
 
-const pollOptions = computed(() =>
-  (view.value?.options ?? []).map((o) => ({ value: String(o.index), label: o.label })),
-);
-const choose = (index: number) => {
-  if (!voted.value) selected.value = index;
+const pollOptions = (q: QuestionView) =>
+  q.options.map((o) => ({ value: String(o.index), label: o.label }));
+const choose = (at: number, index: number) => {
+  if (!voted.value) picks.value = picks.value.map((p, i) => (i === at ? index : p));
   problem.value = '';
 };
+const allPicked = computed(
+  () =>
+    questions.value.length > 0 &&
+    questions.value.every((q, i) => isOption(q.options, picks.value[i] ?? null)),
+);
 
 function review() {
-  if (!view.value || !isOption(view.value.options, selected.value)) {
-    problem.value = t('ballot.pick');
+  if (!allPicked.value) {
+    problem.value = t(many.value ? 'ballot.pick.many' : 'ballot.pick');
     return;
   }
   confirmOpen.value = true;
 }
 
 async function cast() {
-  if (!isOption(view.value?.options ?? [], selected.value)) return;
+  if (!allPicked.value) return;
   submitting.value = true;
   problem.value = '';
   try {
-    view.value = await voting.cast(slug, selected.value);
+    view.value = await voting.cast(slug, picks.value as number[]);
     justVoted.value = view.value?.vote != null;
   } catch (e) {
     const err = toApiError(e);
@@ -103,6 +114,37 @@ const result = computed(() => {
   const closes = formatInZone(new Date(v.endsAt), zone);
   const cast = formatInZone(new Date(mine.castAt), zone);
   const total = v.results ? v.results.total.toLocaleString() : t('result.vote.tile.hidden');
+  const n = questions.value.length;
+  const answers = questions.value
+    .map((q) => `${q.question}: ${labelOf(q.options, q.choice)}`)
+    .join('; ');
+  if (many.value) {
+    return {
+      verdict: {
+        badge: t('result.vote.badge'),
+        title: t('result.vote.title'),
+        body: t('result.vote.body.many', { n }),
+      },
+      headline: [
+        { label: t('result.vote.answered'), value: String(n) },
+        { label: t('result.vote.total'), value: total },
+      ],
+      nextBody: t(v.results ? 'result.vote.next.shown' : 'result.vote.next.hidden', {
+        date: closes,
+      }),
+      tiles: [
+        { label: t('result.vote.tile.questions'), value: String(n) },
+        { label: t('result.vote.tile.votes'), value: total },
+      ],
+      details: [
+        { label: t('result.vote.details.type'), value: t('type.poll.one') },
+        { label: t('result.vote.answers'), value: answers },
+        { label: t('result.vote.details.when'), value: cast },
+        { label: t('result.vote.details.closes'), value: closes },
+      ],
+      caption: t('result.vote.cast', { when: cast }),
+    };
+  }
   return {
     verdict: {
       badge: t('result.vote.badge'),
@@ -140,10 +182,23 @@ const result = computed(() => {
   };
 });
 
+/** Standings to show: every question that has them, each under its own question when there are several. */
+const standings = computed(() =>
+  questions.value
+    .filter((q) => q.results !== null)
+    .map((q) => ({ q, heading: many.value ? q.question : '' })),
+);
+
 const chooseLabel = computed(() => t(isPoll.value ? 'ballot.choose.poll' : 'ballot.choose.vote'));
-const chosenLabel = computed(() => labelOf(view.value?.options ?? [], selected.value));
+const chosenLabel = computed(() =>
+  many.value
+    ? t('ballot.confirm.many', { n: questions.value.length })
+    : labelOf(view.value?.options ?? [], picks.value[0] ?? null),
+);
 const votedLabel = computed(() =>
-  labelOf(view.value?.options ?? [], voted.value?.optionIndex ?? null),
+  many.value
+    ? t('ballot.voted.many', { n: questions.value.length })
+    : labelOf(view.value?.options ?? [], voted.value?.optionIndex ?? null),
 );
 </script>
 
@@ -188,12 +243,13 @@ const votedLabel = computed(() =>
         <template #actions>
           <UiButton :to="`/c/${slug}`" variant="secondary">{{ t('ballot.back') }}</UiButton>
         </template>
-        <template v-if="view.results" #extra>
-          <UiCard as="div" class="standings">
+        <template v-if="standings.length > 0" #extra>
+          <UiCard v-for="s in standings" :key="s.q.id" as="div" class="standings">
             <BallotResults
-              :options="view.options"
-              :results="view.results"
-              :yours="voted.optionIndex"
+              :options="s.q.options"
+              :results="s.q.results!"
+              :yours="s.q.choice"
+              :heading="s.heading"
             />
           </UiCard>
         </template>
@@ -215,27 +271,35 @@ const votedLabel = computed(() =>
       </header>
 
       <UiBanner v-if="voted" tone="info" :title="t('ballot.voted.title')" role="status">
-        {{ t('ballot.voted.body', { name: votedLabel }) }}
+        {{ many ? votedLabel : t('ballot.voted.body', { name: votedLabel }) }}
       </UiBanner>
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
 
-      <div class="layout" :data-split="view.results !== null && !voted">
+      <div class="layout" :data-split="standings.length > 0 && !voted">
         <section v-if="!voted" class="options" :aria-label="chooseLabel">
-          <UiChoiceGroup
-            v-if="isPoll"
-            :model-value="selected === null ? '' : String(selected)"
-            :legend="t('ballot.choose.poll')"
-            variant="cards"
-            :options="pollOptions"
-            @update:model-value="choose(Number($event))"
-          />
+          <template v-if="isPoll">
+            <div v-for="(q, at) in questions" :key="q.id" class="question">
+              <UiChoiceGroup
+                :model-value="picks[at] == null ? '' : String(picks[at])"
+                :legend="
+                  many
+                    ? t('ballot.question.n', { n: at + 1, total: questions.length, text: q.question })
+                    : t('ballot.choose.poll')
+                "
+                :hint="many ? q.helper : undefined"
+                variant="cards"
+                :options="pollOptions(q)"
+                @update:model-value="choose(at, Number($event))"
+              />
+            </div>
+          </template>
 
           <div v-else role="group" :aria-label="t('ballot.choose.vote')" class="grid">
             <article
               v-for="o in view.options"
               :key="o.index"
               class="candidate"
-              :data-selected="selected === o.index"
+              :data-selected="picks[0] === o.index"
             >
               <img
                 v-if="o.imageUrl"
@@ -250,15 +314,15 @@ const votedLabel = computed(() =>
                 <p v-if="o.description" class="ui-text-body-s ui-text-hint">{{ o.description }}</p>
               </div>
               <UiButton
-                :variant="selected === o.index ? 'primary' : 'secondary'"
+                :variant="picks[0] === o.index ? 'primary' : 'secondary'"
                 size="xs"
                 block
-                :icon="selected === o.index ? 'check-circle' : undefined"
-                :aria-pressed="selected === o.index"
-                @click="choose(o.index)"
+                :icon="picks[0] === o.index ? 'check-circle' : undefined"
+                :aria-pressed="picks[0] === o.index"
+                @click="choose(0, o.index)"
               >
                 {{
-                  selected === o.index
+                  picks[0] === o.index
                     ? t('ballot.selected')
                     : t('ballot.select', { name: o.label })
                 }}
@@ -270,7 +334,7 @@ const votedLabel = computed(() =>
             <UiButton
               size="lg"
               icon-trailing="arrow-right"
-              :disabled="selected === null"
+              :disabled="!allPicked"
               @click="review"
             >
               {{ t('ballot.submit') }}
@@ -279,13 +343,16 @@ const votedLabel = computed(() =>
           </div>
         </section>
 
-        <UiCard v-if="view.results" as="div" class="standings">
-          <BallotResults
-            :options="view.options"
-            :results="view.results"
-            :yours="voted?.optionIndex ?? null"
-          />
-        </UiCard>
+        <div v-if="standings.length > 0" class="standings-list">
+          <UiCard v-for="s in standings" :key="s.q.id" as="div" class="standings">
+            <BallotResults
+              :options="s.q.options"
+              :results="s.q.results!"
+              :yours="s.q.choice"
+              :heading="s.heading"
+            />
+          </UiCard>
+        </div>
         <UiBanner v-else-if="!voted" tone="info">{{ t('ballot.results.hidden') }}</UiBanner>
       </div>
 
@@ -406,6 +473,16 @@ const votedLabel = computed(() =>
 }
 .standings {
   min-inline-size: 0;
+}
+.standings-list,
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-4);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .actions {
   display: flex;

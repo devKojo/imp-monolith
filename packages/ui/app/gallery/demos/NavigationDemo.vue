@@ -4,6 +4,7 @@ import UiAccordion from '../../components/UiAccordion.vue';
 import UiBanner from '../../components/UiBanner.vue';
 import UiBreadcrumbs from '../../components/UiBreadcrumbs.vue';
 import UiCarousel from '../../components/UiCarousel.vue';
+import UiCollapsible from '../../components/UiCollapsible.vue';
 import UiButton from '../../components/UiButton.vue';
 import UiDashboardShell from '../../components/UiDashboardShell.vue';
 import UiPublicShell from '../../components/UiPublicShell.vue';
@@ -23,6 +24,7 @@ import UiConsoleShell from '../../components/UiConsoleShell.vue';
 import UiPortalShell from '../../components/UiPortalShell.vue';
 import GalleryBlock from '../GalleryBlock.vue';
 
+const collapsibleOpen = ref(true);
 const tab = ref('overview');
 const slide = ref(0);
 const slides = ['Weekend getaway draw', 'Weekly coffee giveaway', 'Campus quiz'];
@@ -103,6 +105,12 @@ const authPassword = ref('');
       <template #item-how>Answer the questions, verify your number, and you are entered.</template>
       <template #item-prizes>A weekend getaway for two.</template>
     </UiAccordion>
+  </GalleryBlock>
+
+  <GalleryBlock name="UiCollapsible">
+    <UiCollapsible v-model:open="collapsibleOpen" title="Participant details" summary="2 fields">
+      Ask for an email address and consent to the privacy notice.
+    </UiCollapsible>
   </GalleryBlock>
 
   <GalleryBlock name="UiBreadcrumbs">

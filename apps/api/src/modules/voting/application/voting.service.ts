@@ -16,10 +16,17 @@ import type {
   BallotView,
   CampaignResults,
   Participant,
+  QuestionView,
   RunnableBallot,
   StoredVote,
 } from '../domain/model';
-import { buildBallot, optionIndexOf, targetOf, toResults } from '../domain/rules';
+import {
+  answerTo,
+  buildBallot,
+  optionIndexOf,
+  questionResults,
+  targetOfChoices,
+} from '../domain/rules';
 import type { VotingRepository } from './ports';
 
 /**
@@ -70,6 +77,7 @@ export class VotingService {
       endsAt: found.endAt.toISOString(),
       question: ballot.question,
       optionCount: ballot.options.length,
+      questionCount: ballot.questions.length,
     };
   }
 
@@ -80,17 +88,19 @@ export class VotingService {
     stored: StoredVote | null,
   ): Promise<BallotView> {
     const { found, fields, ballot } = context;
-    const index = stored ? optionIndexOf(found.kind, fields, stored) : null;
     // The standings: always for a "live" campaign, otherwise only to someone who has voted.
     const showResults = found.showResults === 'live' || stored !== null;
-    const results = showResults
-      ? toResults(
-          found.kind,
-          fields,
-          ballot.options.length,
-          await this.repo.tally(ctx, found.campaignId),
-        )
-      : null;
+    const tally = showResults ? await this.repo.tally(ctx, found.campaignId) : [];
+    const questions: QuestionView[] = ballot.questions.map((q, at) => ({
+      ...q,
+      choice: !stored
+        ? null
+        : found.kind === 'poll'
+          ? answerTo(stored, q.id)
+          : optionIndexOf(found.kind, fields, stored),
+      results: showResults ? questionResults(found.kind, fields, at, tally) : null,
+    }));
+    const first = questions[0];
     return {
       slug,
       kind: found.kind,
@@ -102,10 +112,12 @@ export class VotingService {
       helper: ballot.helper,
       options: ballot.options,
       vote:
-        stored && index !== null
-          ? { optionIndex: index, castAt: stored.castAt.toISOString() }
+        stored && first && first.choice !== null
+          ? { optionIndex: first.choice, castAt: stored.castAt.toISOString() }
           : null,
-      results,
+      results: first?.results ?? null,
+      questions,
+      castAt: stored ? stored.castAt.toISOString() : null,
     };
   }
 
@@ -116,18 +128,21 @@ export class VotingService {
     return this.view(context.ctx, slug, context, stored);
   }
 
-  /** Casts the participant's one vote. A second attempt is refused, never replaced. */
+  /**
+   * Casts the participant's one vote: one answer per question, in order (an image vote has one). All of it is
+   * taken together or none of it, and a second attempt is refused, never replaced.
+   */
   async cast(
     participant: Participant | null,
     slug: string,
-    optionIndex: number,
+    choices: readonly number[],
   ): Promise<BallotView> {
     const context = await this.enter(participant, slug);
     const { found, ctx, fields, userId } = context;
     const existing = await this.repo.vote(ctx, found.campaignId, userId);
     if (existing) throw new AlreadyVotedError();
 
-    const target = targetOf(found.kind, fields, optionIndex);
+    const target = targetOfChoices(found.kind, fields, choices);
     if (!target) throw new InvalidOptionError();
     const stored = await this.repo.cast(ctx, {
       campaignId: found.campaignId,
@@ -149,23 +164,29 @@ export class VotingService {
     if (!campaign) throw new BallotNotFoundError();
     const fields = await this.repo.fields(ctx, campaignId);
     const ballot = buildBallot(campaign.kind, fields);
-    const results = toResults(
-      campaign.kind,
-      fields,
-      ballot.options.length,
-      await this.repo.tally(ctx, campaignId),
-    );
+    const tally = await this.repo.tally(ctx, campaignId);
+    const questions = ballot.questions.map((q, at) => {
+      const results = questionResults(campaign.kind, fields, at, tally);
+      return {
+        id: q.id,
+        question: q.question,
+        total: results.total,
+        options: q.options.map((o) => ({
+          ...o,
+          votes: results.options[o.index]!.votes,
+          percent: results.options[o.index]!.percent,
+        })),
+      };
+    });
+    const first = questions[0];
     return {
       campaignId,
       kind: campaign.kind,
       title: campaign.title,
       question: ballot.question,
-      total: results.total,
-      options: ballot.options.map((o) => ({
-        ...o,
-        votes: results.options[o.index]!.votes,
-        percent: results.options[o.index]!.percent,
-      })),
+      total: first?.total ?? 0,
+      options: first?.options ?? [],
+      questions,
     };
   }
 }

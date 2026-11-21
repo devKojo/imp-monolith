@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import { t } from '../../../i18n';
 import { leader, resultFor } from '../logic';
 import type { BallotOption, Results } from '../types';
@@ -13,7 +13,10 @@ const props = defineProps<{
   results: Results;
   /** The option the signed-in participant voted for, if any. */
   yours?: number | null;
+  /** The question these standings answer, when a ballot has several; replaces the generic title. */
+  heading?: string;
 }>();
+const titleId = useId();
 
 const top = computed(() => leader(props.results));
 const total = computed(() =>
@@ -24,9 +27,9 @@ const total = computed(() =>
 </script>
 
 <template>
-  <section class="results" aria-labelledby="results-title">
+  <section class="results" :aria-labelledby="titleId">
     <div class="results__head">
-      <h2 id="results-title" class="ui-text-h3">{{ t('ballot.results.title') }}</h2>
+      <h2 :id="titleId" class="ui-text-h3">{{ heading || t('ballot.results.title') }}</h2>
       <p class="ui-text-caption ui-text-hint" role="status">{{ total }}</p>
     </div>
     <ul class="results__rows">
