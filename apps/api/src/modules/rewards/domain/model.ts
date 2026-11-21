@@ -108,7 +108,7 @@ export type AwardRow = {
   riskReasons: string[];
 };
 
-export type ReviewDecision = 'release' | 'reject';
+export type ReviewDecision = 'release' | 'reject' | 'revoke';
 export type ReviewOutcome =
   | { kind: 'done'; status: string }
   | { kind: 'platform' }

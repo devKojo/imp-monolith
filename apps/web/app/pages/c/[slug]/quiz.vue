@@ -17,6 +17,7 @@ import {
 import type { AttemptView, QuizInfo } from '../../../modules/quiz/types';
 import { useOpenCampaigns } from '../../../modules/participant/useOpenCampaigns';
 import { useQuiz } from '../../../modules/quiz/useQuiz';
+import { useMyRewards } from '../../../modules/rewards/useMyRewards';
 
 /**
  * The quiz screen. One question at a time; choosing an option saves it at once, so nothing is lost if
@@ -46,6 +47,22 @@ const openCampaigns = useOpenCampaigns();
 const next = computed(() => openCampaigns.campaigns.value.find((c) => c.slug !== slug) ?? null);
 // Confetti only when the result arrives in this visit, not when coming back to a finished quiz.
 const celebrate = ref(false);
+
+// A pass may have won a tier (prizes given to the first to pass): find it among the person's awards.
+const myRewards = useMyRewards();
+const reward = computed(
+  () =>
+    myRewards.awards.data.value.items.find(
+      (a) => a.campaign.slug === slug && a.source === 'COMPLETION',
+    ) ?? null,
+);
+// The award is made when the quiz is finished, so look again then.
+watch(
+  () => view.value?.result?.passed,
+  (passed) => {
+    if (passed) void myRewards.refresh();
+  },
+);
 const retaking = ref(false);
 
 useHead({ title: t('quiz.page.title') });
@@ -206,6 +223,7 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
         :now="openCampaigns.now.value"
         :time-up="timeUp"
         :celebrate="celebrate"
+        :reward="reward"
         :retaking="retaking"
         @retake="retake"
       />

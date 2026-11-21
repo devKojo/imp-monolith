@@ -131,6 +131,15 @@ describe('selectionOf', () => {
       selection: 'POOL',
     });
   });
+  it('has nothing to settle when tiers go to the first to qualify', () => {
+    expect(
+      selectionOf({
+        archetype: 'QUIZ',
+        pool: null,
+        prizes: [prize({ id: 'p', position: 1, selection: 'COMPLETION' })],
+      }),
+    ).toEqual({ ok: false, reason: 'AS_QUALIFIED' });
+  });
   it('refuses what cannot be settled in one step', () => {
     expect(selectionOf({ archetype: 'INSTANT', ...base })).toEqual({
       ok: false,
