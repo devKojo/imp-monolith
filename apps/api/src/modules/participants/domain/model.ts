@@ -1,9 +1,10 @@
 /**
  * Participants as a business sees them: who took part in its campaigns and how far they got. Read-only;
- * the facts come from quiz attempts and survey responses, which belong to the `quiz` and `survey` modules.
+ * the facts come from quiz attempts, survey responses, votes and giveaway entries, which belong to the
+ * `quiz`, `survey`, `voting` and `giveaway` modules. A vote or an entry is complete the moment it is made.
  * Only a name is ever shown: no email, no answers.
  */
-export type ParticipationKind = 'quiz' | 'survey';
+export type ParticipationKind = 'quiz' | 'survey' | 'poll' | 'vote' | 'giveaway';
 export type ParticipationStatus = 'in_progress' | 'completed';
 
 /** One participant's participation in one campaign. */

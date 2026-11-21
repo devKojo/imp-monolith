@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { isOption, labelOf, leader, resultFor } from './logic';
+import { isOption, labelOf, leader, resultFor, rankOf } from './logic';
 import type { BallotOption, Results } from './types';
 
 const options: BallotOption[] = [
@@ -56,5 +56,24 @@ describe('labelOf and isOption', () => {
     expect(isOption(options, 0)).toBe(true);
     expect(isOption(options, 2)).toBe(false);
     expect(isOption(options, null)).toBe(false);
+  });
+});
+
+describe('rankOf', () => {
+  const results = {
+    total: 10,
+    options: [
+      { index: 0, votes: 4, percent: 40 },
+      { index: 1, votes: 4, percent: 40 },
+      { index: 2, votes: 2, percent: 20 },
+    ],
+  };
+  it('puts the most votes first and shares a place on a tie', () => {
+    expect(rankOf(results, 0)).toBe(1);
+    expect(rankOf(results, 1)).toBe(1);
+    expect(rankOf(results, 2)).toBe(3);
+  });
+  it('is null without standings', () => {
+    expect(rankOf(null, 0)).toBeNull();
   });
 });

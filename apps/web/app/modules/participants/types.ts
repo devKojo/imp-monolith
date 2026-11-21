@@ -1,4 +1,4 @@
-export type ParticipationKind = 'quiz' | 'survey';
+export type ParticipationKind = 'quiz' | 'survey' | 'poll' | 'vote' | 'giveaway';
 export type ParticipationStatus = 'in_progress' | 'completed';
 
 /** One participant's participation in one campaign, as the business sees it: a name, never an email. */

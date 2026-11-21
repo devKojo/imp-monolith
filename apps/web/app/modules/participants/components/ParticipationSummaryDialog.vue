@@ -12,6 +12,9 @@ import {
   minutesBetween,
   outcomePoints,
 } from '../logic';
+import { standingsBars } from '../../business/overview';
+import type { CampaignResults } from '../../voting/types';
+import { useCampaignResults } from '../../voting/useVoting';
 import type { CampaignActivity, Participation } from '../types';
 import { useParticipants } from '../useParticipants';
 
@@ -27,10 +30,16 @@ const props = defineProps<{ open: boolean; participation: Participation | null }
 const emit = defineEmits<{ 'update:open': [open: boolean] }>();
 
 const store = useParticipants();
+const ballotApi = useCampaignResults();
+const ballot = ref<CampaignResults | null>(null);
 const zone = browserZone();
 const activity = ref<CampaignActivity | null>(null);
 const state = ref<'loading' | 'ready' | 'error'>('loading');
 const view = ref('outcome');
+/** A poll or image vote has standings, a giveaway only counts over time; quizzes and surveys have an outcome. */
+const isBallot = (k: string | undefined) => k === 'poll' || k === 'vote';
+const firstView = (k: string | undefined) =>
+  isBallot(k) ? 'standings' : k === 'giveaway' ? 'activity' : 'outcome';
 const kind = ref('area');
 const details = ref(false);
 
@@ -39,8 +48,12 @@ async function load() {
   if (!p) return;
   state.value = 'loading';
   activity.value = null;
+  ballot.value = null;
   try {
-    activity.value = await store.campaign(p.campaignId);
+    [activity.value, ballot.value] = await Promise.all([
+      store.campaign(p.campaignId),
+      isBallot(p.kind) ? ballotApi.results(p.campaignId).catch(() => null) : Promise.resolve(null),
+    ]);
     state.value = 'ready';
   } catch {
     state.value = 'error';
@@ -51,7 +64,7 @@ watch(
   ([open]) => {
     if (!open) return;
     // Each opening starts from the short view.
-    view.value = 'outcome';
+    view.value = firstView(props.participation?.kind);
     details.value = false;
     void load();
   },
@@ -108,10 +121,22 @@ const more = computed<Fact[]>(() => {
 });
 
 const a = computed(() => activity.value);
-const viewOptions = [
-  { value: 'outcome', label: t('participants.tab.outcome') },
-  { value: 'activity', label: t('participants.tab.activity') },
-];
+const activityOption = { value: 'activity', label: t('participants.tab.activity') };
+const viewOptions = computed(() =>
+  isBallot(p.value?.kind)
+    ? [{ value: 'standings', label: t('participants.tab.standings') }, activityOption]
+    : p.value?.kind === 'giveaway'
+      ? [activityOption]
+      : [{ value: 'outcome', label: t('participants.tab.outcome') }, activityOption],
+);
+const standings = computed(() =>
+  ballot.value ? standingsBars(ballot.value, t('participants.chart.votes')) : [],
+);
+const standingsSummary = computed(() =>
+  ballot.value
+    ? t('ballot.results.total', { n: ballot.value.total.toLocaleString() })
+    : t('overview.chart.standings.failed'),
+);
 const kindOptions = [
   { value: 'area', label: t('participants.chartKind.area') },
   { value: 'bar', label: t('participants.chartKind.bar') },
@@ -147,14 +172,25 @@ const outcomeSummary = computed(() => {
       })}`
     : base;
 });
-const series = computed(() =>
-  a.value
-    ? activitySeries(a.value.daily, {
-        started: t('participants.chart.started'),
-        completed: t('participants.chart.completed'),
-      })
-    : [],
-);
+const series = computed(() => {
+  if (!a.value) return [];
+  // A vote or an entry starts and completes at once, so one series says it: votes or entries a day.
+  if (a.value.kind === 'giveaway' || isBallot(a.value.kind)) {
+    const all = activitySeries(a.value.daily, { started: '', completed: '' });
+    return [
+      {
+        name: t(
+          a.value.kind === 'giveaway' ? 'participants.chart.entries' : 'participants.chart.votes',
+        ),
+        points: all[1]!.points,
+      },
+    ];
+  }
+  return activitySeries(a.value.daily, {
+    started: t('participants.chart.started'),
+    completed: t('participants.chart.completed'),
+  });
+});
 const activitySummary = computed(() => {
   const best = a.value ? busiestDay(a.value.daily) : null;
   return best
@@ -214,6 +250,7 @@ const activitySummary = computed(() => {
           </div>
           <div class="charts__controls">
             <UiSegmentedControl
+              v-if="viewOptions.length > 1"
               v-model="view"
               :label="t('participants.tab.label')"
               :options="viewOptions"
@@ -237,6 +274,14 @@ const activitySummary = computed(() => {
             :series="outcome"
             :summary="outcomeSummary"
             :center-text="String(a.started)"
+          />
+          <UiChart
+            v-else-if="view === 'standings'"
+            type="bar"
+            :title="t('participants.chart.standings')"
+            :series="standings"
+            :summary="standingsSummary"
+            :table-limit="5"
           />
           <UiChart
             v-else

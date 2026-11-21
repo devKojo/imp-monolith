@@ -5,6 +5,9 @@ import { t } from '../../../i18n';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
+import { timeLeftText } from '../../../modules/discovery/logic';
+import ParticipationResult from '../../../modules/participant/components/ParticipationResult.vue';
+import { useOpenCampaigns } from '../../../modules/participant/useOpenCampaigns';
 import type { GiveawayView } from '../../../modules/giveaway/types';
 import { useGiveaway } from '../../../modules/giveaway/useGiveaway';
 
@@ -17,6 +20,11 @@ definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 const slug = String(useRoute().params.slug);
 const giveaway = useGiveaway();
 const footer = siteFooter();
+
+const openCampaigns = useOpenCampaigns();
+const next = computed(() => openCampaigns.campaigns.value.find((c) => c.slug !== slug) ?? null);
+// Confetti only for someone who has just entered (the campaign page adds ?welcome=1), not on a return visit.
+const celebrate = useRoute().query.welcome === '1';
 
 const state = ref<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
 const view = ref<GiveawayView | null>(null);
@@ -44,6 +52,45 @@ const entered = computed(() =>
   view.value?.entry ? formatInZone(new Date(view.value.entry.enteredAt), zone) : '',
 );
 const closes = computed(() => (view.value ? formatInZone(new Date(view.value.endsAt), zone) : ''));
+
+const result = computed(() => {
+  const v = view.value;
+  if (!v?.entry) return null;
+  const n = Math.max(1, v.entryCount);
+  return {
+    verdict: {
+      badge: t('result.giveaway.badge'),
+      title: t('result.giveaway.title'),
+      body: t('result.giveaway.body', { title: v.title }),
+    },
+    headline: [
+      {
+        label: t('result.giveaway.ticket'),
+        value: t('giveaway.ticket.number', { n: v.entry.ticketNumber }),
+      },
+      { label: t('result.giveaway.entries'), value: v.entryCount.toLocaleString() },
+    ],
+    tiles: [
+      {
+        label: t('result.giveaway.ticket'),
+        value: t('giveaway.ticket.number', { n: v.entry.ticketNumber }),
+      },
+      {
+        label: t('result.giveaway.tile.odds'),
+        value: t('result.giveaway.tile.odds.value', { n: n.toLocaleString() }),
+      },
+      {
+        label: t('result.giveaway.tile.left'),
+        value: timeLeftText(v.endsAt, openCampaigns.now.value),
+      },
+    ],
+    details: [
+      { label: t('result.giveaway.details.entered'), value: entered.value },
+      { label: t('result.giveaway.details.closes'), value: closes.value },
+      { label: t('result.giveaway.details.ticket'), value: String(v.entry.ticketNumber) },
+    ],
+  };
+});
 </script>
 
 <template>
@@ -70,38 +117,31 @@ const closes = computed(() => (view.value ? formatInZone(new Date(view.value.end
       @action="load"
     />
 
-    <div v-else class="wrap">
-      <UiCard as="section" aria-labelledby="entered-title" class="done">
-        <UiIcon name="check-circle" :size="40" />
-        <h1 id="entered-title" class="ui-text-h2">{{ t('giveaway.done.title') }}</h1>
-        <p class="ui-text-body">{{ t('giveaway.done.body', { title: view.title }) }}</p>
-
-        <div class="ticket" role="group" :aria-label="t('giveaway.ticket.label')">
-          <p class="ui-text-label-sm ticket__label">{{ t('giveaway.ticket.label') }}</p>
-          <p class="ticket__number ui-text-display">
-            {{ t('giveaway.ticket.number', { n: view.entry.ticketNumber }) }}
-          </p>
-          <p class="ui-text-caption ui-text-hint">{{ t('giveaway.entered', { date: entered }) }}</p>
-        </div>
-
-        <ul class="facts">
-          <li class="ui-text-body-s">
-            {{ t('giveaway.entries', { n: view.entryCount.toLocaleString() }) }}
-          </li>
-          <li class="ui-text-body-s">{{ t('giveaway.closes', { date: closes }) }}</li>
-        </ul>
-
-        <UiBanner tone="info" :title="t('giveaway.notice.title')">{{
-          t('giveaway.notice.body')
-        }}</UiBanner>
-
-        <div class="actions">
-          <UiButton :to="`/c/${slug}`" variant="secondary" size="xs">{{
-            t('ballot.back')
+    <div v-else-if="result" class="wrap">
+      <ParticipationResult
+        :type-label="t('type.giveaway.one')"
+        :title="view.title"
+        :business-name="view.businessName"
+        :caption="t('giveaway.entered', { date: entered })"
+        :verdict="result.verdict"
+        :headline="result.headline"
+        :next-title="t('result.giveaway.next.title')"
+        :next-body="t('result.giveaway.next.body')"
+        :summary-title="t('result.giveaway.summary.title')"
+        :tiles="result.tiles"
+        :details-title="t('result.giveaway.details.title')"
+        :details="result.details"
+        :next="next"
+        :now="openCampaigns.now.value"
+        :celebrate="celebrate"
+      >
+        <template #actions>
+          <UiButton to="/me/rewards" icon="arrow-right">{{
+            t('result.giveaway.rewards')
           }}</UiButton>
-          <UiButton to="/me" size="xs">{{ t('quiz.toDashboard') }}</UiButton>
-        </div>
-      </UiCard>
+          <UiButton :to="`/c/${slug}`" variant="secondary">{{ t('ballot.back') }}</UiButton>
+        </template>
+      </ParticipationResult>
     </div>
   </UiPublicShell>
 </template>
@@ -109,51 +149,9 @@ const closes = computed(() => (view.value ? formatInZone(new Date(view.value.end
 <style scoped>
 .wrap {
   inline-size: 100%;
-  max-inline-size: calc(var(--ui-space-12) * 12);
+  max-inline-size: calc(var(--ui-space-12) * 24);
   margin-block: var(--ui-space-8);
   margin-inline: auto;
   padding-inline: var(--ui-space-4);
-}
-.done {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-4);
-  align-items: flex-start;
-}
-.done h1,
-.done p {
-  margin: 0;
-}
-.ticket {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-1);
-  inline-size: 100%;
-  padding: var(--ui-space-4);
-  background: var(--ui-color-selected-bg);
-  border: 1px dashed var(--ui-color-border);
-  border-radius: var(--ui-radius-lg);
-}
-.ticket__label {
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ui-color-text-secondary);
-}
-.ticket__number {
-  font-variant-numeric: tabular-nums;
-}
-.facts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--ui-color-text-secondary);
-}
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ui-space-2);
 }
 </style>
