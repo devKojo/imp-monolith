@@ -25,8 +25,26 @@ export type PrizeInput = {
   valueLabel: string;
   winners: number;
   description: string;
+  /** What the prize is worth to the winner. Absent means an item shown as text (older clients). */
+  kind?: PrizeKind;
+  /** Whole minor units (cash) or points. Null for an item. */
+  amountMinor?: number | null;
+  currency?: string | null;
+  /** Placing range this prize covers ("1st" is 1 to 1); both or neither. */
+  rankFrom?: number | null;
+  rankTo?: number | null;
+  /** How winners are chosen; null lets the campaign's type decide. */
+  selection?: PrizeSelection | null;
 };
 export type Prize = PrizeInput & { id: string };
+
+export const PRIZE_KINDS = ['CASH', 'POINTS', 'ITEM'] as const;
+export type PrizeKind = (typeof PRIZE_KINDS)[number];
+export const PRIZE_SELECTIONS = ['RANKING', 'DRAW'] as const;
+export type PrizeSelection = (typeof PRIZE_SELECTIONS)[number];
+
+/** The largest cash or points amount for one prize (minor units): a typo guard, not a business rule. */
+export const AMOUNT_MAX = 1_000_000_000_000;
 
 /** One field kind a template allows. */
 export type AllowedField = {

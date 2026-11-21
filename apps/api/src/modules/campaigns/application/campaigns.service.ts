@@ -33,6 +33,7 @@ import {
   failedChecks,
   normalizeFields,
   normalizePrizes,
+  prizeProblem,
   normalizeSettings,
   runningStatusFor,
   slugify,
@@ -141,6 +142,9 @@ export class CampaignsService {
     const fields = normalizeFields(input.fields);
     const problem = templateProblem(fields, template);
     if (problem) throw new CampaignInvalidError(problem, { field: 'fields' });
+    const prizes = input.settings.pool ? [] : normalizePrizes(input.prizes);
+    const prizeIssue = prizeProblem(prizes);
+    if (prizeIssue) throw new CampaignInvalidError(prizeIssue, { field: 'prizes' });
     const result = await this.repo.saveDraft(ctx, id, input.expectedVersion, {
       title: input.title,
       summary: input.summary.trim(),
@@ -148,7 +152,7 @@ export class CampaignsService {
       startAt,
       endAt,
       // A prize pool replaces prize tiers, so a campaign has one or the other, never both.
-      prizes: input.settings.pool ? [] : normalizePrizes(input.prizes),
+      prizes,
       fields,
       settings: normalizeSettings(
         template,

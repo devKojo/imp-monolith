@@ -105,6 +105,8 @@ model User {
   votes              Vote[]
   giveawayEntries    GiveawayEntry[]
   rewardAwards       RewardAward[]
+  rewardClaims       RewardClaim[]
+  scamReports        ScamReport[]
   pointsLedger       PointsLedger[]
   signals            ParticipationSignal[]
 
@@ -273,6 +275,7 @@ model Campaign {
   votes           Vote[]
   giveawayEntries GiveawayEntry[]
   rewardAwards    RewardAward[]
+  scamReports     ScamReport[]
   rewardDraws     RewardDraw[]
   signals         ParticipationSignal[]
 
@@ -541,6 +544,12 @@ enum AwardStatus {
   REVOKED
 }
 
+enum PayoutMethod {
+  MOBILE_MONEY
+  BANK_TRANSFER
+  DELIVERY
+}
+
 enum SignalKind {
   JOIN
   CLAIM
@@ -572,6 +581,8 @@ model RewardAward {
   user     User           @relation(fields: [userId], references: [id])
   events   RewardEvent[]
   ledger   PointsLedger[]
+  claim    RewardClaim?
+  reports  ScamReport[]
 
   @@unique([tenantId, id])
   @@index([tenantId, campaignId, status])
@@ -660,4 +671,81 @@ model ParticipationSignal {
   @@index([tenantId, userId])
   @@index([createdAt])
   @@map("participation_signals")
+}
+
+/// @owner rewards
+/// Where a cash or item award should go. The destination is encrypted; the hash is keyed (for spotting one
+/// destination used by many accounts) and the hint is the masked tail shown back to people. One per award.
+model RewardClaim {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  awardId         String       @map("award_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  method          PayoutMethod
+  accountName     String       @map("account_name")
+  destinationEnc  String       @map("destination_enc")
+  destinationHash String       @map("destination_hash")
+  destinationHint String       @map("destination_hint")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  award RewardAward @relation(fields: [tenantId, awardId], references: [tenantId, id])
+  user  User        @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, awardId])
+  @@index([tenantId, destinationHash])
+  @@index([tenantId, userId])
+  @@map("reward_claims")
+}
+
+enum ScamReason {
+  ASKED_TO_PAY
+  SUSPICIOUS_CONTACT
+  NOT_RECEIVED
+  OTHER
+}
+
+enum ScamReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+/// @owner rewards
+/// A winner's report that something about an award looks like a scam (asked to pay a fee, odd contact, not
+/// received). The reporter can read their own; the business can neither read nor tell who reported (no
+/// tenant read policy); the platform reviews them. `severity` orders the review queue and comes from the
+/// reason alone.
+model ScamReport {
+  id         String           @id @default(uuid(7)) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  campaignId String           @map("campaign_id") @db.Uuid
+  awardId    String           @map("award_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  reason     ScamReason
+  details    String           @default("")
+  severity   Int
+  status     ScamReportStatus @default(OPEN)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  campaign Campaign    @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
+  award    RewardAward @relation(fields: [tenantId, awardId], references: [tenantId, id])
+  user     User        @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, awardId, userId, reason])
+  @@index([tenantId, campaignId])
+  @@index([status, severity])
+  @@map("scam_reports")
+}
+
+/// @owner rewards
+/// Fixed-window counters for rate limiting that hold across server instances. The key is a caller-chosen
+/// string (already hashed or an opaque id); no personal data. Old windows are pruned as the limiter runs.
+model RateLimitCounter {
+  key         String
+  windowStart DateTime @map("window_start") @db.Timestamptz
+  count       Int
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit_counters")
 }

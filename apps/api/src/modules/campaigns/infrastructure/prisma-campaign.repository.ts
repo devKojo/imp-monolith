@@ -7,7 +7,13 @@ import type {
 import { withTenant, writeAudit, type TenantContext, type TenantTx } from '@/shared/database';
 import type { CampaignRepository, DraftContent, WriteResult } from '../application/ports';
 import type { CampaignField, CampaignSettings, FieldInput, FieldKind } from '../domain/fields';
-import type { CampaignStatus, Prize, StoredCampaign, StoredSummary } from '../domain/model';
+import type {
+  CampaignStatus,
+  Prize,
+  PrizeInput,
+  StoredCampaign,
+  StoredSummary,
+} from '../domain/model';
 import { poolOf } from '../domain/pool';
 
 const withContent = {
@@ -59,7 +65,12 @@ function settingsOf(value: unknown): CampaignSettings {
         }
       : {}),
     ...(ballot
-      ? { ballot: { showResults: ballot.showResults === 'live' ? ('live' as const) : ('after_vote' as const) } }
+      ? {
+          ballot: {
+            showResults:
+              ballot.showResults === 'live' ? ('live' as const) : ('after_vote' as const),
+          },
+        }
       : {}),
     ...(pool ? { pool } : {}),
   };
@@ -87,13 +98,7 @@ function detailOf(r: Row): StoredCampaign {
     templateId: r.templateId,
     startAt: iso(r.startAt),
     endAt: iso(r.endAt),
-    prizes: r.prizes.map((p): Prize => ({
-      id: p.id,
-      name: p.name,
-      valueLabel: p.valueLabel,
-      winners: p.winners,
-      description: p.description,
-    })),
+    prizes: r.prizes.map(prizeOf),
     fields: r.fields.map(fieldOf),
     settings: settingsOf(r.settings),
     version: r.version,
@@ -104,12 +109,24 @@ function detailOf(r: Row): StoredCampaign {
   };
 }
 
+type PrizeRecord = Row['prizes'][number];
+
+const prizeOf = (p: PrizeRecord): Prize => ({
+  id: p.id,
+  name: p.name,
+  valueLabel: p.valueLabel,
+  winners: p.winners,
+  description: p.description,
+  kind: p.kind,
+  amountMinor: p.amountMinor === null ? null : Number(p.amountMinor),
+  currency: p.currency,
+  rankFrom: p.rankFrom,
+  rankTo: p.rankTo,
+  selection: p.selection === 'RANKING' || p.selection === 'DRAW' ? p.selection : null,
+});
+
 /** Only the prize's own fields: never an id, so a copy of a prize gets a new one. */
-const prizeRows = (
-  ctx: TenantContext,
-  campaignId: string,
-  prizes: ReadonlyArray<{ name: string; valueLabel: string; winners: number; description: string }>,
-) =>
+const prizeRows = (ctx: TenantContext, campaignId: string, prizes: readonly PrizeInput[]) =>
   prizes.map((p, position) => ({
     tenantId: ctx.tenantId,
     campaignId,
@@ -118,6 +135,12 @@ const prizeRows = (
     valueLabel: p.valueLabel,
     winners: p.winners,
     description: p.description,
+    kind: p.kind ?? 'ITEM',
+    amountMinor: p.amountMinor ?? null,
+    currency: p.currency ?? null,
+    rankFrom: p.rankFrom ?? null,
+    rankTo: p.rankTo ?? null,
+    selection: p.selection ?? null,
   }));
 
 /** Fields as rows, in the order given. The API's lowercase kind is the enum's uppercase form. */
@@ -358,7 +381,9 @@ export class PrismaCampaignRepository implements CampaignRepository {
         },
       });
       if (source.prizes.length > 0) {
-        await tx.campaignPrize.createMany({ data: prizeRows(ctx, copy.id, source.prizes) });
+        await tx.campaignPrize.createMany({
+          data: prizeRows(ctx, copy.id, source.prizes.map(prizeOf)),
+        });
       }
       if (source.fields.length > 0) {
         // A copy gets its own ids; only the content is carried over.

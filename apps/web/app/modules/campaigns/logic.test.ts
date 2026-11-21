@@ -90,6 +90,11 @@ describe('prizes', () => {
       valueLabel: '',
       winners: 1,
       description: '',
+      kind: 'ITEM',
+      amountMinor: null,
+      currency: null,
+      rankFrom: null,
+      rankTo: null,
     });
   });
 

@@ -1,0 +1,284 @@
+import { randomUUID } from 'node:crypto';
+import { createTenantContext, type TenantContext } from '@/shared/database';
+import type { RateLimit } from '../infrastructure/attempt-limiter';
+import type { SecretBox } from '../infrastructure/secret-box';
+import { NO_SETTLE_FACTS, assessSettlement } from '../domain/risk';
+import { awardsCsv } from '../domain/export';
+import { newNonce, rulesHashOf, rulesOf, runDraw } from '../domain/draw';
+import {
+  AlreadyAwardedError,
+  AwardNotFoundError,
+  AwardNotPayableError,
+  AwardNotReviewableError,
+  PlatformReviewRequiredError,
+  CampaignNotEndedError,
+  CampaignNotFoundError,
+  DrawNotFoundError,
+  DrawNotSealedError,
+  NoActiveBusinessError,
+  NoEntrantsError,
+  RewardsPermissionError,
+  SealNotAllowedError,
+  UnsupportedRewardsError,
+} from '../domain/errors';
+import type {
+  Actor,
+  AwardResult,
+  AwardRow,
+  DrawRecord,
+  DrawRow,
+  DrawView,
+  PayoutDestination,
+  PlannedAward,
+  ReviewDecision,
+  PublishedDraw,
+  SettleableCampaign,
+} from '../domain/model';
+import { canManageRewards } from '../domain/permissions';
+import { drawPlan, poolPlan, rankingPlan, selectionOf } from '../domain/plan';
+import type { RewardsRepository } from './ports';
+
+/** How long a winner has to claim before the award expires. */
+export const CLAIM_WINDOW_DAYS = 14;
+
+const REASON: Record<'UNSUPPORTED' | 'MIXED' | 'NO_PRIZES', string> = {
+  UNSUPPORTED: 'This kind of reward cannot be settled in one step',
+  MIXED: 'The prizes of this campaign use different ways of choosing winners',
+  NO_PRIZES: 'This campaign has no prizes to award',
+};
+
+const view = (d: DrawRow): DrawView => ({
+  id: d.id,
+  rulesHash: d.rulesHash,
+  sealedAt: d.sealedAt.toISOString(),
+  drawnAt: d.drawnAt?.toISOString() ?? null,
+});
+
+/**
+ * Settling a campaign: who won, and what each is owed. The business is resolved from the actor and the role
+ * is checked once here, so no route can forget it (R-ARC-08). Winners are never typed in: they come from the
+ * score ranking, a pool's equal shares, or a sealed, reproducible draw.
+ */
+export class RewardsService {
+  constructor(
+    private readonly repo: RewardsRepository,
+    private readonly box: SecretBox,
+    /** How often one person may look at payout destinations. */
+    private readonly reveals: RateLimit,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
+
+  private scope(actor: Actor | null): TenantContext {
+    if (!actor) throw new NoActiveBusinessError();
+    if (!canManageRewards(actor.role)) throw new RewardsPermissionError();
+    return createTenantContext({
+      tenantId: actor.tenantId,
+      actorId: actor.userId,
+      requestId: randomUUID(),
+    });
+  }
+
+  private async load(ctx: TenantContext, campaignId: string): Promise<SettleableCampaign> {
+    const c = await this.repo.campaign(ctx, campaignId);
+    if (!c) throw new CampaignNotFoundError();
+    return c;
+  }
+
+  private ended(c: SettleableCampaign): boolean {
+    if (c.status === 'DRAFT' || c.status === 'CANCELLED') return false;
+    // COMPLETED with the end date still ahead means a prize pool campaign that is full.
+    return c.status === 'COMPLETED' || (c.endAt !== null && c.endAt <= this.now());
+  }
+
+  /**
+   * Fixes the draw's rules and randomness before the campaign closes. Publishes only a commitment; safe to
+   * repeat (it returns the same sealed draw).
+   */
+  async seal(actor: Actor | null, campaignId: string): Promise<DrawView> {
+    const ctx = this.scope(actor);
+    const c = await this.load(ctx, campaignId);
+    const picked = selectionOf(c);
+    if (!picked.ok) throw new UnsupportedRewardsError(REASON[picked.reason]);
+    if (picked.selection !== 'DRAW') throw new SealNotAllowedError('Only a draw needs sealing');
+    if (c.status === 'DRAFT' || c.status === 'CANCELLED' || this.ended(c)) {
+      throw new SealNotAllowedError('Seal a draw while its campaign is open');
+    }
+    const nonce = newNonce();
+    const sealed = await this.repo.seal(ctx, {
+      campaignId,
+      rulesHash: rulesHashOf(rulesOf(c), nonce),
+      nonce,
+      sealedAt: this.now(),
+    });
+    return view(sealed);
+  }
+
+  /** Settles an ended campaign once: creates every award, claimable for `CLAIM_WINDOW_DAYS`. */
+  async award(actor: Actor | null, campaignId: string): Promise<AwardResult> {
+    const ctx = this.scope(actor);
+    const c = await this.load(ctx, campaignId);
+    if (!this.ended(c)) throw new CampaignNotEndedError();
+    const picked = selectionOf(c);
+    if (!picked.ok) throw new UnsupportedRewardsError(REASON[picked.reason]);
+
+    let awards: PlannedAward[];
+    let draw: { id: string; record: DrawRecord } | null = null;
+    let drawn: DrawRow | null = null;
+
+    if (picked.selection === 'RANKING') {
+      awards = rankingPlan(c.prizes, await this.repo.entrants(ctx, c, 'ranking'));
+    } else if (picked.selection === 'POOL' && c.pool) {
+      awards = poolPlan(
+        c.pool,
+        (await this.repo.entrants(ctx, c, 'pool')).map((e) => e.userId),
+      );
+    } else {
+      const sealed = await this.repo.draw(ctx, campaignId);
+      // The seal must predate the close and still match the prizes, or the draw is not the one promised.
+      if (!sealed || (c.endAt && sealed.sealedAt > c.endAt)) throw new DrawNotSealedError();
+      if (sealed.drawnAt) throw new AlreadyAwardedError();
+      if (rulesHashOf(rulesOf(c), sealed.nonce) !== sealed.rulesHash)
+        throw new DrawNotSealedError();
+      const entrants = await this.repo.entrants(ctx, c, 'draw');
+      const outcome = runDraw({
+        drawId: sealed.id,
+        rulesHash: sealed.rulesHash,
+        nonce: sealed.nonce,
+        userIds: entrants.map((e) => e.userId),
+      });
+      awards = drawPlan(c.prizes, outcome.order);
+      draw = {
+        id: sealed.id,
+        record: {
+          rules: rulesOf(c),
+          entrantsHash: outcome.entrantsHash,
+          entrants: outcome.refs,
+          seed: outcome.seed,
+          winners: awards.map((a, i) => ({
+            ref: outcome.orderRefs[i] as string,
+            prizeId: a.prizeId as string,
+            slot: a.slot,
+          })),
+          drawnAt: this.now(),
+        },
+      };
+      drawn = { ...sealed, drawnAt: draw.record.drawnAt };
+    }
+
+    if (awards.length === 0) throw new NoEntrantsError();
+    const now = this.now();
+    // Every winner is checked before anything can be claimed: the ones the rules cannot clear wait for review.
+    const facts = await this.repo.settlementFacts(
+      ctx,
+      campaignId,
+      awards.map((a) => a.userId),
+      now,
+    );
+    awards = awards.map((a) => ({
+      ...a,
+      risk: assessSettlement(facts.get(a.userId) ?? NO_SETTLE_FACTS),
+    }));
+    await this.repo.settle(ctx, {
+      campaignId,
+      awards,
+      claimBy: new Date(now.getTime() + CLAIM_WINDOW_DAYS * 86_400_000),
+      actorId: ctx.actorId,
+      draw,
+    });
+    return {
+      campaignId,
+      selection: picked.selection,
+      awarded: awards.length,
+      draw: drawn ? view(drawn) : null,
+    };
+  }
+
+  async awards(actor: Actor | null, campaignId: string): Promise<AwardRow[]> {
+    const ctx = this.scope(actor);
+    await this.load(ctx, campaignId);
+    return this.repo.awards(ctx, campaignId);
+  }
+
+  /** The awards as a spreadsheet, for the business's own books. Destinations are never in it. */
+  async awardsCsv(actor: Actor | null, campaignId: string): Promise<string> {
+    return awardsCsv(await this.awards(actor, campaignId));
+  }
+
+  /**
+   * Where to send one claimed award. Decrypted only here, only for someone who manages rewards, and every
+   * view is recorded against them in the award's history.
+   */
+  async destination(actor: Actor | null, awardId: string): Promise<PayoutDestination> {
+    const ctx = this.scope(actor);
+    // Reading where money goes is limited per person, so a stolen session cannot trawl the winners.
+    await this.reveals.hit(actor!.userId);
+    const found = await this.repo.reveal(ctx, awardId, actor!.userId);
+    if (!found) throw new AwardNotFoundError();
+    const { encrypted, ...rest } = found;
+    return { ...rest, destination: this.box.decrypt(encrypted) };
+  }
+
+  /** Records that the business has paid or sent a claimed cash or item award, with its own reference. */
+  async fulfil(
+    actor: Actor | null,
+    awardId: string,
+    reference: string,
+  ): Promise<{ status: 'FULFILLED'; reference: string | null; alreadyPaid: boolean }> {
+    const ctx = this.scope(actor);
+    const r = await this.repo.fulfil(ctx, {
+      awardId,
+      actorId: actor!.userId,
+      reference,
+      now: this.now(),
+    });
+    switch (r.kind) {
+      case 'fulfilled':
+        return { status: 'FULFILLED', reference, alreadyPaid: false };
+      case 'already':
+        return { status: 'FULFILLED', reference: r.reference, alreadyPaid: true };
+      case 'blocked':
+        throw new AwardNotPayableError(r.status);
+      case 'missing':
+        throw new AwardNotFoundError();
+    }
+  }
+
+  /**
+   * A business reviews an award the risk rules held: release it, or reject it with a reason. A release is
+   * refused for an award flagged high risk (only the platform can clear those); rejecting is always allowed.
+   */
+  async review(
+    actor: Actor | null,
+    awardId: string,
+    decision: ReviewDecision,
+    reason: string | null,
+  ): Promise<{ awardId: string; status: string }> {
+    const ctx = this.scope(actor);
+    const now = this.now();
+    const r = await this.repo.review(ctx, {
+      awardId,
+      actorId: actor!.userId,
+      decision,
+      reason,
+      now,
+      claimBy: new Date(now.getTime() + CLAIM_WINDOW_DAYS * 86_400_000),
+    });
+    switch (r.kind) {
+      case 'done':
+        return { awardId, status: r.status };
+      case 'platform':
+        throw new PlatformReviewRequiredError();
+      case 'blocked':
+        throw new AwardNotReviewableError(r.status);
+      case 'missing':
+        throw new AwardNotFoundError();
+    }
+  }
+
+  /** Anyone can fetch a made draw and re-run it. */
+  async publicDraw(drawId: string): Promise<PublishedDraw> {
+    const found = await this.repo.publicDraw(drawId);
+    if (!found) throw new DrawNotFoundError();
+    return found;
+  }
+}

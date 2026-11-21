@@ -11,6 +11,12 @@ export class EmailTakenError extends AppError {
     super('An account with this email already exists', 409, 'EMAIL_TAKEN');
   }
 }
+/** A signed-in person re-entered the wrong password to confirm a sensitive action (not a sign-in). */
+export class PasswordConfirmationError extends AppError {
+  constructor() {
+    super('The password is not correct', 403, 'PASSWORD_CONFIRMATION_FAILED');
+  }
+}
 export class UnauthenticatedError extends AppError {
   constructor() {
     super('Authentication required', 401, 'UNAUTHENTICATED');

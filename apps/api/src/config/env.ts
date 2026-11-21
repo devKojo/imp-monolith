@@ -26,6 +26,8 @@ const schema = z.object({
   DATABASE_URL_READ: optionalUrl,
   /** HMAC key for session-bound CSRF tokens (>= 32 chars). Required in production. */
   SESSION_SECRET: z.string().min(32).optional(),
+  /** Encrypts payout destinations (>= 16 chars). Falls back to SESSION_SECRET; required in production. */
+  REWARD_DATA_KEY: z.string().min(16).optional(),
   /** Reverse-proxy hops to trust for the client IP (rate limits and abuse signals). Unset when not proxied. */
   TRUST_PROXY: z.coerce.number().int().min(1).max(10).optional(),
   /** Comma-separated origins allowed to make state-changing requests. */
@@ -59,5 +61,8 @@ const schema = z.object({
 export const env = schema.parse(process.env);
 if (env.NODE_ENV === 'production' && !env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is required in production');
+}
+if (env.NODE_ENV === 'production' && !env.REWARD_DATA_KEY && !env.SESSION_SECRET) {
+  throw new Error('REWARD_DATA_KEY is required in production');
 }
 export type Env = z.infer<typeof schema>;
