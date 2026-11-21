@@ -372,6 +372,14 @@ export const registry: ComponentEntry[] = [
     a11y: 'aria-expanded buttons inside headings.',
   },
   {
+    name: 'UiCollapsible',
+    category: 'Navigation',
+    summary: 'Card section that folds away, with a one-line summary while folded.',
+    specRefs: ['Spec 5'],
+    states: ['expanded', 'collapsed', 'with summary'],
+    a11y: 'aria-expanded button inside the heading, controlling the region; the title names the section.',
+  },
+  {
     name: 'UiCarousel',
     category: 'Navigation',
     summary:

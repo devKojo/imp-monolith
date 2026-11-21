@@ -33,6 +33,7 @@ import type { PoolKind, Prize, PrizeKind, PrizePool } from '../types';
  * shared equally by a limited number of participants. The switch at the top chooses which; the pool
  * shows each participant's share as it is typed.
  */
+const open = ref(true);
 const props = defineProps<{
   prizes: Prize[];
   pool: PrizePool | null;
@@ -164,12 +165,19 @@ const poolHint = (pool: PrizePool) => {
 </script>
 
 <template>
-  <UiCard as="section" aria-labelledby="prizes-title" class="prizes">
+  <UiCollapsible
+    v-model:open="open"
+    :title="t('cmp.prizes')"
+    :summary="
+      pool
+        ? t('cmp.prizes.summary.pool')
+        : prizes.length === 1
+          ? t('cmp.prizes.summary.one')
+          : t('cmp.prizes.summary', { n: prizes.length })
+    "
+    class="prizes"
+  >
     <div class="prizes__head">
-      <h2 id="prizes-title" class="ui-text-h3">
-        {{ t('cmp.prizes') }}
-        <span v-if="!pool" class="ui-text-hint ui-text-body-s">({{ prizes.length }})</span>
-      </h2>
       <UiButton
         v-if="!readonly && !pool"
         variant="secondary"
@@ -385,16 +393,10 @@ const poolHint = (pool: PrizePool) => {
         />
       </li>
     </ol>
-  </UiCard>
+  </UiCollapsible>
 </template>
 
 <style scoped>
-.prizes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-4);
-}
-.prizes h2,
 .prizes p {
   margin: 0;
 }

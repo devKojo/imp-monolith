@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { BallotField } from '../domain/model';
-import { buildBallot, optionIndexOf, targetOf, toResults } from '../domain/rules';
+import {
+  answerTo,
+  buildBallot,
+  optionIndexOf,
+  questionResults,
+  targetOf,
+  targetOfChoices,
+  toResults,
+} from '../domain/rules';
 
 const question: BallotField = {
   id: 'q1',
@@ -122,5 +130,52 @@ describe('toResults', () => {
     ]);
     expect(results.total).toBe(1);
     expect(results.options[0]).toEqual({ index: 0, votes: 1, percent: 100 });
+  });
+});
+
+describe('a poll with several questions', () => {
+  const second: BallotField = {
+    id: 'q2',
+    kind: 'choice',
+    label: 'Which chain?',
+    helper: '',
+    options: ['a', 'b'],
+    imageUrl: '',
+  };
+  it('has one question per choice field, with the first repeated at the top', () => {
+    const ballot = buildBallot('poll', [question, second]);
+    expect(ballot.questions.map((q) => q.id)).toEqual(['q1', 'q2']);
+    expect(ballot.question).toBe('Which model?');
+    expect(ballot.questions[1]!.options.map((o) => o.label)).toEqual(['a', 'b']);
+  });
+  it('needs one valid answer for every question', () => {
+    expect(targetOfChoices('poll', [question, second], [2, 1])).toEqual({
+      fieldId: 'q1',
+      choiceIndex: 2,
+      answers: { q1: 2, q2: 1 },
+    });
+    expect(targetOfChoices('poll', [question, second], [2])).toBeNull();
+    expect(targetOfChoices('poll', [question, second], [0, 2])).toBeNull();
+    expect(targetOfChoices('poll', [question, second], [0, -1])).toBeNull();
+    expect(targetOfChoices('vote', candidates, [1])).toMatchObject({ fieldId: 'c2' });
+    expect(targetOfChoices('vote', candidates, [0, 1])).toBeNull();
+  });
+  it('reads an old single-question vote as the answer to that question', () => {
+    const old = { fieldId: 'q1', choiceIndex: 1, answers: {}, castAt: new Date() };
+    expect(answerTo(old, 'q1')).toBe(1);
+    expect(answerTo(old, 'q2')).toBeNull();
+    expect(answerTo({ ...old, answers: { q1: 2, q2: 0 } }, 'q2')).toBe(0);
+  });
+  it('counts each question on its own rows', () => {
+    const tally = [
+      { fieldId: 'q1', choiceIndex: 0, votes: 3 },
+      { fieldId: 'q2', choiceIndex: 1, votes: 3 },
+    ];
+    expect(
+      questionResults('poll', [question, second], 0, tally).options.map((o) => o.votes),
+    ).toEqual([3, 0, 0]);
+    expect(
+      questionResults('poll', [question, second], 1, tally).options.map((o) => o.votes),
+    ).toEqual([0, 3]);
   });
 });

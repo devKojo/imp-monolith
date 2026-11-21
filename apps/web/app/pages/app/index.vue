@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import { SIGNIN } from '../../modules/auth/constants';
 import BusinessShell from '../../modules/business/components/BusinessShell.vue';
+import AnalyticsByType from '../../modules/business/components/AnalyticsByType.vue';
 import {
-  barsOfKinds,
-  campaignBars,
   kindSeries,
-  leadingOption,
   participationByType,
-  standingsBars,
   statusCounts,
   type StatusKey,
 } from '../../modules/business/overview';
@@ -27,8 +24,6 @@ import {
 } from '../../modules/participants/logic';
 import type { BusinessActivity, ParticipantSummary } from '../../modules/participants/types';
 import { useParticipants } from '../../modules/participants/useParticipants';
-import type { CampaignResults } from '../../modules/voting/types';
-import { useCampaignResults } from '../../modules/voting/useVoting';
 
 /**
  * Business overview (client-rendered, no-store: private data never passes the SSR tier). The headline
@@ -121,13 +116,6 @@ const dailySummary = computed(() => {
 });
 
 const campaigns = computed(() => participants.value?.campaigns ?? []);
-const byCampaign = computed(() => campaignBars(campaigns.value, names.value));
-const byCampaignSummary = computed(() => {
-  const top = campaigns.value[0];
-  return top
-    ? t('overview.chart.byCampaign.summary', { title: top.title, n: top.started })
-    : t('participants.empty.body');
-});
 
 // ---- every campaign type has a place on the dashboard
 const kindDaily = computed(() =>
@@ -153,97 +141,6 @@ const typeSummary = computed(() => {
 });
 const typeTotal = computed(() => typePoints.value.reduce((n, p) => n + p.value, 0));
 
-const entries = computed(() =>
-  barsOfKinds(campaigns.value, ['giveaway'], t('participants.chart.entries')),
-);
-const entriesSummary = computed(() => {
-  const top = entries.value[0]?.points[0];
-  return top ? t('overview.chart.entries.summary', { title: top.label, n: top.value }) : '';
-});
-const votes = computed(() =>
-  barsOfKinds(campaigns.value, ['poll', 'vote'], t('participants.chart.votes')),
-);
-const votesSummary = computed(() => {
-  const top = votes.value[0]?.points[0];
-  return top ? t('overview.chart.votes.summary', { title: top.label, n: top.value }) : '';
-});
-
-// The standings of one poll or image vote at a time, the busiest first.
-const ballotApi = useCampaignResults();
-const ballots = computed(() =>
-  campaigns.value
-    .filter((c) => (c.kind === 'poll' || c.kind === 'vote') && c.started > 0)
-    .slice(0, 8),
-);
-const ballotChoices = computed(() =>
-  ballots.value.map((b) => ({ value: b.campaignId, label: b.title })),
-);
-const standingsId = ref('');
-const standings = ref<CampaignResults | null>(null);
-const standingsState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle');
-watch(
-  ballots,
-  (list) => {
-    if (!list.some((b) => b.campaignId === standingsId.value))
-      standingsId.value = list[0]?.campaignId ?? '';
-  },
-  { immediate: true },
-);
-watch(
-  standingsId,
-  async (id) => {
-    standings.value = null;
-    if (!id) return void (standingsState.value = 'idle');
-    standingsState.value = 'loading';
-    try {
-      const data = await ballotApi.results(id);
-      // The person may have picked another campaign while this one loaded.
-      if (id !== standingsId.value) return;
-      standings.value = data;
-      standingsState.value = 'ready';
-    } catch {
-      if (id === standingsId.value) standingsState.value = 'error';
-    }
-  },
-  { immediate: true },
-);
-const standingsSeries = computed(() =>
-  standings.value ? standingsBars(standings.value, t('participants.chart.votes')) : [],
-);
-const standingsSummary = computed(() => {
-  const lead = standings.value ? leadingOption(standings.value) : null;
-  return lead && standings.value
-    ? t('overview.chart.standings.summary', {
-        name: lead.label,
-        votes: lead.votes,
-        total: standings.value.total,
-      })
-    : t('overview.chart.standings.empty');
-});
-
-const quiz = computed(() => activity.value?.quiz ?? null);
-const outcome = computed(() =>
-  quiz.value
-    ? [
-        {
-          name: t('participants.chart.outcome'),
-          points: [
-            { label: t('participants.chart.passed'), value: quiz.value.passed },
-            { label: t('participants.chart.notPassed'), value: quiz.value.failed },
-          ],
-        },
-      ]
-    : [],
-);
-const outcomeSummary = computed(() =>
-  quiz.value && quiz.value.correctPercent !== null
-    ? t('participants.chart.funnel.quiz', {
-        passed: quiz.value.passed,
-        failed: quiz.value.failed,
-        percent: quiz.value.correctPercent,
-      })
-    : '',
-);
 const completion = computed(() =>
   participants.value
     ? completionPercent(participants.value.started, participants.value.completed)
@@ -381,16 +278,6 @@ async function onSwitch(membershipId: string) {
             />
           </UiCard>
 
-          <UiCard v-if="campaigns.length > 0" as="section" class="chart">
-            <UiChart
-              type="bar"
-              :title="t('overview.chart.byCampaign')"
-              :series="byCampaign"
-              :summary="byCampaignSummary"
-              :table-limit="5"
-            />
-          </UiCard>
-
           <UiCard v-if="typePoints.length > 0" as="section" class="chart">
             <UiChart
               type="donut"
@@ -410,61 +297,9 @@ async function onSwitch(membershipId: string) {
               :center-text="String(items.length)"
             />
           </UiCard>
-
-          <UiCard v-if="entries.length > 0" as="section" class="chart">
-            <UiChart
-              type="bar"
-              :title="t('overview.chart.entries')"
-              :series="entries"
-              :summary="entriesSummary"
-              :table-limit="5"
-            />
-          </UiCard>
-
-          <UiCard v-if="votes.length > 0" as="section" class="chart">
-            <UiChart
-              type="bar"
-              :title="t('overview.chart.votes')"
-              :series="votes"
-              :summary="votesSummary"
-              :table-limit="5"
-            />
-          </UiCard>
-
-          <UiCard v-if="ballots.length > 0" as="section" class="chart">
-            <UiSelect
-              id="standings-campaign"
-              v-model="standingsId"
-              :label="t('overview.chart.standings.pick')"
-              :options="ballotChoices"
-            />
-            <UiSkeleton v-if="standingsState === 'loading'" variant="card" />
-            <UiBanner v-else-if="standingsState === 'error'" tone="error" role="alert">
-              {{ t('overview.chart.standings.failed') }}
-            </UiBanner>
-            <UiChart
-              v-else-if="standings && standings.total > 0"
-              type="bar"
-              :title="t('overview.chart.standings')"
-              :series="standingsSeries"
-              :summary="standingsSummary"
-              :table-limit="5"
-            />
-            <p v-else class="ui-text-body-s ui-text-hint">
-              {{ t('overview.chart.standings.empty') }}
-            </p>
-          </UiCard>
-
-          <UiCard v-if="quiz" as="section" class="chart">
-            <UiChart
-              type="donut"
-              :title="t('participants.chart.outcome')"
-              :series="outcome"
-              :summary="outcomeSummary"
-              :center-text="String(quiz.passed + quiz.failed)"
-            />
-          </UiCard>
         </section>
+
+        <AnalyticsByType v-if="people.canView.value" :campaigns="campaigns" :activity="activity" />
       </template>
     </template>
   </BusinessShell>

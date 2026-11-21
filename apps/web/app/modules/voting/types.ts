@@ -11,6 +11,22 @@ export type BallotOption = {
   imageUrl: string;
 };
 
+/** One question of a ballot: a poll question, or an image vote's whole list of candidates. */
+export type BallotQuestion = {
+  id: string;
+  /** The question's text; empty for an image vote. */
+  question: string;
+  helper: string;
+  options: BallotOption[];
+};
+
+export type QuestionView = BallotQuestion & {
+  /** The participant's answer, once voted; null before. */
+  choice: number | null;
+  /** The standings of this question when the campaign lets this participant see them; otherwise null. */
+  results: Results | null;
+};
+
 export type OptionResult = { index: number; votes: number; percent: number };
 export type Results = { total: number; options: OptionResult[] };
 
@@ -23,6 +39,8 @@ export type BallotInfo = {
   endsAt: string;
   question: string;
   optionCount: number;
+  /** How many questions it asks: one for an image vote. */
+  questionCount: number;
 };
 
 export type BallotView = {
@@ -40,6 +58,10 @@ export type BallotView = {
   vote: { optionIndex: number; castAt: string } | null;
   /** The standings, when the campaign lets this participant see them; otherwise null. */
   results: Results | null;
+  /** Every question with the participant's answer and its standings; the fields above are the first one's. */
+  questions: QuestionView[];
+  /** When the participant voted; null before. */
+  castAt: string | null;
 };
 
 /** How one campaign stands, for the business that runs it. */
@@ -50,4 +72,11 @@ export type CampaignResults = {
   question: string;
   total: number;
   options: Array<BallotOption & { votes: number; percent: number }>;
+  /** Every question's standings; the fields above are the first one's. */
+  questions: Array<{
+    id: string;
+    question: string;
+    total: number;
+    options: Array<BallotOption & { votes: number; percent: number }>;
+  }>;
 };

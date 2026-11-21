@@ -9,10 +9,20 @@ import type {
   RunnableBallot,
   StoredVote,
   TallyRow,
+  VoteTarget,
 } from '../domain/model';
 
 const KIND_OF = { POLL: 'poll', VOTE: 'vote' } as const;
 const ARCHETYPES = ['POLL', 'VOTE'] as const;
+
+/** The stored answers JSON, read defensively: only whole-number answers by question id. */
+const answersOf = (value: unknown): Record<string, number> => {
+  const out: Record<string, number> = {};
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    for (const [id, n] of Object.entries(value)) if (Number.isInteger(n)) out[id] = n as number;
+  }
+  return out;
+};
 
 /** The settings column is JSON written by the campaigns module; read it defensively anyway. */
 const showResultsOf = (settings: unknown): ResultsVisibility =>
@@ -117,21 +127,22 @@ export class PrismaVotingRepository implements VotingRepository {
     return withTenant(this.db, ctx, async (tx) => {
       const row = await tx.vote.findFirst({
         where: { tenantId: ctx.tenantId, campaignId, userId },
-        select: { fieldId: true, choiceIndex: true, castAt: true },
+        select: { fieldId: true, choiceIndex: true, answers: true, castAt: true },
       });
-      return row ?? null;
+      return row
+        ? {
+            fieldId: row.fieldId,
+            choiceIndex: row.choiceIndex,
+            answers: answersOf(row.answers),
+            castAt: row.castAt,
+          }
+        : null;
     });
   }
 
   async cast(
     ctx: TenantContext,
-    input: {
-      campaignId: string;
-      userId: string;
-      fieldId: string;
-      choiceIndex: number | null;
-      at: Date;
-    },
+    input: { campaignId: string; userId: string; at: Date } & VoteTarget,
   ): Promise<StoredVote | null> {
     try {
       return await withTenant(this.db, ctx, async (tx) => {
@@ -153,13 +164,20 @@ export class PrismaVotingRepository implements VotingRepository {
               userId: input.userId,
               fieldId: input.fieldId,
               choiceIndex: input.choiceIndex,
+              // Only a poll keeps answers; an image vote's candidate is its field.
+              ...(input.choiceIndex === null ? {} : { answers: input.answers }),
               castAt: input.at,
             },
           ],
           skipDuplicates: true,
         });
         if (count === 0) throw new AlreadyThere();
-        return { fieldId: input.fieldId, choiceIndex: input.choiceIndex, castAt: input.at };
+        return {
+          fieldId: input.fieldId,
+          choiceIndex: input.choiceIndex,
+          answers: input.answers,
+          castAt: input.at,
+        };
       });
     } catch (e) {
       if (e instanceof AlreadyThere) return null;
@@ -167,17 +185,33 @@ export class PrismaVotingRepository implements VotingRepository {
     }
   }
 
+  /**
+   * Votes counted per stored target. An image vote counts by candidate. A poll counts by question and answer:
+   * from its stored answers, or, for a vote cast when the poll had one question, from its field and choice.
+   */
   tally(ctx: TenantContext, campaignId: string): Promise<TallyRow[]> {
     return withTenant(this.db, ctx, async (tx) => {
-      const rows = await tx.vote.groupBy({
-        by: ['fieldId', 'choiceIndex'],
-        where: { tenantId: ctx.tenantId, campaignId },
-        _count: { _all: true },
-      });
+      const rows = await tx.$queryRaw<
+        Array<{ field_id: string; choice_index: number | null; votes: number }>
+      >`
+        SELECT v.field_id::text AS field_id, NULL::int AS choice_index, count(*)::int AS votes
+          FROM votes v
+         WHERE v.tenant_id = ${ctx.tenantId}::uuid AND v.campaign_id = ${campaignId}::uuid
+           AND v.choice_index IS NULL
+         GROUP BY v.field_id
+        UNION ALL
+        SELECT a.key AS field_id, a.value::int AS choice_index, count(*)::int AS votes
+          FROM votes v
+          CROSS JOIN LATERAL jsonb_each_text(
+            COALESCE(v.answers, jsonb_build_object(v.field_id::text, v.choice_index))
+          ) AS a(key, value)
+         WHERE v.tenant_id = ${ctx.tenantId}::uuid AND v.campaign_id = ${campaignId}::uuid
+           AND v.choice_index IS NOT NULL
+         GROUP BY a.key, a.value`;
       return rows.map((r) => ({
-        fieldId: r.fieldId,
-        choiceIndex: r.choiceIndex,
-        votes: r._count._all,
+        fieldId: r.field_id,
+        choiceIndex: r.choice_index,
+        votes: r.votes,
       }));
     });
   }

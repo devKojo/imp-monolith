@@ -34,6 +34,18 @@ const results = computed<Results | null>(() =>
       }
     : null,
 );
+/** One block per question; a ballot with a single question shows it under the panel's own title. */
+const blocks = computed(() =>
+  (data.value?.questions ?? []).map((q) => ({
+    id: q.id,
+    heading: (data.value?.questions.length ?? 0) > 1 ? q.question : '',
+    options: q.options,
+    results: {
+      total: q.total,
+      options: q.options.map(({ index, votes, percent }) => ({ index, votes, percent })),
+    } satisfies Results,
+  })),
+);
 </script>
 
 <template>
@@ -49,7 +61,15 @@ const results = computed<Results | null>(() =>
     <p v-else-if="results.total === 0" class="ui-text-body-s ui-text-hint">
       {{ t('ballot.business.empty') }}
     </p>
-    <BallotResults v-else :options="data.options" :results="results" />
+    <template v-else>
+      <BallotResults
+        v-for="b in blocks"
+        :key="b.id"
+        :options="b.options"
+        :results="b.results"
+        :heading="b.heading"
+      />
+    </template>
   </UiCard>
 </template>
 

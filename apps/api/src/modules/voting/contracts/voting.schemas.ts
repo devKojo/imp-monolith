@@ -10,5 +10,13 @@ const slug = z
 export const slugParamSchema = z.object({ slug }).strict();
 export const campaignParamSchema = z.object({ campaignId: uuidSchema }).strict();
 
-/** The option voted for, numbered from 0 in the order the campaign lists them. */
-export const voteSchema = z.object({ optionIndex: z.number().int().min(0).max(19) }).strict();
+const choice = z.number().int().min(0).max(19);
+
+/**
+ * The vote: `choices` has one answer per question in order, each numbered from 0 in the order the campaign
+ * lists them; `optionIndex` is the same for a ballot with one question (an image vote, or a one-question poll).
+ */
+export const voteSchema = z.union([
+  z.object({ choices: z.array(choice).min(1).max(10) }).strict(),
+  z.object({ optionIndex: choice }).strict(),
+]);

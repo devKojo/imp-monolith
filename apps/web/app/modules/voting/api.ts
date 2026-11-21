@@ -34,8 +34,9 @@ export function createVotingApi(fetcher: Fetcher, root = '/api/v1') {
 
     // The participant: read the options and vote.
     current: (slug: string) => call<BallotView>('GET', `/voting/${slug}`),
-    cast: (slug: string, optionIndex: number, csrf: string) =>
-      call<BallotView>('POST', `/voting/${slug}/vote`, { body: { optionIndex }, csrf }),
+    /** One answer per question, in order (an image vote has one). */
+    cast: (slug: string, choices: number[], csrf: string) =>
+      call<BallotView>('POST', `/voting/${slug}/vote`, { body: { choices }, csrf }),
 
     // The business: how one of its campaigns stands.
     results: (campaignId: string) =>

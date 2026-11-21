@@ -31,13 +31,27 @@ export type BallotOption = {
   imageUrl: string;
 };
 
-/** What the options are, built from the campaign's fields. */
-export type Ballot = {
-  kind: BallotKind;
-  /** A poll's question; empty for an image vote (the campaign's own title asks it). */
+/** One question of a ballot: a poll question with its answers, or the whole list of an image vote's candidates. */
+export type BallotQuestion = {
+  /** The campaign field that is the question; for an image vote there is just the one, named `candidates`. */
+  id: string;
+  /** The question's text; empty for an image vote (the campaign's own title asks it). */
   question: string;
   helper: string;
   options: BallotOption[];
+};
+
+/**
+ * What the options are, built from the campaign's fields. A poll has one or more questions; an image vote
+ * has one (its candidates). `question`, `helper` and `options` repeat the first question, for readers that
+ * only know the single-question shape.
+ */
+export type Ballot = {
+  kind: BallotKind;
+  question: string;
+  helper: string;
+  options: BallotOption[];
+  questions: BallotQuestion[];
 };
 
 /** A running poll or image vote campaign found by its public address. */
@@ -52,14 +66,38 @@ export type RunnableBallot = {
   showResults: ResultsVisibility;
 };
 
-/** A vote as stored: the field chosen (a poll's question or a candidate) and, for a poll, the answer. */
-export type StoredVote = { fieldId: string; choiceIndex: number | null; castAt: Date };
+/**
+ * A vote as stored: one row per participant. For an image vote the field is the candidate chosen. For a poll
+ * `answers` has the answer to each question by the question's field id; `fieldId` / `choiceIndex` repeat the
+ * first one (and are all there is for a poll cast when it had a single question).
+ */
+export type StoredVote = {
+  fieldId: string;
+  choiceIndex: number | null;
+  answers: Record<string, number>;
+  castAt: Date;
+};
+
+/** What a cast vote writes. */
+export type VoteTarget = {
+  fieldId: string;
+  choiceIndex: number | null;
+  answers: Record<string, number>;
+};
 
 /** Votes counted per stored target. */
 export type TallyRow = { fieldId: string; choiceIndex: number | null; votes: number };
 
 export type OptionResult = { index: number; votes: number; percent: number };
 export type Results = { total: number; options: OptionResult[] };
+
+/** One question as the participant app renders it. */
+export type QuestionView = BallotQuestion & {
+  /** The answer the participant gave, once they have voted; null otherwise. */
+  choice: number | null;
+  /** The standings of this question, when the campaign lets this participant see them; otherwise null. */
+  results: Results | null;
+};
 
 /** What the participant app renders. */
 export type BallotView = {
@@ -72,10 +110,14 @@ export type BallotView = {
   question: string;
   helper: string;
   options: BallotOption[];
-  /** The participant's own vote, once cast. */
+  /** The participant's own vote on the first question, once cast. */
   vote: { optionIndex: number; castAt: string } | null;
-  /** The standings, when the campaign lets this participant see them; otherwise null. */
+  /** The standings of the first question, when the campaign lets this participant see them; otherwise null. */
   results: Results | null;
+  /** Every question, with the participant's answer and the standings of each. A poll may have several. */
+  questions: QuestionView[];
+  /** When the participant voted; null before. */
+  castAt: string | null;
 };
 
 /** What a visitor may know before signing in: never the standings. */
@@ -87,6 +129,8 @@ export type BallotInfo = {
   endsAt: string;
   question: string;
   optionCount: number;
+  /** How many questions the ballot asks: one for an image vote. */
+  questionCount: number;
 };
 
 /** How a campaign stands, for the business that runs it. */
@@ -97,6 +141,13 @@ export type CampaignResults = {
   question: string;
   options: Array<BallotOption & { votes: number; percent: number }>;
   total: number;
+  /** Every question's standings; `question`, `options` and `total` above are the first one's. */
+  questions: Array<{
+    id: string;
+    question: string;
+    options: Array<BallotOption & { votes: number; percent: number }>;
+    total: number;
+  }>;
 };
 
 /** The signed-in participant. */

@@ -485,6 +485,9 @@ model Vote {
   userId      String   @map("user_id") @db.Uuid
   fieldId     String   @map("field_id") @db.Uuid
   choiceIndex Int?     @map("choice_index")
+  /// A poll's answer to every question as { questionFieldId: answerNumber }; null for an image vote and for
+  /// polls cast before polls had several questions (then fieldId / choiceIndex is the only answer).
+  answers     Json?    @db.JsonB
   castAt      DateTime @default(now()) @map("cast_at") @db.Timestamptz
 
   campaign Campaign      @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Cascade)
