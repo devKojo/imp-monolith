@@ -94,6 +94,10 @@ export const normalizePrizes = (prizes: readonly PrizeInput[]): PrizeInput[] =>
  * never at settlement.
  */
 export function prizeProblem(prizes: readonly PrizeInput[]): string | null {
+  // The engine settles a campaign one way, so the prizes must agree on how winners are chosen.
+  if (new Set(prizes.map((p) => p.selection ?? null)).size > 1) {
+    return 'All prizes must choose their winners the same way';
+  }
   const taken: Array<[number, number]> = [];
   for (const [i, p] of prizes.entries()) {
     const n = `Prize ${i + 1}`;

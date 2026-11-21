@@ -4,8 +4,8 @@ import { ConflictError } from '@/shared/errors';
 import { withPublic, withTenant, type TenantContext, type TenantTx } from '@/shared/database';
 import type { EntrantPurpose, RewardsRepository } from '../application/ports';
 import { AlreadyAwardedError } from '../domain/errors';
-import { settleFactsFrom } from '../domain/facts';
 import { businessMayRelease, type SettleFacts } from '../domain/risk';
+import { settlementFactsIn } from './settlement-facts';
 import type {
   AwardRow,
   DrawRecord,
@@ -328,43 +328,9 @@ export class PrismaRewardsRepository implements RewardsRepository {
     userIds: readonly string[],
     now: Date,
   ): Promise<Map<string, SettleFacts>> {
-    return withTenant(this.db, ctx, async (tx) => {
-      const ids = [...userIds];
-      const own = await tx.participationSignal.findMany({
-        where: { tenantId: ctx.tenantId, campaignId, kind: 'JOIN', userId: { in: ids } },
-        select: { ipHash: true },
-      });
-      const ips = [...new Set(own.flatMap((s) => (s.ipHash ? [s.ipHash] : [])))];
-      // Everyone who joined from a winner's network, capped so one huge shared network cannot stall settling.
-      const signals =
-        ips.length === 0
-          ? []
-          : await tx.participationSignal.findMany({
-              where: { tenantId: ctx.tenantId, campaignId, kind: 'JOIN', ipHash: { in: ips } },
-              select: { userId: true, ipHash: true, uaHash: true },
-              take: 20_000,
-            });
-      const users = await tx.user.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, createdAt: true },
-      });
-      const prior = await tx.rewardAward.groupBy({
-        by: ['userId'],
-        where: {
-          tenantId: ctx.tenantId,
-          userId: { in: ids },
-          status: { in: ['REJECTED', 'REVOKED'] },
-        },
-        _count: { _all: true },
-      });
-      return settleFactsFrom({
-        winners: ids,
-        signals,
-        createdAt: new Map(users.map((u) => [u.id, u.createdAt])),
-        priorRejections: new Map(prior.map((p) => [p.userId, p._count._all])),
-        now,
-      });
-    });
+    return withTenant(this.db, ctx, (tx) =>
+      settlementFactsIn(tx, { tenantId: ctx.tenantId, campaignId, userIds, now }),
+    );
   }
 
   review(
@@ -386,25 +352,34 @@ export class PrismaRewardsRepository implements RewardsRepository {
         WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid FOR UPDATE`;
       const r = rows[0];
       if (!r) return { kind: 'missing' };
-      if (r.status !== 'PENDING_REVIEW' && r.status !== 'HELD') {
+      // Release and reject are for awards waiting for review. A recall (revoke) also covers one that is
+      // available or claimed but not yet paid; a paid or ended award cannot be recalled.
+      const reviewable = r.status === 'PENDING_REVIEW' || r.status === 'HELD';
+      const recallable = reviewable || r.status === 'AVAILABLE' || r.status === 'CLAIMED';
+      if (decision === 'revoke' ? !recallable : !reviewable) {
         return { kind: 'blocked', status: r.status };
       }
       if (decision === 'release' && !businessMayRelease(r.risk_score)) return { kind: 'platform' };
 
       const to =
-        decision === 'reject'
-          ? 'REJECTED'
-          : r.status === 'PENDING_REVIEW'
-            ? 'AVAILABLE'
-            : 'CLAIMED';
+        decision === 'revoke'
+          ? 'REVOKED'
+          : decision === 'reject'
+            ? 'REJECTED'
+            : r.status === 'PENDING_REVIEW'
+              ? 'AVAILABLE'
+              : 'CLAIMED';
       if (to === 'AVAILABLE') {
         await tx.$executeRaw`UPDATE reward_awards SET status = 'AVAILABLE'::"AwardStatus", claim_by = ${claimBy}, updated_at = ${now}
           WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
       } else if (to === 'CLAIMED') {
         await tx.$executeRaw`UPDATE reward_awards SET status = 'CLAIMED'::"AwardStatus", updated_at = ${now}
           WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
-      } else {
+      } else if (to === 'REJECTED') {
         await tx.$executeRaw`UPDATE reward_awards SET status = 'REJECTED'::"AwardStatus", updated_at = ${now}
+          WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
+      } else {
+        await tx.$executeRaw`UPDATE reward_awards SET status = 'REVOKED'::"AwardStatus", updated_at = ${now}
           WHERE id = ${awardId}::uuid AND tenant_id = ${ctx.tenantId}::uuid`;
       }
       await tx.rewardEvent.create({
@@ -412,8 +387,9 @@ export class PrismaRewardsRepository implements RewardsRepository {
           tenantId: ctx.tenantId,
           awardId,
           actorId,
-          type: decision === 'release' ? 'released' : 'rejected',
-          fromStatus: r.status as 'PENDING_REVIEW' | 'HELD',
+          type:
+            decision === 'release' ? 'released' : decision === 'reject' ? 'rejected' : 'revoked',
+          fromStatus: r.status as 'PENDING_REVIEW' | 'HELD' | 'AVAILABLE' | 'CLAIMED',
           toStatus: to,
           reasonCode: reason ?? (decision === 'release' ? 'REVIEWED_OK' : null),
         },

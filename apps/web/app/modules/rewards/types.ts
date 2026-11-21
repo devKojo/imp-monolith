@@ -85,7 +85,7 @@ export type PayoutDestination = {
   destination: string;
 };
 
-export type ReviewDecision = 'release' | 'reject';
+export type ReviewDecision = 'release' | 'reject' | 'revoke';
 export type RejectReason = 'NOT_ELIGIBLE' | 'SUSPECTED_ABUSE' | 'OTHER';
 export type ReportReason = 'ASKED_TO_PAY' | 'SUSPICIOUS_CONTACT' | 'NOT_RECEIVED' | 'OTHER';
 export type ReportInput = { reason: ReportReason; details?: string };

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { t } from '../../i18n';
 import { toApiError } from '../../modules/auth/errors';
 import ParticipantShell from '../../modules/participant/components/ParticipantShell.vue';
@@ -94,6 +94,21 @@ async function start(a: MyAward) {
 const submitClaim = async (input: ClaimInput) => {
   if (claiming.value) await done(claiming.value, input);
 };
+
+// Arriving from a result screen ("Claim reward") goes straight into claiming that award, once.
+const wanted = String(useRoute().query.claim ?? '');
+const opened = ref(false);
+watch(
+  awards,
+  (list) => {
+    if (opened.value || !wanted) return;
+    const a = list.find((x) => x.id === wanted && x.status === 'AVAILABLE');
+    if (!a) return;
+    opened.value = true;
+    void start(a);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

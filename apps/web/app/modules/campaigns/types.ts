@@ -66,6 +66,8 @@ export type Prize = {
   /** The places this prize covers ("1st" is 1 to 1); both or neither. */
   rankFrom?: number | null;
   rankTo?: number | null;
+  /** How winners are chosen: null settles at the end; COMPLETION gives each tier to the next to qualify. */
+  selection?: 'RANKING' | 'DRAW' | 'COMPLETION' | null;
 };
 
 export type PrizeKind = 'ITEM' | 'CASH' | 'POINTS';

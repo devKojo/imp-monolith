@@ -122,7 +122,10 @@ const prizeOf = (p: PrizeRecord): Prize => ({
   currency: p.currency,
   rankFrom: p.rankFrom,
   rankTo: p.rankTo,
-  selection: p.selection === 'RANKING' || p.selection === 'DRAW' ? p.selection : null,
+  selection:
+    p.selection === 'RANKING' || p.selection === 'DRAW' || p.selection === 'COMPLETION'
+      ? p.selection
+      : null,
 });
 
 /** Only the prize's own fields: never an id, so a copy of a prize gets a new one. */

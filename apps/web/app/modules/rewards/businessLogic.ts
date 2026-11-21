@@ -13,6 +13,10 @@ export const needsPayment = (a: Pick<BusinessAward, 'status' | 'kind'>): boolean
 export const REVIEW_AT = 30;
 export const FLAG_AT = 70;
 
+/** A business can recall an award it has not paid yet: still available to claim, or claimed and waiting to be paid. */
+export const canRecall = (a: Pick<BusinessAward, 'status'>): boolean =>
+  a.status === 'AVAILABLE' || a.status === 'CLAIMED';
+
 /** An award the risk rules held, before or after it was claimed. */
 export const waitsForReview = (a: Pick<BusinessAward, 'status'>): boolean =>
   a.status === 'PENDING_REVIEW' || a.status === 'HELD';

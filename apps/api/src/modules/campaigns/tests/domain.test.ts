@@ -299,6 +299,12 @@ describe('prizeProblem', () => {
       ]),
     ).toBeNull();
   });
+  it('wants every prize to choose its winners the same way', () => {
+    expect(
+      prizeProblem([p({ selection: 'COMPLETION' }), p({ selection: 'COMPLETION' })]),
+    ).toBeNull();
+    expect(prizeProblem([p({ selection: 'COMPLETION' }), p({})])).toMatch(/same way/);
+  });
   it('asks for an amount, a currency and whole, matching, separate placings', () => {
     expect(prizeProblem([p({ kind: 'POINTS' })])).toMatch(/amount/);
     expect(prizeProblem([p({ kind: 'CASH', amountMinor: 1 })])).toMatch(/currency/);

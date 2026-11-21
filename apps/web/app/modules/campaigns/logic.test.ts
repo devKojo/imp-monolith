@@ -94,6 +94,7 @@ describe('prizes', () => {
       currency: null,
       rankFrom: null,
       rankTo: null,
+      selection: null,
     });
   });
 
