@@ -36,6 +36,12 @@ export function chipStatus(status: string): string {
 
 export const PAYOUT_METHODS: PayoutMethod[] = ['MOBILE_MONEY', 'BANK_TRANSFER', 'DELIVERY'];
 
+/** What a person who has just won should be offered: claim now, wait out a check, or look at where it stands. */
+export function rewardPrompt(a: Pick<MyAward, 'status'>): 'claim' | 'checking' | 'view' {
+  if (a.status === 'AVAILABLE') return 'claim';
+  return a.status === 'PENDING_REVIEW' || a.status === 'HELD' ? 'checking' : 'view';
+}
+
 /** Whole days left to claim, or null when there is no deadline or it has passed. */
 export function daysLeft(claimBy: string | null, now: Date): number | null {
   if (!claimBy) return null;

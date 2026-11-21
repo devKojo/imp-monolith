@@ -1037,7 +1037,8 @@ export const staticSiteText = {
   'rewards.biz.error.notSealed':
     'The draw was not sealed before the campaign closed, so it cannot be settled.',
   'rewards.biz.error.noEntrants': 'Nobody is eligible for a reward in this campaign.',
-  'rewards.biz.error.unsupported': "This campaign's prizes cannot be settled in one step.",
+  'rewards.biz.error.unsupported':
+    'This campaign gives its prizes as people qualify, or cannot be settled in one step. There is nothing to settle here.',
   'rewards.biz.error.generic': 'Something went wrong. Try again.',
   'rewards.biz.error.platform':
     'This award is flagged high risk. Only the platform can release it.',
@@ -1064,6 +1065,13 @@ export const staticSiteText = {
   'rewards.biz.reject.for': 'Reject {name}',
   'rewards.biz.released': 'Released. The winner can now continue.',
   'rewards.biz.rejected': 'Rejected. The winner will see that it was not approved.',
+  'rewards.biz.revoke': 'Recall',
+  'rewards.biz.revoke.for': 'Recall {name}',
+  'rewards.biz.revoked': 'Recalled. The winner can no longer claim it.',
+  'rewards.biz.revoke.title': 'Recall this award',
+  'rewards.biz.revoke.body':
+    'Recall the award for {name}. They will no longer be able to claim it. This cannot be undone.',
+  'rewards.biz.revoke.submit': 'Recall award',
   'rewards.biz.reject.title': 'Reject this award',
   'rewards.biz.reject.body': 'Reject the award for {name}. This cannot be undone.',
   'rewards.biz.reject.reason': 'Reason',
@@ -1073,6 +1081,15 @@ export const staticSiteText = {
   'rewards.biz.reject.submit': 'Reject award',
   'rewards.held.checking': 'Under a routine check. You can claim it once it is cleared.',
   'rewards.held.claimed': 'Claimed. It is under a routine check before it is sent.',
+  'result.reward.title.ranked': 'You won place {n}!',
+  'result.reward.title.plain': 'You won a reward!',
+  'result.reward.body.claim':
+    'Your prize: {amount}. Claim it now and {business} will review and pay it.',
+  'result.reward.body.checking':
+    'Your reward is under a routine check. You can claim it once it is cleared.',
+  'result.reward.body.view': 'You have claimed this reward. Follow it in My rewards.',
+  'result.reward.cta.claim': 'Claim reward',
+  'result.reward.cta.view': 'View my rewards',
   'rewards.claimed.held': 'Claimed. It is under a routine check and will be sent once cleared.',
   'rewards.report.action': 'Report a problem',
   'rewards.report.action.for': 'Report a problem with {prize}',
@@ -1092,6 +1109,13 @@ export const staticSiteText = {
   'rewards.report.error.generic': 'We could not send your report. Try again.',
   'rewards.biz.error.network':
     'We could not reach the server. Check your connection and try again.',
+  'cmp.prizes.choose': 'How winners are chosen',
+  'cmp.prizes.choose.end': 'When the campaign ends',
+  'cmp.prizes.choose.first': 'As people pass',
+  'cmp.prizes.choose.end.hint':
+    'Winners are picked when the campaign ends: by score ranking or a draw.',
+  'cmp.prizes.choose.first.hint':
+    'Each tier goes to the next person who passes, in the order you list them. They can claim it straight away and you review and pay it. You can recall an award you suspect.',
   'cmp.prize.kind': 'Prize type',
   'cmp.prize.kind.ITEM': 'Item',
   'cmp.prize.kind.CASH': 'Cash',

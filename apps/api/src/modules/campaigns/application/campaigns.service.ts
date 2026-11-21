@@ -145,6 +145,17 @@ export class CampaignsService {
     const prizes = input.settings.pool ? [] : normalizePrizes(input.prizes);
     const prizeIssue = prizeProblem(prizes);
     if (prizeIssue) throw new CampaignInvalidError(prizeIssue, { field: 'prizes' });
+    // Winners chosen as people pass only make sense where there is something to pass or finish.
+    if (
+      prizes.some((p) => p.selection === 'COMPLETION') &&
+      template?.archetype !== 'quiz' &&
+      template?.archetype !== 'survey'
+    ) {
+      throw new CampaignInvalidError(
+        'Prizes can go to the first to qualify only in a quiz or a survey',
+        { field: 'prizes' },
+      );
+    }
     const result = await this.repo.saveDraft(ctx, id, input.expectedVersion, {
       title: input.title,
       summary: input.summary.trim(),

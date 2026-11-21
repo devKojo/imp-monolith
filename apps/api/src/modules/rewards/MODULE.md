@@ -142,6 +142,25 @@ Signals are hashes of the IP and user agent, kept 90 days (ADR-R001 decision 7).
 anything (a household, an office, a mobile carrier): alone it is below the review line and it only counts with
 other signals.
 
+## Awarding as people qualify
+
+A quiz or survey can give its tiers to the first people to qualify instead of settling at the end: the business
+chooses "As people pass" in the prize editor, which sets every prize's selection to `COMPLETION` (the editor and
+the API both require every prize to agree, and allow it only for a quiz or survey).
+
+- **When.** `allocateOnCompletion` runs inside the transaction that records the pass (quiz `finish`) or the
+  submission (survey `submit`), so the award exists exactly when the pass does. It locks the campaign row while it
+  decides, so two people who pass at the same moment take two different tiers. A person is awarded once; when every
+  tier is taken, later passers get nothing. Tiers are taken in the order the business listed them (`expandSlots`).
+- **Risk.** The winner is scored by the same settlement rules, among the people already awarded. A score of 30 or
+  more makes the award `PENDING_REVIEW` (no claim deadline until it is released); otherwise it is `AVAILABLE` for 14
+  days. The claim, the business's review and payment, and the platform's review are unchanged.
+- **Recall.** The business can recall (`revoke`, with a reason) any award it has not paid: waiting for review, held,
+  still available, or claimed. A paid or ended award cannot be recalled. A recalled tier is not given to someone
+  else (the slot stays used).
+- **Settling.** Such a campaign has nothing to settle at the end (`POST /award` says so).
+- **Not built.** Automatic payout. The platform still does not move money; the business pays and marks it paid.
+
 ## Known gaps
 
 - Reports are recorded and ranked but nothing reads them until the platform console (R6); no rule uses them yet.

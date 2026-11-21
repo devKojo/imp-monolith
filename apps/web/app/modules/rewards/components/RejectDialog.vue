@@ -11,6 +11,8 @@ import type { BusinessAward, RejectReason } from '../types';
  */
 const props = defineProps<{
   award: BusinessAward | null;
+  /** Reject an award held for review, or recall one that is available or claimed but not yet paid. */
+  mode?: 'reject' | 'revoke';
   submit: (awardId: string, reason: RejectReason) => Promise<void>;
 }>();
 const open = defineModel<boolean>('open', { required: true });
@@ -48,8 +50,12 @@ async function send() {
 <template>
   <UiDialog
     v-model:open="open"
-    :title="t('rewards.biz.reject.title')"
-    :description="t('rewards.biz.reject.body', { name: award?.name ?? '' })"
+    :title="t(mode === 'revoke' ? 'rewards.biz.revoke.title' : 'rewards.biz.reject.title')"
+    :description="
+      t(mode === 'revoke' ? 'rewards.biz.revoke.body' : 'rewards.biz.reject.body', {
+        name: award?.name ?? '',
+      })
+    "
   >
     <form class="form" novalidate @submit.prevent="send">
       <UiBanner v-if="problem" tone="error" role="alert">{{ problem }}</UiBanner>
@@ -70,7 +76,7 @@ async function send() {
         :loading-label="t('rewards.biz.pay.sending')"
         @click="send"
       >
-        {{ t('rewards.biz.reject.submit') }}
+        {{ t(mode === 'revoke' ? 'rewards.biz.revoke.submit' : 'rewards.biz.reject.submit') }}
       </UiButton>
     </template>
   </UiDialog>

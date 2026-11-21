@@ -4,6 +4,8 @@ import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
 import { timeLeftText } from '../../discovery/logic';
 import type { DiscoveryCampaign } from '../../discovery/types';
+import type { MyAward } from '../../rewards/types';
+import RewardWon from '../../rewards/components/RewardWon.vue';
 import type { AttemptView, QuizInfo } from '../types';
 
 /**
@@ -24,6 +26,8 @@ const props = defineProps<{
   timeUp?: boolean;
   /** Fire the confetti: true only right after finishing, not when coming back to the page. */
   celebrate?: boolean;
+  /** The tier this person won by passing, when the prizes go to the first to pass. */
+  reward?: MyAward | null;
   /** A retake is being started. */
   retaking?: boolean;
   /** Current time in ms, for the suggested campaign's countdown. */
@@ -158,7 +162,10 @@ const nextEnds = computed(() =>
 
     <div class="grid">
       <UiCard as="section" aria-labelledby="quiz-next-step" class="next">
-        <template v-if="passed">
+        <template v-if="passed && reward">
+          <RewardWon :reward="reward" heading-id="quiz-next-step" />
+        </template>
+        <template v-else-if="passed">
           <h2 id="quiz-next-step" class="ui-text-h3">{{ t('quiz.reward.title') }}</h2>
           <p class="ui-text-body">{{ t('quiz.reward.body') }}</p>
           <UiButton to="/me/rewards" icon="arrow-right">{{ t('quiz.reward.action') }}</UiButton>

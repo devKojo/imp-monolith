@@ -33,6 +33,7 @@ export const newPrize = (id: string): Prize => ({
   currency: null,
   rankFrom: null,
   rankTo: null,
+  selection: null,
 });
 
 export const addPrize = (prizes: readonly Prize[], prize: Prize): Prize[] => [...prizes, prize];

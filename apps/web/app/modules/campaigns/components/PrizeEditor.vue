@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { t, type AppTextKey } from '../../../i18n';
 import { LIMITS } from '../logic';
 import {
@@ -39,6 +39,8 @@ const props = defineProps<{
   /** Places taken so far, once the campaign is running; shown beside the pool. */
   joined?: number | null;
   readonly?: boolean;
+  /** Whether tiers may go to the first to pass (a quiz or a survey). */
+  firstAllowed?: boolean;
 }>();
 const emit = defineEmits<{
   'update:pool': [pool: PrizePool | null];
@@ -61,6 +63,22 @@ function onWinners(id: string, text: string) {
   emit('update', id, { winners: Math.min(LIMITS.winners, Math.floor(n)) });
 }
 const settle = (id: string) => delete typed[id];
+
+// ---- how winners are chosen: for the whole campaign, so every tier gets the same choice
+const chooseOptions = [
+  { value: 'end', label: t('cmp.prizes.choose.end') },
+  { value: 'first', label: t('cmp.prizes.choose.first') },
+];
+const chosen = computed(() =>
+  props.prizes.length > 0 && props.prizes.every((p) => p.selection === 'COMPLETION')
+    ? 'first'
+    : 'end',
+);
+function onChoose(value: string) {
+  for (const p of props.prizes) {
+    emit('update', p.id, { selection: value === 'first' ? 'COMPLETION' : null });
+  }
+}
 
 // ---- what a tier is worth: cash or points, and the places it covers. Typed text is kept as typed;
 // a prize only takes a value that is valid.
@@ -232,6 +250,19 @@ const poolHint = (pool: PrizePool) => {
       {{ t('cmp.prizes.empty') }}
     </p>
 
+    <div v-if="!pool && firstAllowed && prizes.length > 0" class="choose">
+      <UiSegmentedControl
+        :model-value="chosen"
+        :label="t('cmp.prizes.choose')"
+        :options="chooseOptions"
+        :disabled="readonly"
+        @update:model-value="onChoose"
+      />
+      <p class="ui-text-caption ui-text-hint">
+        {{ t(chosen === 'first' ? 'cmp.prizes.choose.first.hint' : 'cmp.prizes.choose.end.hint') }}
+      </p>
+    </div>
+
     <ol v-else class="prizes__list">
       <li v-for="(p, i) in prizes" :key="p.id" class="prize">
         <div class="prize__head">
@@ -392,6 +423,11 @@ const poolHint = (pool: PrizePool) => {
   padding: var(--ui-space-3) var(--ui-space-4);
   background: var(--ui-color-surface-subtle);
   border-radius: var(--ui-radius-md);
+}
+.choose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
 }
 .prizes__list {
   display: flex;

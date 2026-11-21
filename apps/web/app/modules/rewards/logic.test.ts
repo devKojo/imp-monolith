@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { awardAmount, canClaim, chipStatus, daysLeft, section } from './logic';
+import { awardAmount, canClaim, chipStatus, daysLeft, rewardPrompt, section } from './logic';
 
 describe('awardAmount', () => {
   it('reads money in major units and points as a count', () => {
@@ -44,5 +44,15 @@ describe('daysLeft', () => {
   it('is null with no deadline or after it', () => {
     expect(daysLeft(null, now)).toBeNull();
     expect(daysLeft('2026-05-31T00:00:00Z', now)).toBeNull();
+  });
+});
+
+describe('rewardPrompt', () => {
+  it('offers a claim when ready, a wait when under a check, and a look otherwise', () => {
+    expect(rewardPrompt({ status: 'AVAILABLE' })).toBe('claim');
+    expect(rewardPrompt({ status: 'PENDING_REVIEW' })).toBe('checking');
+    expect(rewardPrompt({ status: 'HELD' })).toBe('checking');
+    expect(rewardPrompt({ status: 'CLAIMED' })).toBe('view');
+    expect(rewardPrompt({ status: 'FULFILLED' })).toBe('view');
   });
 });

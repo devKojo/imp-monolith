@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { t } from '../../../i18n';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
+import { useMyRewards } from '../../../modules/rewards/useMyRewards';
 import SurveyDone from '../../../modules/survey/components/SurveyDone.vue';
 import SurveyStepCard from '../../../modules/survey/components/SurveyStepCard.vue';
 import { surveyErrorKey } from '../../../modules/survey/errors';
@@ -48,6 +49,18 @@ const step = computed(() => steps.value[Math.min(index.value, steps.value.length
 const answers = computed<Answers>(() => view.value?.answers ?? {});
 const percent = computed(() => progressPercent(index.value, steps.value.length));
 const done = computed(() => (view.value?.submittedAt ?? null) !== null);
+
+// Finishing may have won a tier (prizes given to the first to finish): find it among the person's awards.
+const myRewards = useMyRewards();
+const reward = computed(
+  () =>
+    myRewards.awards.data.value.items.find(
+      (a) => a.campaign.slug === slug && a.source === 'COMPLETION',
+    ) ?? null,
+);
+watch(done, (finished) => {
+  if (finished) void myRewards.refresh();
+});
 
 async function load() {
   state.value = 'loading';
@@ -197,7 +210,7 @@ const unanswered = computed(
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />
 
     <div v-else-if="done" class="wrap solo">
-      <SurveyDone :title="info?.title ?? t('survey.page.title')" />
+      <SurveyDone :title="info?.title ?? t('survey.page.title')" :reward="reward" />
     </div>
 
     <div v-else-if="step" class="wrap screen">

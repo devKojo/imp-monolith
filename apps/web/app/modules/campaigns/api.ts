@@ -24,6 +24,7 @@ export const toUpdateBody = (c: Campaign) => ({
           currency,
           rankFrom,
           rankTo,
+          selection,
         }) => ({
           name,
           valueLabel,
@@ -34,6 +35,8 @@ export const toUpdateBody = (c: Campaign) => ({
           currency: currency ?? null,
           rankFrom: rankFrom ?? null,
           rankTo: rankTo ?? null,
+          // Only the choice made in the editor is sent; the end-of-campaign methods stay as saved.
+          selection: selection ?? null,
         }),
       ),
   // Fields go without ids and machine names: the server numbers and names them.

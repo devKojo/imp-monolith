@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import { claimSeat } from '@/modules/campaigns';
+import { allocateOnCompletion } from '@/modules/rewards';
 import type { QuizRepository } from '../application/ports';
 import type { AttemptResult, AttemptRow, QuizDefinition, RunnableQuiz } from '../domain/model';
 
@@ -209,7 +210,25 @@ export class PrismaQuizRepository implements QuizRepository {
           passed: input.result.passed,
         },
       });
-      return count === 1;
+      if (count !== 1) return false;
+      // A pass in a campaign whose prizes go to the first to qualify takes the next free tier, in this same
+      // transaction, so the award exists exactly when the pass does.
+      if (input.result.passed) {
+        const attempt = await tx.quizAttempt.findFirst({
+          where: { id: input.attemptId, tenantId: ctx.tenantId },
+          select: { campaignId: true, userId: true },
+        });
+        if (attempt) {
+          await allocateOnCompletion(tx, {
+            tenantId: ctx.tenantId,
+            campaignId: attempt.campaignId,
+            userId: attempt.userId,
+            archetype: 'QUIZ',
+            now: input.at,
+          });
+        }
+      }
+      return true;
     });
   }
 }
