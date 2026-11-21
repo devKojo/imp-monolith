@@ -144,6 +144,9 @@ const EXPECTED_GRANTS: Array<[string, string, string, boolean]> = [
   ['app_runtime', 'scam_reports', 'INSERT', true],
   ['app_runtime', 'scam_reports', 'UPDATE', false],
   ['app_runtime', 'scam_reports', 'DELETE', false],
+  // Platform staff are read only through the platform role; the runtime role cannot even see who they are.
+  ['app_runtime', 'platform_staff', 'SELECT', false],
+  ['app_runtime', 'platform_staff', 'INSERT', false],
   ['app_runtime', 'points_ledger', 'DELETE', false],
   ['app_runtime', 'participation_signals', 'UPDATE', false],
   ['app_runtime', 'participation_signals', 'DELETE', false],

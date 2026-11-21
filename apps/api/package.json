@@ -21,6 +21,7 @@
     "db:check-fk": "vite-node scripts/db/check-fk.ts",
     "db:check-uuid": "vite-node scripts/db/check-uuid.ts",
     "db:connection-budget": "vite-node scripts/db/connection-budget.ts",
+    "platform:grant-staff": "vite-node scripts/db/grant-platform-staff.ts",
     "db:verify": "vite-node scripts/db/verify-rls.ts && vite-node scripts/db/verify-db-objects.ts && vite-node scripts/db/check-uuid.ts --db"
   },
   "dependencies": {

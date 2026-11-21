@@ -56,3 +56,12 @@ Weights and bands are in `apps/api/src/modules/rewards/MODULE.md`. Two choices w
 hold is decided by the claim rules alone (an award a business already reviewed and released is not held again
 for what it was released for), while the cap on who may release uses the award's total score; and scam reports
 carry a severity from the reason only, because the business scope cannot read them to count reporters.
+
+### R6 as built
+
+A new `administration` module is the only user of the platform database role. Platform staff are rows in
+`platform_staff`, added by an operator (`npm run platform:grant-staff`), so becoming staff needs database access
+and not only an account. Every call re-checks the row (revocation is immediate), and a decision that changes what
+a winner is owed re-asks for the password. There is no second factor yet; that is the main gap before real staff
+use it. The queue shows counts of the same payout destination and network in other businesses, which only the
+platform role can read.

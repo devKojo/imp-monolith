@@ -11,6 +11,7 @@ import { SecretBox } from './infrastructure/secret-box';
 
 export type { AwardResult, AwardRow, DrawView, PublishedDraw } from './domain/model';
 export { verifyDraw } from './domain/draw';
+export { CLAIM_WINDOW_DAYS } from './application/rewards.service';
 export { appendPoints, pointsBalance } from './infrastructure/points-ledger';
 export { SecretBox } from './infrastructure/secret-box';
 export type { MyAward, MyAwardDetail, MyAwardsPage, WalletBalance } from './domain/model';

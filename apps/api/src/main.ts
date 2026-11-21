@@ -6,11 +6,12 @@ import { createQuizModule } from './modules/quiz';
 import { createSurveyModule } from './modules/survey';
 import { createVotingModule } from './modules/voting';
 import { createGiveawayModule } from './modules/giveaway';
+import { createAdministrationModule } from './modules/administration';
 import { createRewardsModule } from './modules/rewards';
 import { createMyParticipationsModule } from './modules/my-participations';
 import { createParticipantsModule } from './modules/participants';
 import { createTemplatesModule } from './modules/templates';
-import { createTenantDb } from './shared/database';
+import { createPlatformDb, createTenantDb } from './shared/database';
 import { RabbitMqEventBus } from './infrastructure/messaging/rabbitmq-event-bus';
 
 const bus = await RabbitMqEventBus.connect(env.RABBITMQ_URL);
@@ -46,6 +47,13 @@ const rewards = createRewardsModule({
   identity,
   dataKey: env.REWARD_DATA_KEY ?? env.SESSION_SECRET,
 });
+// Platform review needs the platform database role; without it the routes simply are not mounted.
+const administration = env.DATABASE_URL_PLATFORM
+  ? createAdministrationModule({
+      db: createPlatformDb({ connectionString: env.DATABASE_URL_PLATFORM, poolMax: 2 }),
+      identity,
+    })
+  : undefined;
 const participants = createParticipantsModule({ db, identity });
 const myParticipations = createMyParticipationsModule({ db, identity });
 const campaigns = createCampaignsModule({ db, identity, templates: templates.lookup });
@@ -61,6 +69,7 @@ const app = await createApp({
   voting,
   giveaway,
   rewards,
+  ...(administration ? { administration } : {}),
   participants,
   myParticipations,
 });

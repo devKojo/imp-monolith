@@ -11,6 +11,7 @@ import type { QuizModule } from '@/modules/quiz';
 import type { SurveyModule } from '@/modules/survey';
 import type { VotingModule } from '@/modules/voting';
 import type { GiveawayModule } from '@/modules/giveaway';
+import type { AdministrationModule } from '@/modules/administration';
 import type { RewardsModule } from '@/modules/rewards';
 import type { MyParticipationsModule } from '@/modules/my-participations';
 import type { ParticipantsModule } from '@/modules/participants';
@@ -26,6 +27,8 @@ export async function createApp(deps: {
   voting?: VotingModule;
   giveaway?: GiveawayModule;
   rewards?: RewardsModule;
+  /** Platform staff review. Only present when the platform database role is configured. */
+  administration?: AdministrationModule;
   participants?: ParticipantsModule;
   myParticipations?: MyParticipationsModule;
   /** Key for the abuse-detection hashes (see `request-signals`). Required in production. */
@@ -67,6 +70,7 @@ export async function createApp(deps: {
     app.use(deps.giveaway.basePath, deps.giveaway.router);
     app.use(deps.giveaway.publicBasePath, deps.giveaway.publicRouter);
   }
+  if (deps.administration) app.use(deps.administration.basePath, deps.administration.router);
   if (deps.rewards) {
     app.use(deps.rewards.basePath, deps.rewards.router);
     app.use(deps.rewards.mineBasePath, deps.rewards.mineRouter);
