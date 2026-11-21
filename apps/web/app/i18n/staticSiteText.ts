@@ -914,6 +914,15 @@ export const staticSiteText = {
   'overview.chart.byKindDaily.summary':
     '{type} had the most over the period, with {n} participations.',
   'overview.chart.byType.summary': '{type} leads with {n} participations.',
+  'overview.drill.title': 'Explore by campaign type',
+  'overview.drill.hint':
+    'Pick a type to see its own charts. Only the types you have used are listed.',
+  'overview.drill.label': 'Campaign type',
+  'overview.drill.summary': '{campaigns} campaigns, {n} participations, {done} completed.',
+  'overview.drill.daily': '{type}: participation, last 14 days',
+  'overview.drill.daily.summary': 'Daily {type} participation over the last 14 days.',
+  'overview.drill.campaigns.summary': 'How each {type} campaign is doing.',
+  'overview.drill.question': 'Question',
   'overview.chart.entries': 'Entries by giveaway',
   'overview.chart.entries.summary': '{title} has the most entries, with {n}.',
   'overview.chart.votes': 'Votes by campaign',
