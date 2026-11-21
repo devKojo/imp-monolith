@@ -58,5 +58,7 @@ export type CampaignActivity = {
 export type BusinessActivity = {
   /** Oldest first, ending today (UTC); days without activity are zeros. */
   daily: DailyActivity[];
+  /** The same days split by campaign type: participations started each day, in the order of `daily`. */
+  byKind: Record<ParticipationKind, number[]>;
   quiz: { passed: number; failed: number; correctPercent: number | null } | null;
 };

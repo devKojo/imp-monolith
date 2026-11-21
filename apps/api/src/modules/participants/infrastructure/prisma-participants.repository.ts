@@ -129,38 +129,47 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
       const where = { tenantId: ctx.tenantId };
 
       type DayRow = { day: string; n: number };
-      const [quizStarted, quizDone, surveyStarted, surveyDone, voted, entered] = await Promise.all([
-        tx.$queryRaw<DayRow[]>`
+      type KindRow = DayRow & { kind: string | null };
+      const [quizStarted, quizDone, surveyStarted, surveyDone, votedRows, entered] =
+        await Promise.all([
+          tx.$queryRaw<DayRow[]>`
           SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM quiz_attempts
           WHERE tenant_id = ${ctx.tenantId}::uuid AND started_at >= ${since}
           GROUP BY 1`,
-        tx.$queryRaw<DayRow[]>`
+          tx.$queryRaw<DayRow[]>`
           SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM quiz_attempts
           WHERE tenant_id = ${ctx.tenantId}::uuid AND submitted_at >= ${since}
           GROUP BY 1`,
-        tx.$queryRaw<DayRow[]>`
+          tx.$queryRaw<DayRow[]>`
           SELECT to_char(started_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM survey_responses
           WHERE tenant_id = ${ctx.tenantId}::uuid AND started_at >= ${since}
           GROUP BY 1`,
-        tx.$queryRaw<DayRow[]>`
+          tx.$queryRaw<DayRow[]>`
           SELECT to_char(submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM survey_responses
           WHERE tenant_id = ${ctx.tenantId}::uuid AND submitted_at >= ${since}
           GROUP BY 1`,
-        tx.$queryRaw<DayRow[]>`
-          SELECT to_char(cast_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
-          FROM votes
-          WHERE tenant_id = ${ctx.tenantId}::uuid AND cast_at >= ${since}
-          GROUP BY 1`,
-        tx.$queryRaw<DayRow[]>`
+          // Polls and image votes share the votes table; the campaign's type tells them apart.
+          tx.$queryRaw<KindRow[]>`
+          SELECT to_char(v.cast_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
+                 t.archetype::text AS kind, count(*)::int AS n
+          FROM votes v
+          JOIN campaigns c ON c.id = v.campaign_id AND c.tenant_id = v.tenant_id
+          LEFT JOIN campaign_templates t ON t.id = c.template_id
+          WHERE v.tenant_id = ${ctx.tenantId}::uuid AND v.cast_at >= ${since}
+          GROUP BY 1, 2`,
+          tx.$queryRaw<DayRow[]>`
           SELECT to_char(entered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS n
           FROM giveaway_entries
           WHERE tenant_id = ${ctx.tenantId}::uuid AND entered_at >= ${since}
           GROUP BY 1`,
-      ]);
+        ]);
+      const voted: DayRow[] = votedRows;
+      const polled = votedRows.filter((r) => r.kind === 'POLL');
+      const imageVoted = votedRows.filter((r) => r.kind !== 'POLL');
       const sum = (...lists: DayRow[][]) => {
         const by = new Map<string, number>();
         for (const r of lists.flat()) by.set(r.day, (by.get(r.day) ?? 0) + r.n);
@@ -169,10 +178,25 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
       // A vote or an entry starts and completes at the same moment.
       const startedBy = sum(quizStarted, surveyStarted, voted, entered);
       const completedBy = sum(quizDone, surveyDone, voted, entered);
-      const daily = Array.from({ length: ACTIVITY_DAYS }, (_, i) => {
-        const date = day(new Date(since.getTime() + i * 86_400_000));
-        return { date, started: startedBy.get(date) ?? 0, completed: completedBy.get(date) ?? 0 };
-      });
+      const dates = Array.from({ length: ACTIVITY_DAYS }, (_, i) =>
+        day(new Date(since.getTime() + i * 86_400_000)),
+      );
+      const daily = dates.map((date) => ({
+        date,
+        started: startedBy.get(date) ?? 0,
+        completed: completedBy.get(date) ?? 0,
+      }));
+      const perDay = (...lists: DayRow[][]) => {
+        const by = sum(...lists);
+        return dates.map((date) => by.get(date) ?? 0);
+      };
+      const byKind = {
+        quiz: perDay(quizStarted),
+        survey: perDay(surveyStarted),
+        poll: perDay(polled),
+        vote: perDay(imageVoted),
+        giveaway: perDay(entered),
+      };
 
       const [passed, failed, sums] = await Promise.all([
         tx.quizAttempt.count({ where: { ...where, passed: true } }),
@@ -185,6 +209,7 @@ export class PrismaParticipantsRepository implements ParticipantsRepository {
       const total = sums._sum.total ?? 0;
       return {
         daily,
+        byKind,
         quiz:
           passed + failed > 0
             ? {

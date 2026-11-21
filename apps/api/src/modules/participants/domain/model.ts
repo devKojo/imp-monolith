@@ -68,6 +68,11 @@ export type CampaignActivity = {
 export type BusinessActivity = {
   /** Oldest first, ending today (UTC); days without activity are zeros. */
   daily: DailyActivity[];
+  /**
+   * The same days split by campaign type: participations started each day, one number per day in the order of
+   * `daily`. Every type is present (zeros when it has none), so a new type shows up as its own line.
+   */
+  byKind: Record<ParticipationKind, number[]>;
   /** Passed and not passed across every quiz attempt that was finished; null when none were. */
   quiz: { passed: number; failed: number; correctPercent: number | null } | null;
 };

@@ -648,4 +648,64 @@ describe('UiChart (UI-A11Y-10)', () => {
     expect(paths.length).toBeGreaterThanOrEqual(1);
     expect(w.findAll('text.ui-chart__label').map((t) => t.text())).toEqual(['Entries', 'Verified']);
   });
+
+  it('opens a tooltip with every value when a column is pointed at or focused, and closes it on Escape', async () => {
+    const w = mount(UiChart, { props: { type: 'bar', title: 'T', series, summary: 's' } });
+    expect(w.find('.ui-chart__tip').exists()).toBe(false);
+    const columns = w.findAll('rect.ui-chart__hit');
+    expect(columns).toHaveLength(2);
+    expect(columns[1]!.attributes('aria-label')).toBe('Tue. Entries: 340, Verified: 210');
+    await columns[1]!.trigger('mouseover');
+    const tip = w.get('.ui-chart__tip');
+    expect(tip.text()).toContain('Tue');
+    expect(tip.text()).toContain('Entries: 340');
+    expect(tip.text()).toContain('Verified: 210');
+    await w.get('svg').trigger('mouseleave');
+    expect(w.find('.ui-chart__tip').exists()).toBe(false);
+    await columns[0]!.trigger('focusin');
+    expect(w.get('.ui-chart__tip').text()).toContain('Mon');
+    await w.get('figure').trigger('keydown', { key: 'Escape' });
+    expect(w.find('.ui-chart__tip').exists()).toBe(false);
+  });
+
+  it('shortens a long name on the axis and shows it in full on hover and in the table', async () => {
+    const long = 'Black Friday image vote 2026';
+    const w = mount(UiChart, {
+      props: {
+        type: 'bar',
+        title: 'T',
+        series: [{ name: 'Votes', points: [{ label: long, value: 7 }] }],
+        summary: 's',
+      },
+    });
+    const axis = w.find('text.ui-chart__short');
+    expect(axis.text()).toBe('Black Frida…');
+    await axis.trigger('mouseover');
+    expect(w.get('.ui-chart__tip').text()).toContain(long);
+    expect(w.get('tbody').text()).toContain(long);
+  });
+
+  it('names a donut slice in full with its share when it is pointed at', async () => {
+    const w = mount(UiChart, {
+      props: {
+        type: 'donut',
+        title: 'T',
+        series: [
+          {
+            name: 'Types',
+            points: [
+              { label: 'A very long campaign type name', value: 3 },
+              { label: 'Other', value: 1 },
+            ],
+          },
+        ],
+        summary: 's',
+      },
+    });
+    const slice = w.findAll('circle.ui-chart__hit')[0]!;
+    expect(slice.attributes('aria-label')).toBe('A very long campaign type name: 3 (75%)');
+    await slice.trigger('mouseover');
+    expect(w.get('.ui-chart__tip').text()).toContain('3 (75%)');
+    expect(w.get('.ui-chart__tip').text()).toContain('A very long campaign type name');
+  });
 });
