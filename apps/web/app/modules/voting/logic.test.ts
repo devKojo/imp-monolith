@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { isOption, labelOf, leader, resultFor, rankOf } from './logic';
+import { isOption, labelOf, leader, resultFor, rankOf, questionsOf } from './logic';
 import type { BallotOption, Results } from './types';
 
 const options: BallotOption[] = [
@@ -75,5 +75,25 @@ describe('rankOf', () => {
   });
   it('is null without standings', () => {
     expect(rankOf(null, 0)).toBeNull();
+  });
+});
+
+describe('questionsOf', () => {
+  const base = {
+    campaignId: 'c',
+    kind: 'poll' as const,
+    title: 'T',
+    question: 'Q?',
+    total: 3,
+    options: [],
+  };
+  it('uses the questions the API sends', () => {
+    const questions = [{ id: 'a', question: 'A?', total: 1, options: [] }];
+    expect(questionsOf({ ...base, questions })).toEqual(questions);
+  });
+  it('treats the top-level fields as the one question from an older API', () => {
+    expect(questionsOf(base as never)).toEqual([
+      { id: 'question', question: 'Q?', total: 3, options: [] },
+    ]);
   });
 });

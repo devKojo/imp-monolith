@@ -1,4 +1,4 @@
-import type { BallotOption, OptionResult, Results } from './types';
+import type { BallotOption, CampaignResults, OptionResult, Results } from './types';
 
 /** Pure helpers for the voting screens: every function returns new data and never mutates. */
 
@@ -22,6 +22,18 @@ export function rankOf(results: Results | null, index: number): number | null {
   if (!results) return null;
   const mine = resultFor(results, index).votes;
   return 1 + results.options.filter((o) => o.votes > mine).length;
+}
+
+/**
+ * The questions of a campaign's standings. An API that predates several-question polls sends only the
+ * first question's fields at the top level, so those stand in as the one question.
+ */
+export function questionsOf(data: CampaignResults): CampaignResults['questions'] {
+  return (
+    data.questions ?? [
+      { id: 'question', question: data.question, total: data.total, options: data.options },
+    ]
+  );
 }
 
 /** The label of an option by its number, or an empty string if there is none. */

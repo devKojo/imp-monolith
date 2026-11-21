@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { t } from '../../../i18n';
+import { questionsOf } from '../logic';
 import type { CampaignResults, Results } from '../types';
 import { useCampaignResults } from '../useVoting';
 import BallotResults from './BallotResults.vue';
@@ -36,9 +37,9 @@ const results = computed<Results | null>(() =>
 );
 /** One block per question; a ballot with a single question shows it under the panel's own title. */
 const blocks = computed(() =>
-  (data.value?.questions ?? []).map((q) => ({
+  (data.value ? questionsOf(data.value) : []).map((q, _i, all) => ({
     id: q.id,
-    heading: (data.value?.questions.length ?? 0) > 1 ? q.question : '',
+    heading: all.length > 1 ? q.question : '',
     options: q.options,
     results: {
       total: q.total,

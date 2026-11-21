@@ -8,6 +8,7 @@ import type {
 } from '../../participants/types';
 import { dayLabel } from '../../participants/logic';
 import type { CampaignResults } from '../../voting/types';
+import { questionsOf } from '../../voting/logic';
 import { useCampaignResults } from '../../voting/useVoting';
 import { barsOfKinds, campaignBars, kindSeries, leadingOption, standingsBars } from '../overview';
 
@@ -129,7 +130,7 @@ watch(
       // The person may have picked another campaign while this one loaded.
       if (id !== standingsId.value) return;
       standings.value = data;
-      questionId.value = data.questions[0]?.id ?? '';
+      questionId.value = questionsOf(data)[0]?.id ?? '';
       state.value = 'ready';
     } catch {
       if (id === standingsId.value) state.value = 'error';
@@ -138,10 +139,12 @@ watch(
   { immediate: true },
 );
 const question = computed(
-  () => standings.value?.questions.find((q) => q.id === questionId.value) ?? null,
+  () =>
+    (standings.value ? questionsOf(standings.value) : []).find((q) => q.id === questionId.value) ??
+    null,
 );
 const questionChoices = computed(() =>
-  (standings.value?.questions ?? []).map((q, i) => ({
+  (standings.value ? questionsOf(standings.value) : []).map((q, i) => ({
     value: q.id,
     label: `${i + 1}. ${q.question || standings.value?.title || ''}`,
   })),
