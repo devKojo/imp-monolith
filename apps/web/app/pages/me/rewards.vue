@@ -23,6 +23,10 @@ const awards = computed(() => rewards.awards.data.value.items);
 const available = computed(() => awards.value.filter((a) => section(a) === 'available'));
 const history = computed(() => awards.value.filter((a) => section(a) === 'history'));
 const wallet = computed(() => rewards.wallet.data.value);
+const totalPoints = computed(() => wallet.value.reduce((n, w) => n + w.points, 0));
+const paidCount = computed(
+  () => awards.value.filter((a) => a.status === 'CLAIMED' || a.status === 'FULFILLED').length,
+);
 const loading = computed(() => rewards.awards.pending.value && awards.value.length === 0);
 const failed = computed(() => !!rewards.awards.error.value);
 
@@ -131,6 +135,16 @@ watch(
     <UiSystemState v-else-if="failed" kind="generic" @action="rewards.refresh" />
 
     <template v-else>
+      <section class="stats" :aria-label="t('rewards.stats.label')">
+        <UiStatCard
+          :label="t('rewards.stats.points')"
+          :value="totalPoints.toLocaleString('en')"
+          icon="gift"
+        />
+        <UiStatCard :label="t('rewards.stats.ready')" :value="String(available.length)" />
+        <UiStatCard :label="t('rewards.stats.claimed')" :value="String(paidCount)" />
+      </section>
+
       <section class="block" aria-labelledby="wallet-title">
         <h2 id="wallet-title" class="ui-text-h2">{{ t('rewards.wallet.title') }}</h2>
         <UiEmptyState
@@ -267,6 +281,17 @@ watch(
 .head__summary {
   margin: 0;
   color: var(--ui-color-text-secondary);
+}
+.stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ui-space-4);
+  margin-block-end: var(--ui-space-8);
+}
+@media (min-width: 768px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .block {
   display: flex;

@@ -4,6 +4,7 @@ import { t } from '../../i18n';
 import { useAuth } from '../../modules/auth/composables/useAuth';
 import ParticipantShell from '../../modules/participant/components/ParticipantShell.vue';
 import CampaignCarousel from '../../modules/participant/components/CampaignCarousel.vue';
+import RewardsSummary from '../../modules/rewards/components/RewardsSummary.vue';
 import MyParticipations from '../../modules/participant/components/MyParticipations.vue';
 import {
   PARTICIPATION_PAGE_SIZE,
@@ -37,6 +38,8 @@ const firstName = computed(() => session.value?.user.name.trim().split(/\s+/)[0]
         <span class="hero__name">{{ firstName }}</span>
       </h1>
     </header>
+
+    <RewardsSummary />
 
     <section class="open-campaigns">
       <UiSkeleton v-if="open.pending.value" variant="card" />
