@@ -113,6 +113,7 @@ describe('save body', () => {
       'name',
       'rankFrom',
       'rankTo',
+      'selection',
       'valueLabel',
       'winners',
     ]);

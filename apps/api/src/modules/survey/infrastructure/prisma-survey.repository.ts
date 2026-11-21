@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { recordSignal, withPublic, withTenant, type TenantContext } from '@/shared/database';
 import { claimSeat } from '@/modules/campaigns';
+import { allocateOnCompletion } from '@/modules/rewards';
 import type { SurveyRepository } from '../application/ports';
 import type {
   AnswerValue,
@@ -202,7 +203,22 @@ export class PrismaSurveyRepository implements SurveyRepository {
         where: { id: input.responseId, tenantId: ctx.tenantId, submittedAt: null },
         data: { submittedAt: input.at },
       });
-      return count === 1;
+      if (count !== 1) return false;
+      // Finishing a survey whose prizes go to the first to finish takes the next free tier, in this transaction.
+      const response = await tx.surveyResponse.findFirst({
+        where: { id: input.responseId, tenantId: ctx.tenantId },
+        select: { campaignId: true, userId: true },
+      });
+      if (response) {
+        await allocateOnCompletion(tx, {
+          tenantId: ctx.tenantId,
+          campaignId: response.campaignId,
+          userId: response.userId,
+          archetype: 'SURVEY',
+          now: input.at,
+        });
+      }
+      return true;
     });
   }
 }

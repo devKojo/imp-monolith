@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canManageRewards,
+  canRecall,
   needsPlatform,
   riskBand,
   waitsForReview,
@@ -99,5 +100,14 @@ describe('risk review', () => {
   });
   it('bands a score', () => {
     expect([0, 29, 30, 69, 70].map(riskBand)).toEqual(['none', 'none', 'REVIEW', 'REVIEW', 'FLAG']);
+  });
+});
+
+describe('canRecall', () => {
+  it('covers an award not yet paid: available to claim, or claimed', () => {
+    expect(canRecall(award({ status: 'AVAILABLE' }))).toBe(true);
+    expect(canRecall(award({ status: 'CLAIMED' }))).toBe(true);
+    expect(canRecall(award({ status: 'FULFILLED' }))).toBe(false);
+    expect(canRecall(award({ status: 'REVOKED' }))).toBe(false);
   });
 });

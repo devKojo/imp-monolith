@@ -40,7 +40,7 @@ export type Prize = PrizeInput & { id: string };
 
 export const PRIZE_KINDS = ['CASH', 'POINTS', 'ITEM'] as const;
 export type PrizeKind = (typeof PRIZE_KINDS)[number];
-export const PRIZE_SELECTIONS = ['RANKING', 'DRAW'] as const;
+export const PRIZE_SELECTIONS = ['RANKING', 'DRAW', 'COMPLETION'] as const;
 export type PrizeSelection = (typeof PRIZE_SELECTIONS)[number];
 
 /** The largest cash or points amount for one prize (minor units): a typo guard, not a business rule. */

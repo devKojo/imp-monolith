@@ -11,7 +11,7 @@ export const awardParamSchema = z.object({ awardId: uuidSchema }).strict();
 /** A business reviewing an award the risk rules held. */
 export const reviewBodySchema = z
   .object({
-    decision: z.enum(['release', 'reject']),
+    decision: z.enum(['release', 'reject', 'revoke']),
     // Why it was rejected; a release needs none.
     reason: z.enum(['NOT_ELIGIBLE', 'SUSPECTED_ABUSE', 'OTHER']).optional(),
   })

@@ -8,6 +8,7 @@ import type { CampaignSummary } from '../../modules/campaigns/types';
 import {
   canSettle,
   countAwards,
+  canRecall,
   needsPayment,
   needsPlatform,
   riskBand,
@@ -143,14 +144,19 @@ async function release(id: string) {
   }
 }
 const rejecting = ref<BusinessAward | null>(null);
+const rejectMode = ref<'reject' | 'revoke'>('reject');
 const rejectOpen = ref(false);
-function askReject(id: string) {
+function askReject(id: string, mode: 'reject' | 'revoke' = 'reject') {
   rejecting.value = awards.value.find((a) => a.id === id) ?? null;
+  rejectMode.value = mode;
   rejectOpen.value = rejecting.value !== null;
 }
 async function reject(awardId: string, reason: RejectReason) {
-  await rewards.review(awardId, 'reject', reason);
-  notice.value = { tone: 'info', text: t('rewards.biz.rejected') };
+  await rewards.review(awardId, rejectMode.value, reason);
+  notice.value = {
+    tone: 'info',
+    text: t(rejectMode.value === 'revoke' ? 'rewards.biz.revoked' : 'rewards.biz.rejected'),
+  };
   await loadAwards();
 }
 
@@ -172,6 +178,7 @@ const tableRows = computed(() =>
     status: a.status,
     sentTo: a.paidReference ?? a.payoutHint ?? '-',
     payable: needsPayment(a),
+    recallable: canRecall(a),
     waiting: waitsForReview(a),
     platform: needsPlatform(a),
     score: a.riskScore,
@@ -325,6 +332,17 @@ const tableRows = computed(() =>
                 </UiButton>
               </div>
               <UiButton
+                v-if="row.recallable"
+                size="xs"
+                variant="tertiary"
+                @click="askReject(String(row.id), 'revoke')"
+              >
+                {{ t('rewards.biz.revoke') }}
+                <span class="ui-sr-only">{{
+                  t('rewards.biz.revoke.for', { name: String(row.winner) })
+                }}</span>
+              </UiButton>
+              <UiButton
                 v-if="row.payable"
                 size="xs"
                 variant="secondary"
@@ -350,7 +368,12 @@ const tableRows = computed(() =>
     </template>
 
     <PayoutDialog v-model:open="dialog" :award="paying" :reveal="reveal" :submit="record" />
-    <RejectDialog v-model:open="rejectOpen" :award="rejecting" :submit="reject" />
+    <RejectDialog
+      v-model:open="rejectOpen"
+      :award="rejecting"
+      :mode="rejectMode"
+      :submit="reject"
+    />
   </BusinessShell>
 </template>
 

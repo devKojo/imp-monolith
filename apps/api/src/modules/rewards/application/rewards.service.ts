@@ -41,7 +41,8 @@ import type { RewardsRepository } from './ports';
 /** How long a winner has to claim before the award expires. */
 export const CLAIM_WINDOW_DAYS = 14;
 
-const REASON: Record<'UNSUPPORTED' | 'MIXED' | 'NO_PRIZES', string> = {
+const REASON: Record<'UNSUPPORTED' | 'MIXED' | 'NO_PRIZES' | 'AS_QUALIFIED', string> = {
+  AS_QUALIFIED: 'Rewards for this campaign are awarded as people qualify, so there is nothing to settle',
   UNSUPPORTED: 'This kind of reward cannot be settled in one step',
   MIXED: 'The prizes of this campaign use different ways of choosing winners',
   NO_PRIZES: 'This campaign has no prizes to award',

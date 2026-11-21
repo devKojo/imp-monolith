@@ -101,7 +101,8 @@ const DEFAULT_SELECTION: Record<Archetype, Selection | null> = {
 };
 
 export type SelectionResult =
-  { ok: true; selection: Selection } | { ok: false; reason: 'UNSUPPORTED' | 'MIXED' | 'NO_PRIZES' };
+  | { ok: true; selection: Selection }
+  | { ok: false; reason: 'UNSUPPORTED' | 'MIXED' | 'NO_PRIZES' | 'AS_QUALIFIED' };
 
 /** How this campaign picks winners: a pool shares equally; otherwise the prizes agree on one method. */
 export function selectionOf(
@@ -112,8 +113,9 @@ export function selectionOf(
   const wanted = new Set(c.prizes.map((p) => p.selection ?? DEFAULT_SELECTION[c.archetype]));
   if (wanted.size > 1) return { ok: false, reason: 'MIXED' };
   const [only] = [...wanted];
-  // Instant win and completion rewards are not settled by a single run at the end.
-  if (!only || only === 'INSTANT' || only === 'COMPLETION')
-    return { ok: false, reason: 'UNSUPPORTED' };
+  // Completion rewards are awarded as people qualify, so there is nothing to settle at the end.
+  if (only === 'COMPLETION') return { ok: false, reason: 'AS_QUALIFIED' };
+  // An instant win is not settled by a single run at the end either.
+  if (!only || only === 'INSTANT') return { ok: false, reason: 'UNSUPPORTED' };
   return { ok: true, selection: only };
 }

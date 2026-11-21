@@ -248,7 +248,14 @@ const setPrizes = (next: Prize[]) => {
   if (draft.value) draft.value = { ...draft.value, prizes: next };
 };
 const addNewPrize = () => {
-  if (draft.value) setPrizes(addPrize(draft.value.prizes, newPrize(crypto.randomUUID())));
+  if (draft.value) {
+    // A new tier chooses its winners the way the others do.
+    const prize = {
+      ...newPrize(crypto.randomUUID()),
+      selection: draft.value.prizes[0]?.selection ?? null,
+    };
+    setPrizes(addPrize(draft.value.prizes, prize));
+  }
 };
 
 // ---- actions
@@ -560,6 +567,9 @@ const crumbs = computed(() => [
             :pool="draft.settings.pool ?? null"
             :joined="isDraft ? null : draft.participantCount"
             :readonly="readonly"
+            :first-allowed="
+              draft.template?.archetype === 'quiz' || draft.template?.archetype === 'survey'
+            "
             @update:pool="setPool"
             @add="addNewPrize"
             @update="(prizeId, patch) => setPrizes(updatePrize(draft!.prizes, prizeId, patch))"
