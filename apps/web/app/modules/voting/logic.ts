@@ -14,6 +14,16 @@ export function leader(results: Results | null): number | null {
   return best.index;
 }
 
+/**
+ * Where an option stands: 1 for the most votes. Options with the same votes share a place, so a tie for first
+ * is two firsts. Null when there are no standings.
+ */
+export function rankOf(results: Results | null, index: number): number | null {
+  if (!results) return null;
+  const mine = resultFor(results, index).votes;
+  return 1 + results.options.filter((o) => o.votes > mine).length;
+}
+
 /** The label of an option by its number, or an empty string if there is none. */
 export const labelOf = (options: readonly BallotOption[], index: number | null): string =>
   index === null ? '' : (options.find((o) => o.index === index)?.label ?? '');

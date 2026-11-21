@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
+import ParticipationResult from '../../../modules/participant/components/ParticipationResult.vue';
+import { useOpenCampaigns } from '../../../modules/participant/useOpenCampaigns';
 import BallotResults from '../../../modules/voting/components/BallotResults.vue';
 import { ballotErrorKey } from '../../../modules/voting/errors';
-import { isOption, labelOf } from '../../../modules/voting/logic';
+import { isOption, labelOf, rankOf, resultFor } from '../../../modules/voting/logic';
 import type { BallotView } from '../../../modules/voting/types';
 import { useVoting } from '../../../modules/voting/useVoting';
 
@@ -21,6 +24,12 @@ definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 const slug = String(useRoute().params.slug);
 const voting = useVoting();
 const footer = siteFooter();
+
+const openCampaigns = useOpenCampaigns();
+const next = computed(() => openCampaigns.campaigns.value.find((c) => c.slug !== slug) ?? null);
+// Confetti only right after casting the vote, not when coming back to a vote that was cast earlier.
+const justVoted = ref(false);
+const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const state = ref<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
 const view = ref<BallotView | null>(null);
@@ -70,6 +79,7 @@ async function cast() {
   problem.value = '';
   try {
     view.value = await voting.cast(slug, selected.value);
+    justVoted.value = view.value?.vote != null;
   } catch (e) {
     const err = toApiError(e);
     problem.value = t(ballotErrorKey(err));
@@ -81,6 +91,54 @@ async function cast() {
     submitting.value = false;
   }
 }
+
+/** What the person sees once they have voted: the same result screen every campaign type ends with. */
+const result = computed(() => {
+  const v = view.value;
+  const mine = v?.vote;
+  if (!v || !mine) return null;
+  const name = labelOf(v.options, mine.optionIndex);
+  const rank = rankOf(v.results, mine.optionIndex);
+  const share = v.results ? resultFor(v.results, mine.optionIndex).percent : null;
+  const closes = formatInZone(new Date(v.endsAt), zone);
+  const cast = formatInZone(new Date(mine.castAt), zone);
+  const total = v.results ? v.results.total.toLocaleString() : t('result.vote.tile.hidden');
+  return {
+    verdict: {
+      badge: t('result.vote.badge'),
+      title: t('result.vote.title'),
+      body: t('result.vote.body', { name }),
+    },
+    headline: v.results
+      ? [
+          { label: t('result.vote.share'), value: `${share}%`, suffix: name },
+          { label: t('result.vote.total'), value: total },
+        ]
+      : [{ label: t('result.vote.choice'), value: name }],
+    nextBody: t(v.results ? 'result.vote.next.shown' : 'result.vote.next.hidden', { date: closes }),
+    tiles: [
+      { label: t('result.vote.tile.options'), value: String(v.options.length) },
+      {
+        label: t('result.vote.tile.rank'),
+        value:
+          rank === null
+            ? t('result.vote.tile.hidden')
+            : t('result.vote.tile.rank.value', { n: rank, m: v.options.length }),
+      },
+      { label: t('result.vote.tile.votes'), value: total },
+    ],
+    details: [
+      {
+        label: t('result.vote.details.type'),
+        value: t(isPoll.value ? 'type.poll.one' : 'type.vote.one'),
+      },
+      { label: t('result.vote.choice'), value: name },
+      { label: t('result.vote.details.when'), value: cast },
+      { label: t('result.vote.details.closes'), value: closes },
+    ],
+    caption: t('result.vote.cast', { when: cast }),
+  };
+});
 
 const chooseLabel = computed(() => t(isPoll.value ? 'ballot.choose.poll' : 'ballot.choose.vote'));
 const chosenLabel = computed(() => labelOf(view.value?.options ?? [], selected.value));
@@ -108,6 +166,40 @@ const votedLabel = computed(() =>
     </UiEmptyState>
 
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />
+
+    <div v-else-if="voted && result" class="wrap">
+      <ParticipationResult
+        :type-label="t(isPoll ? 'type.poll.one' : 'type.vote.one')"
+        :title="heading"
+        :business-name="view.businessName"
+        :caption="result.caption"
+        :verdict="result.verdict"
+        :headline="result.headline"
+        :next-title="t('result.vote.next.title')"
+        :next-body="result.nextBody"
+        :summary-title="t('result.vote.summary.title')"
+        :tiles="result.tiles"
+        :details-title="t('result.vote.details.title')"
+        :details="result.details"
+        :next="next"
+        :now="openCampaigns.now.value"
+        :celebrate="justVoted"
+      >
+        <template #actions>
+          <UiButton :to="`/c/${slug}`" variant="secondary">{{ t('ballot.back') }}</UiButton>
+        </template>
+        <template v-if="view.results" #extra>
+          <UiCard as="div" class="standings">
+            <BallotResults
+              :options="view.options"
+              :results="view.results"
+              :yours="voted.optionIndex"
+            />
+          </UiCard>
+        </template>
+      </ParticipationResult>
+      <p class="ui-text-caption ui-text-hint final">{{ t('result.vote.details.final') }}</p>
+    </div>
 
     <div v-else class="wrap">
       <header class="head">
@@ -224,6 +316,10 @@ const votedLabel = computed(() =>
   margin-block: var(--ui-space-6);
   margin-inline: auto;
   padding-inline: var(--ui-space-4);
+}
+.final {
+  margin: 0;
+  text-align: center;
 }
 @media (min-width: 768px) {
   .wrap {

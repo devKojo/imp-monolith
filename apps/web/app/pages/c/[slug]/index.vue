@@ -106,8 +106,9 @@ async function start() {
     if (ballotInfo.value) {
       await navigateTo(`/c/${slug}/vote`);
     } else if (giveawayInfo.value) {
-      if (standing.value === 'none') await giveaway.enter(slug);
-      await navigateTo(`/c/${slug}/giveaway`);
+      const justEntered = standing.value === 'none';
+      if (justEntered) await giveaway.enter(slug);
+      await navigateTo(`/c/${slug}/giveaway${justEntered ? '?welcome=1' : ''}`);
     } else if (surveyInfo.value) {
       if (standing.value === 'none') await survey.start(slug);
       await navigateTo(`/c/${slug}/survey`);
