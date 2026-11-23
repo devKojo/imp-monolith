@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
+  matchCampaigns,
   canManageRewards,
   canRecall,
   needsPlatform,
@@ -109,5 +110,24 @@ describe('canRecall', () => {
     expect(canRecall(award({ status: 'CLAIMED' }))).toBe(true);
     expect(canRecall(award({ status: 'FULFILLED' }))).toBe(false);
     expect(canRecall(award({ status: 'REVOKED' }))).toBe(false);
+  });
+});
+
+describe('matchCampaigns', () => {
+  const items = [
+    { id: 'a', title: 'Summer Quiz' },
+    { id: 'b', title: 'Café Giveaway' },
+    { id: 'c', title: 'Winter Survey' },
+  ];
+  it('returns everything for an empty search', () => {
+    expect(matchCampaigns(items, '  ')).toHaveLength(3);
+  });
+  it('matches every word, ignoring case and accents', () => {
+    expect(matchCampaigns(items, 'cafe give').map((c) => c.id)).toEqual(['b']);
+    expect(matchCampaigns(items, 'QUIZ').map((c) => c.id)).toEqual(['a']);
+    expect(matchCampaigns(items, 'summer survey')).toEqual([]);
+  });
+  it('keeps the selected campaign in the list', () => {
+    expect(matchCampaigns(items, 'quiz', 'c').map((c) => c.id)).toEqual(['a', 'c']);
   });
 });

@@ -9,6 +9,7 @@ import {
   canSettle,
   countAwards,
   canRecall,
+  matchCampaigns,
   needsPayment,
   needsPlatform,
   riskBand,
@@ -48,10 +49,14 @@ const counts = computed(() => countAwards(awards.value));
 const settleable = computed(
   () => campaign.value !== null && canSettle(campaign.value, awards.value.length, now),
 );
+const search = ref('');
+const matches = computed(() => matchCampaigns(choices.value, search.value, campaignId.value));
 const options = computed(() => [
   { value: '', label: t('rewards.biz.campaign.choose') },
-  ...choices.value.map((c) => ({ value: c.id, label: c.title })),
+  ...matches.value.map((c) => ({ value: c.id, label: c.title })),
 ]);
+// How many campaigns the search leaves, other than the one already chosen.
+const matchCount = computed(() => matches.value.filter((c) => c.id !== campaignId.value).length);
 
 const fail = (e: unknown) => {
   notice.value = { tone: 'error', text: t(payoutErrorKey(toApiError(e))) };
@@ -214,6 +219,24 @@ const tableRows = computed(() =>
 
     <template v-else>
       <div class="picker">
+        <UiSearchField
+          v-if="choices.length > 1"
+          v-model="search"
+          compact
+          :label="t('rewards.biz.campaign.search')"
+        />
+        <p
+          v-if="search.trim()"
+          class="ui-text-caption ui-text-hint"
+          role="status"
+          aria-live="polite"
+        >
+          {{
+            matchCount === 0
+              ? t('rewards.biz.campaign.noMatch')
+              : t('rewards.biz.campaign.matches', { n: matchCount })
+          }}
+        </p>
         <UiSelect
           id="rewards-campaign"
           v-model="campaignId"
@@ -386,6 +409,9 @@ const tableRows = computed(() =>
   margin: 0;
 }
 .picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
   max-inline-size: 28rem;
   margin-block-end: var(--ui-space-6);
 }

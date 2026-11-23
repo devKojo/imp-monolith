@@ -25,6 +25,25 @@ export const waitsForReview = (a: Pick<BusinessAward, 'status'>): boolean =>
 export const needsPlatform = (a: Pick<BusinessAward, 'status' | 'riskScore'>): boolean =>
   waitsForReview(a) && a.riskScore >= FLAG_AT;
 
+/**
+ * The campaigns that match what was typed in the picker's search (title, case and accent insensitive; every
+ * word must appear). The chosen campaign always stays in the list so a search never drops the selection.
+ */
+export function matchCampaigns<T extends { id: string; title: string }>(
+  items: readonly T[],
+  query: string,
+  selectedId = '',
+): T[] {
+  const fold = (s: string) =>
+    s
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase();
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [...items];
+  return items.filter((c) => c.id === selectedId || words.every((w) => fold(c.title).includes(w)));
+}
+
 export type RiskBand = 'none' | 'REVIEW' | 'FLAG';
 export const riskBand = (score: number): RiskBand =>
   score >= FLAG_AT ? 'FLAG' : score >= REVIEW_AT ? 'REVIEW' : 'none';
