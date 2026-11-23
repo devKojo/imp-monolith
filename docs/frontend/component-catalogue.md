@@ -10,7 +10,7 @@
 
 | Component | What it is for | Composes | Used by | Spec |
 |---|---|---|---|---|
-| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiCollapsible`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPortalShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
+| `UiIcon` | The one inline SVG icon set. Decorative unless given a label. | - | `UiAccordion`, `UiActionMenu`, `UiBadge`, `UiBanner`, `UiBreadcrumbs`, `UiButton`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCheckbox`, `UiChoiceGroup`, `UiCollapsible`, `UiCopyButton`, `UiDataTable`, `UiDateTimeField`, `UiEmptyState`, `UiErrorSummary`, `UiFeatureTile`, `UiFilterChips`, `UiFormField`, `UiIconTile`, `UiInstantWinCard`, `UiLink`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiPermissionGate`, `UiPortalShell`, `UiSidebarNav`, `UiStepper`, `UiTextInput`, `UiToaster`, `UiTopBar` | UI-FND-06 |
 | `UiLink` | Internal (NuxtLink) or external link with a text cue for new tabs; bare mode for links styled as buttons or cards. | `UiIcon` | `UiActionMenu`, `UiBreadcrumbs`, `UiButton`, `UiConsentGroup`, `UiPortalShell`, `UiPublicShell`, `UiRewardCard`, `UiSidebarNav`, `UiTopBar` | UI-A11Y-06 |
 | `UiLiveRegion` | aria-live status or alert region for save, submit and error announcements. | - | `UiCopyButton`, `UiCountdown`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPasswordField` | UI-A11Y-05 |
 | `UiProgress` | Progress bar used by stepper, uploader, countdown and meters. | - | `UiCountdown`, `UiMediaUploader`, `UiMeter`, `UiPasswordField`, `UiStepper` | Spec 5 |
@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | `UiButton` | Primary, secondary, tertiary and danger actions (as button or, with `to`, as a link) with loading spinner, trailing icon and disabled-with-reason states. | `UiIcon`, `UiLink` | `UiActionMenu`, `UiBanner`, `UiCampaignCard`, `UiCaptchaWrapper`, `UiCarousel`, `UiChart`, `UiConfirmDialog`, `UiConflictDialog`, `UiConsoleShell`, `UiCopyButton`, `UiCountdown`, `UiDataTable`, `UiDialog`, `UiDrawProofPanel`, `UiMaskedValue`, `UiMediaUploader`, `UiOtpInput`, `UiPagination`, `UiPasswordField`, `UiPortalShell`, `UiReorderableList`, `UiSearchField`, `UiStepUpDialog`, `UiSystemState`, `UiToaster`, `UiTopBar` | Spec 5, UI-FND-05, UI-CPY-02 |
 | `UiActionMenu` | One "more actions" menu for a table row or card: links and actions, a danger style, drawn above the table so it is never clipped. | `UiButton`, `UiIcon`, `UiLink` | - | UI-DSH-04, UI-A11Y-05 |
-| `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
+| `UiCopyButton` | Copy a value to the clipboard and announce it. | `UiButton`, `UiIcon`, `UiLiveRegion` | `UiDrawProofPanel`, `UiPermissionGate` | UI-RWD-03, UI-DSH-12 |
 | `UiPermissionGate` | Hide, disable-with-reason, ask-a-colleague or lock an action by permission rule. | `UiCopyButton`, `UiIcon` | - | UI-DSH-03, Spec 7.3 |
 
 ## Forms
@@ -119,7 +119,7 @@
 
 ## Most reused
 
-- `UiIcon`: used by 31 components
+- `UiIcon`: used by 32 components
 - `UiButton`: used by 26 components
 - `UiLink`: used by 9 components
 - `UiBadge`: used by 8 components

@@ -7,6 +7,7 @@ import UiCollapsible from '../app/components/UiCollapsible.vue';
 import UiChart from '../app/components/UiChart.vue';
 import UiConfirmDialog from '../app/components/UiConfirmDialog.vue';
 import UiConsentGroup from '../app/components/UiConsentGroup.vue';
+import UiCopyButton from '../app/components/UiCopyButton.vue';
 import UiCountdown from '../app/components/UiCountdown.vue';
 import UiDataTable from '../app/components/UiDataTable.vue';
 import UiDateTimeField from '../app/components/UiDateTimeField.vue';
@@ -241,6 +242,19 @@ describe('UiSystemState (UXA-006)', () => {
         .find('[role="status"]')
         .exists(),
     ).toBe(true);
+  });
+});
+
+describe('UiCopyButton', () => {
+  it('shows a small "Copied" toast beside the button after copying', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const w = mount(UiCopyButton, { props: { value: 'https://x.test/c/a', what: 'link' } });
+    expect(w.find('.ui-copy__toast').exists()).toBe(false);
+    await w.get('button').trigger('click');
+    await flushPromises();
+    expect(writeText).toHaveBeenCalledWith('https://x.test/c/a');
+    expect(w.get('.ui-copy__toast').text()).toBe('Copied');
   });
 });
 
