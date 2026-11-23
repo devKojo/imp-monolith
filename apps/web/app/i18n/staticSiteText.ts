@@ -1029,6 +1029,9 @@ export const staticSiteText = {
   'rewards.biz.subtitle': 'Settle a finished campaign, see who won, and record each payment.',
   'rewards.biz.campaign': 'Campaign',
   'rewards.biz.campaign.choose': 'Choose a campaign',
+  'rewards.biz.campaign.search': 'Search campaigns',
+  'rewards.biz.campaign.noMatch': 'No campaigns match your search.',
+  'rewards.biz.campaign.matches': '{n} campaigns match your search.',
   'rewards.biz.none.title': 'No campaigns yet',
   'rewards.biz.none.body':
     'Create and run a campaign with prizes, then settle it here once it ends.',
