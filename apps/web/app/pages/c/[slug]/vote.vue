@@ -92,7 +92,7 @@ async function cast() {
   problem.value = '';
   try {
     view.value = await voting.cast(slug, picks.value as number[]);
-    justVoted.value = view.value?.vote != null;
+    justVoted.value = (view.value?.vote ?? null) !== null;
   } catch (e) {
     const err = toApiError(e);
     problem.value = t(ballotErrorKey(err));
