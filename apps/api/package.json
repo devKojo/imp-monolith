@@ -16,6 +16,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "smoke:db": "vite-node scripts/smoke-db.ts",
     "db:provision-roles": "vite-node scripts/db/provision-roles.ts",
+    "db:backfill-instant-awards": "vite-node scripts/db/backfill-instant-awards.ts",
     "db:check": "npm run db:check-ownership && npm run db:check-fk && npm run db:check-uuid && npm run db:connection-budget",
     "db:check-ownership": "vite-node scripts/db/check-ownership.ts",
     "db:check-fk": "vite-node scripts/db/check-fk.ts",
