@@ -10,7 +10,7 @@ export type MyAward = {
   /** Whole minor units for money, points for points; null while the prize is only described in text. */
   amountMinor: number | null;
   currency: string | null;
-  source: 'RANKING' | 'DRAW' | 'POOL' | 'INSTANT' | 'COMPLETION';
+  source: 'RANKING' | 'DRAW' | 'POOL' | 'COMPLETION';
   rank: number | null;
   prizeName: string | null;
   claimBy: string | null;

@@ -25,7 +25,7 @@ const props = defineProps<{
   survey: SurveyInfo | null;
   /** The facts of a poll or image vote campaign; null for any other kind. */
   ballot: BallotInfo | null;
-  /** The facts of a giveaway campaign; null for any other kind (an instant win is not enterable yet). */
+  /** The facts of a giveaway campaign; null for any other kind. */
   giveaway: GiveawayInfo | null;
   /** Label of the main action, or empty when this visitor cannot enter (for example a business account). */
   actionLabel: string;
@@ -68,7 +68,7 @@ const kind = computed(() => props.campaign.type);
 const kicker = computed(() => t(`type.${kind.value}.one` as AppTextKey));
 const tagline = computed(() => t(`pub.tagline.${kind.value}` as AppTextKey));
 const intro = computed(() => props.campaign.summary || tagline.value);
-// An instant win shows as a giveaway to a visitor but has no entry yet, so it has no giveaway facts.
+// A giveaway whose facts could not be read cannot be entered from this page.
 const enterable = computed(
   () => canEnter(kind.value) && (kind.value !== 'giveaway' || props.giveaway !== null),
 );

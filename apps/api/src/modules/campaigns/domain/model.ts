@@ -63,7 +63,7 @@ export type TemplateRef = {
   id: string;
   slug: string;
   name: string;
-  archetype: 'giveaway' | 'quiz' | 'survey' | 'instant' | 'poll' | 'vote';
+  archetype: 'giveaway' | 'quiz' | 'survey' | 'poll' | 'vote';
   description: string;
   /** A campaign needs at least this many content fields (questions) to launch. */
   minContentFields: number;

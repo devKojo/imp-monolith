@@ -37,7 +37,6 @@ enum TemplateArchetype {
   GIVEAWAY
   QUIZ
   SURVEY
-  INSTANT
   POLL
   VOTE
 }
@@ -288,7 +287,7 @@ model Campaign {
 }
 
 /// @owner templates
-/// A built-in campaign type (quiz, survey, giveaway, instant win). Global and read-only for businesses:
+/// A built-in campaign type (quiz, survey, giveaway, poll, vote). Global and read-only for businesses:
 /// seeded, and later managed by platform admins. It says what a campaign of that type may contain.
 model CampaignTemplate {
   id               String            @id @default(uuid(7)) @db.Uuid
@@ -532,7 +531,6 @@ enum PrizeSelection {
   RANKING
   DRAW
   POOL
-  INSTANT
   COMPLETION
 }
 

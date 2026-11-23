@@ -141,10 +141,6 @@ describe('selectionOf', () => {
     ).toEqual({ ok: false, reason: 'AS_QUALIFIED' });
   });
   it('refuses what cannot be settled in one step', () => {
-    expect(selectionOf({ archetype: 'INSTANT', ...base })).toEqual({
-      ok: false,
-      reason: 'UNSUPPORTED',
-    });
     expect(selectionOf({ archetype: 'QUIZ', prizes: [], pool: null })).toEqual({
       ok: false,
       reason: 'NO_PRIZES',

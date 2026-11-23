@@ -1,6 +1,6 @@
 # templates
 
-The built-in campaign types: quiz, survey, giveaway and instant win. A template is not a form a business
+The built-in campaign types: quiz, survey, giveaway, poll and vote. A template is not a form a business
 designs. It is a type that says which kinds of field a campaign of that type may use, how many of each, and
 what a new campaign starts with. The campaign holds the actual content (questions, answers, prizes, settings).
 
@@ -17,7 +17,7 @@ be managed by platform admins later (no admin screen yet).
 
 | Table                      | Notes                                                                                                                                                                   |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `campaign_templates`       | `slug` (unique), `name`, `archetype` (QUIZ, SURVEY, GIVEAWAY, INSTANT), `description`, `min_content_fields` (questions needed to launch), `requires_prizes`, `position` |
+| `campaign_templates`       | `slug` (unique), `name`, `archetype` (QUIZ, SURVEY, GIVEAWAY, POLL, VOTE), `description`, `min_content_fields` (questions needed to launch), `requires_prizes`, `position` |
 | `campaign_template_fields` | Per template: `kind`, `max_count` (null = no limit), `default_count`, `default_label`, `default_required`                                                               |
 
 `app_runtime` can only `SELECT` them (tested); `app_platform` manages them. The seeded rows have fixed ids so
@@ -28,7 +28,6 @@ every environment has the same types.
 | Quiz        | email, phone, name, consent                  | quiz question (single choice with a correct answer) | at least 1 question |
 | Survey      | email, phone, name, consent                  | multiple choice, rating, short text, long text      | at least 1 question |
 | Giveaway    | email, phone, name, address, wallet, consent | none                                                | prizes              |
-| Instant win | email, phone, name, address, wallet, consent | none                                                | prizes              |
 
 ## API (`/api/v1/templates`, JSON, `no-store`)
 

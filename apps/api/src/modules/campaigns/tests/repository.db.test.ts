@@ -314,7 +314,6 @@ describe.skipIf(!enabled)('campaigns at the database level', () => {
     expect(bySlug.vote).toEqual(fixture(voteTemplate));
     expect(Object.keys(bySlug).sort()).toEqual([
       'giveaway',
-      'instant',
       'poll',
       'quiz',
       'survey',

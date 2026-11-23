@@ -17,7 +17,8 @@ in-memory one used by authentication.
    a reference; the participant confirms receipt or disputes it. A payout provider is a later, separate ADR.
 2. **Prizes become machine-readable.** `campaign_prizes` gains `kind` (CASH, POINTS, ITEM), `amount_minor`
    and `currency`, `rank_from`/`rank_to` (so "1st" and "2nd to 5th" are expressible) and `selection`
-   (RANKING, DRAW, POOL, INSTANT, COMPLETION). Existing rows become ITEM and keep their text.
+   (RANKING, DRAW, POOL, COMPLETION; INSTANT was removed together with the instant win campaign type in
+   migration `20261126100000_remove_instant_win`). Existing rows become ITEM and keep their text.
 3. **One award row per winning slot** (`reward_awards`). It snapshots the amount when created and moves
    through `PENDING_REVIEW`, `AVAILABLE`, `CLAIMED`, `FULFILLED`, or the exits `HELD`, `REJECTED`,
    `EXPIRED`, `REVOKED`. Partial unique indexes make a duplicate award for the same slot or the same person

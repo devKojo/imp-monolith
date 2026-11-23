@@ -102,7 +102,7 @@ persist these moves; until then, `status` filters in the list use the effective 
 1. A title.
 2. A campaign type (template).
 3. An end time in the future, after the start if there is one.
-4. Prizes: at least one if the type requires prizes (giveaway, instant win), and every prize complete.
+4. Prizes: at least one if the type requires prizes (giveaway), and every prize complete.
 5. Details: a way to reach the participant (an email or phone field) and a required consent.
 6. Content: at least as many questions as the type needs (a quiz or survey needs one), and every field complete
    (a label; a choice or quiz question has two or more different answers; a quiz question has its correct
@@ -152,13 +152,13 @@ Running campaigns of every business, soonest to close first, for the `/discover`
 - **Visible** means LIVE, or SCHEDULED and already started, not deleted, not ended, business not suspended.
 - **Deviation:** businesses still PENDING are listed, because sign-up does not yet include an approval step.
   Suspended ones are not.
-- Output is public content only. `timeZone` is always `UTC`; an instant win shows as a giveaway; polls and votes
+- Output is public content only. `timeZone` is always `UTC`; polls and votes
   have no source yet and return nothing; there are no images.
 
 ## Not built yet
 
 - **Participation for other kinds of campaign.** Quizzes are covered by the `quiz` module; giveaways, polls,
-  surveys and instant wins cannot be entered yet. The page `/c/{slug}` exists, and offers entry for quizzes only.
+  and surveys cannot be entered yet. The page `/c/{slug}` exists, and offers entry for quizzes only.
 - **Events.** Launch, pause and cancel should emit outbox events (identifiers only, R-EVT-12) once the outbox
   publisher exists.
 - **Contracts** are hand-written here and in the web app; replace with the generated client (R-STK-04). The

@@ -14,7 +14,7 @@ claimed: the ones the rules cannot clear are `PENDING_REVIEW`, the rest `AVAILAB
 | `DRAW`    | giveaway, survey, poll, vote | everyone in (quiz and survey: finished)              | seeded shuffle; the first people take the places in order  |
 | `POOL`    | any campaign with a pool     | everyone who took a seat                             | the same whole share each (`floor(amount / seats)`)        |
 
-Instant win and "completion" rewards are not settled in one run and are refused (`422 REWARDS_UNSUPPORTED`).
+"Completion" rewards are awarded as people qualify, not settled in one run, and are refused (`422 REWARDS_UNSUPPORTED`).
 A campaign's prizes must agree on one method. Places come from winner counts in prize order ("1st", "2nd",
 "3rd to 5th"), or from an explicit `rank_from`/`rank_to`.
 
