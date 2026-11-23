@@ -199,6 +199,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
   "UiCopyButton": {
     "composes": [
       "UiButton",
+      "UiIcon",
       "UiLiveRegion"
     ],
     "usedBy": [
@@ -319,6 +320,7 @@ export const composition: Record<string, { composes: string[]; usedBy: string[] 
       "UiCheckbox",
       "UiChoiceGroup",
       "UiCollapsible",
+      "UiCopyButton",
       "UiDataTable",
       "UiDateTimeField",
       "UiEmptyState",

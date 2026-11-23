@@ -20,6 +20,7 @@ export const en = {
   'common.cancel': 'Cancel',
   'common.copy': 'Copy',
   'common.copied': 'Copied',
+  'common.copyFailed': "Couldn't copy",
   'common.loading': 'Loading',
   'common.help': 'Help',
   'common.backToDashboard': 'Back to dashboard',
