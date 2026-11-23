@@ -22,6 +22,7 @@ export const en = {
   'common.copied': 'Copied',
   'common.loading': 'Loading',
   'common.help': 'Help',
+  'common.backToDashboard': 'Back to dashboard',
   'avatar.verified': 'Verified',
   'common.on': 'On',
   'common.off': 'Off',

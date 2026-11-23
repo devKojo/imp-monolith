@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { t } from '../../../i18n';
+import { useUnavailableExit } from '../../../modules/auth/composables/useHomeLink';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
@@ -25,6 +26,7 @@ import { useMyRewards } from '../../../modules/rewards/useMyRewards';
  * measured with the device's elapsed time, and when it reaches zero the server closes the attempt and
  * scores what was answered. Nothing here knows a correct answer.
  */
+const exit = useUnavailableExit();
 definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 
 const slug = String(useRoute().params.slug);
@@ -209,7 +211,7 @@ const open = computed(() => (view.value ? unanswered(view.value) : 0));
       :title="t('quiz.unavailable.title')"
       :description="t('quiz.unavailable.body')"
     >
-      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+      <UiButton :to="exit.to" variant="secondary" size="xs">{{ exit.label }}</UiButton>
     </UiEmptyState>
 
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />

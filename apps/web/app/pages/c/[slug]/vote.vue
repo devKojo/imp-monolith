@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
+import { useUnavailableExit } from '../../../modules/auth/composables/useHomeLink';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
@@ -19,6 +20,7 @@ import { useVoting } from '../../../modules/voting/useVoting';
  * confirms, because a vote is final. Once voted (or when the campaign shows standings to everyone) the
  * results appear beside the options.
  */
+const exit = useUnavailableExit();
 definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 
 const slug = String(useRoute().params.slug);
@@ -217,7 +219,7 @@ const votedLabel = computed(() =>
       :title="t('ballot.unavailable.title')"
       :description="t('ballot.unavailable.body')"
     >
-      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+      <UiButton :to="exit.to" variant="secondary" size="xs">{{ exit.label }}</UiButton>
     </UiEmptyState>
 
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />
@@ -283,7 +285,11 @@ const votedLabel = computed(() =>
                 :model-value="picks[at] == null ? '' : String(picks[at])"
                 :legend="
                   many
-                    ? t('ballot.question.n', { n: at + 1, total: questions.length, text: q.question })
+                    ? t('ballot.question.n', {
+                        n: at + 1,
+                        total: questions.length,
+                        text: q.question,
+                      })
                     : t('ballot.choose.poll')
                 "
                 :hint="many ? q.helper : undefined"
@@ -331,12 +337,7 @@ const votedLabel = computed(() =>
           </div>
 
           <div class="submit">
-            <UiButton
-              size="lg"
-              icon-trailing="arrow-right"
-              :disabled="!allPicked"
-              @click="review"
-            >
+            <UiButton size="lg" icon-trailing="arrow-right" :disabled="!allPicked" @click="review">
               {{ t('ballot.submit') }}
             </UiButton>
             <p class="ui-text-caption ui-text-hint">{{ t('ballot.final') }}</p>
