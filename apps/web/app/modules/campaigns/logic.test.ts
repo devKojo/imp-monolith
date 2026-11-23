@@ -122,9 +122,8 @@ describe('launch checks', () => {
     expect(passes({ startAt: hours(1), endAt: hours(5) }).schedule).toBe(true);
   });
 
-  it('requires prizes for giveaways and instant wins only, but rejects unfinished ones', () => {
+  it('requires prizes for giveaways (the default type) only, but rejects unfinished ones', () => {
     expect(passes({ prizes: [] }).prizes).toBe(false);
-    expect(passes({ template: template({ archetype: 'instant' }), prizes: [] }).prizes).toBe(false);
     expect(passes({ template: quiz(), prizes: [] }).prizes).toBe(true);
     expect(passes({ template: quiz(), prizes: [prize('p', ' ')] }).prizes).toBe(false);
     expect(passes({ prizes: [{ ...prize('p'), winners: 0 }] }).prizes).toBe(false);

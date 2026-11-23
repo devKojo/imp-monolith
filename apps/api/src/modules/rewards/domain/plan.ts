@@ -91,13 +91,12 @@ export function poolPlan(pool: PoolSpec, userIds: readonly string[]): PlannedAwa
   }));
 }
 
-const DEFAULT_SELECTION: Record<Archetype, Selection | null> = {
+const DEFAULT_SELECTION: Record<Archetype, Selection> = {
   QUIZ: 'RANKING',
   GIVEAWAY: 'DRAW',
   SURVEY: 'DRAW',
   POLL: 'DRAW',
   VOTE: 'DRAW',
-  INSTANT: null,
 };
 
 export type SelectionResult =
@@ -115,7 +114,6 @@ export function selectionOf(
   const [only] = [...wanted];
   // Completion rewards are awarded as people qualify, so there is nothing to settle at the end.
   if (only === 'COMPLETION') return { ok: false, reason: 'AS_QUALIFIED' };
-  // An instant win is not settled by a single run at the end either.
-  if (!only || only === 'INSTANT') return { ok: false, reason: 'UNSUPPORTED' };
+  if (!only) return { ok: false, reason: 'UNSUPPORTED' };
   return { ok: true, selection: only };
 }

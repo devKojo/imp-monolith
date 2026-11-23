@@ -4,7 +4,7 @@
  */
 export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'LIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
 
-export type Archetype = 'giveaway' | 'quiz' | 'survey' | 'instant' | 'poll' | 'vote';
+export type Archetype = 'giveaway' | 'quiz' | 'survey' | 'poll' | 'vote';
 
 export type FieldKind =
   | 'full_name'

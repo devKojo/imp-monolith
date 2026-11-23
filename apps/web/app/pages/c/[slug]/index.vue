@@ -24,8 +24,7 @@ import { siteFooter } from '../../../modules/site/footer';
 /**
  * The page of a running campaign (/c/{slug}). For a quiz or a survey it shows the facts and the way in:
  * sign in with a participant account, then start (or continue, or see the result). A poll or an image vote
- * leads to the voting screen and a giveaway takes the entry on this page. An instant win is listed on the
- * discovery page but cannot be entered yet. Rendered in the browser: it reads the
+ * leads to the voting screen and a giveaway takes the entry on this page. Rendered in the browser: it reads the
  * signed-in state to choose the button.
  */
 const exit = useUnavailableExit();
@@ -62,7 +61,7 @@ async function load() {
       ballotInfo.value = await voting.info(slug);
     }
     if (campaign.value.type === 'giveaway') {
-      // An instant win also shows as a giveaway but has no entry, so it simply has no facts.
+      // No facts (404) means this giveaway cannot be entered from here.
       giveawayInfo.value = await giveaway.info(slug).catch((e) => {
         if (toApiError(e).status === 404) return null;
         throw e;

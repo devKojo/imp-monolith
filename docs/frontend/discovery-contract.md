@@ -6,7 +6,7 @@ route. This contract fills that gap. **Implemented** by the campaigns module (se
 the page shows real campaigns only and has no sample data.
 
 Deviations from the proposal below: PENDING businesses are listed (suspended ones are not); `timeZone` is
-always `UTC`; an instant win is a `giveaway`; `poll` and `vote` return nothing yet; `imageUrl`/`imageAlt`
+always `UTC`; `poll` and `vote` return nothing yet; `imageUrl`/`imageAlt`
 are not returned; the legal gate for competitions is not enforced yet.
 
 ## Endpoint

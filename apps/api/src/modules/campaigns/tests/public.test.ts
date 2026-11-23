@@ -52,8 +52,7 @@ describe('mapping', () => {
     expect(toPublic(row(1, { archetype: 'quiz' })).type).toBe('quiz');
     expect(toPublic(row(1, { archetype: 'survey' })).type).toBe('survey');
     expect(toPublic(row(1, { archetype: 'giveaway' })).type).toBe('giveaway');
-    expect(toPublic(row(1, { archetype: 'instant' })).type).toBe('giveaway');
-    expect(archetypesFor('giveaway').sort()).toEqual(['giveaway', 'instant']);
+    expect(archetypesFor('giveaway')).toEqual(['giveaway']);
     expect(archetypesFor('quiz')).toEqual(['quiz']);
     expect(toPublic(row(1, { archetype: 'poll' })).type).toBe('poll');
     expect(toPublic(row(1, { archetype: 'vote' })).type).toBe('vote');
@@ -161,12 +160,12 @@ describe('discovery service', () => {
     await service.list({ q: 'coffee', type: 'giveaway' });
     expect(repo.calls[0]).toMatchObject({
       q: 'coffee',
-      archetypes: ['giveaway', 'instant'],
+      archetypes: ['giveaway'],
       now: NOW,
     });
     await service.list({ type: 'poll' });
     await service.list({ type: 'vote' });
-    expect(repo.calls.map((c) => c.archetypes)).toEqual([['giveaway', 'instant'], ['poll'], ['vote']]);
+    expect(repo.calls.map((c) => c.archetypes)).toEqual([['giveaway'], ['poll'], ['vote']]);
   });
 
   it('answers 400 for a cursor it did not make', async () => {

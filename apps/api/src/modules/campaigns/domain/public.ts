@@ -72,10 +72,9 @@ export function toPublicDetail(row: PublicRow): PublicCampaignDetail {
 
 export const PAGE_SIZE = 60;
 
-/** Template kinds, as the public listing names them. An instant win is a giveaway to a visitor. */
+/** Template kinds, as the public listing names them. */
 const ARCHETYPE_TYPE: Record<string, PublicType> = {
   giveaway: 'giveaway',
-  instant: 'giveaway',
   quiz: 'quiz',
   survey: 'survey',
   poll: 'poll',

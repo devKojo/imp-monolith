@@ -49,7 +49,7 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
   /** The built-in type for a kind of campaign: global, so the business does not matter. */
   const template = async (
     _tenantId: string,
-    archetype: 'GIVEAWAY' | 'QUIZ' | 'SURVEY' | 'INSTANT',
+    archetype: 'GIVEAWAY' | 'QUIZ' | 'SURVEY',
   ) => SEEDED[archetype.toLowerCase() as keyof typeof SEEDED];
 
   async function campaign(
@@ -100,7 +100,6 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     giveawayA = await template(a, 'GIVEAWAY');
     quizA = await template(a, 'QUIZ');
     quizB = await template(b, 'QUIZ');
-    const instantA = await template(a, 'INSTANT');
     const surveyA = await template(a, 'SURVEY');
     const tGamma = await template(suspended, 'GIVEAWAY');
 
@@ -111,7 +110,6 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     ]);
     await campaign('live-b', b, quizB, { endAt: at(20) }); // a PENDING business still shows
     await campaign('started', a, quizA, { status: 'SCHEDULED', startAt: at(-1), endAt: at(30) });
-    await campaign('instant', a, instantA, { endAt: at(40) }, [{ name: 'Scratch card' }]);
     await campaign('survey', a, surveyA, { endAt: at(50) });
     // Hidden
     await campaign('draft', a, quizA, { status: 'DRAFT', slug: null, endAt: null });
@@ -146,7 +144,6 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
       'live-a',
       'live-b',
       'started',
-      'instant',
       'survey',
     ]);
   });
@@ -192,11 +189,11 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     expect(noPrize).not.toHaveProperty('prize');
   });
 
-  it('treats an instant win as a giveaway, and filters by type', async () => {
+  it('filters by type', async () => {
     const giveaways = (await visible(undefined, 'giveaway')).map((i) =>
       i.slug.replace(`-${tag}`, ''),
     );
-    expect(giveaways).toEqual(['live-a', 'instant']);
+    expect(giveaways).toEqual(['live-a']);
     expect((await visible(undefined, 'quiz')).map((i) => i.slug.replace(`-${tag}`, ''))).toEqual([
       'live-b',
       'started',
@@ -219,9 +216,6 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
     expect((await visible('gh₵ 5,000')).map((i) => i.slug.replace(`-${tag}`, ''))).toEqual([
       'live-a',
     ]);
-    expect((await visible('scratch card')).map((i) => i.slug.replace(`-${tag}`, ''))).toEqual([
-      'instant',
-    ]);
     expect(await visible('no such thing xyz')).toEqual([]);
   });
 
@@ -242,7 +236,7 @@ describe.skipIf(!enabled)('public discovery (real PostgreSQL, real roles)', () =
       after = { endAt: rows[0]!.endAt, id: rows[0]!.id };
     }
     const mine = seen.filter((s) => s.endsWith(tag)).map((s) => s.replace(`-${tag}`, ''));
-    expect(mine).toEqual(['live-a', 'live-b', 'started', 'instant', 'survey']);
+    expect(mine).toEqual(['live-a', 'live-b', 'started', 'survey']);
     expect(new Set(seen).size).toBe(seen.length);
   });
 

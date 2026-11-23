@@ -61,6 +61,6 @@ describe('prizes and entry', () => {
     for (const type of ['quiz', 'survey', 'poll', 'vote', 'giveaway']) {
       expect(canEnter(type)).toBe(true);
     }
-    expect(canEnter('instant')).toBe(false);
+    expect(canEnter('unknown')).toBe(false);
   });
 });

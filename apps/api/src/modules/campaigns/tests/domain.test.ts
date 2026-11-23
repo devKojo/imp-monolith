@@ -107,9 +107,9 @@ describe('preflight', () => {
     expect(passes({ startAt: hours(1), endAt: hours(5) }).schedule).toBe(true);
   });
 
-  it('requires prizes for giveaways and instant wins, but not for quizzes and surveys', () => {
+  it('requires prizes for giveaways, but not for quizzes and surveys', () => {
     expect(passes({ prizes: [] }).prizes).toBe(false);
-    expect(passes({ template: template({ archetype: 'instant' }), prizes: [] }).prizes).toBe(false);
+    expect(passes({ template: giveawayTemplate, prizes: [] }).prizes).toBe(false);
     expect(passes({ template: quizTemplate, prizes: [] }).prizes).toBe(true);
     expect(passes({ template: surveyTemplate, prizes: [] }).prizes).toBe(true);
   });

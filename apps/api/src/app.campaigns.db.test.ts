@@ -158,7 +158,7 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
   });
 
   describe('the built-in campaign types', () => {
-    it('lists the six types with what each allows, to anyone in a business', async () => {
+    it('lists the five types with what each allows, to anyone in a business', async () => {
       for (const p of [people.owner, people.analyst, people.outsider]) {
         const res = await read(p, 'templates');
         expect(res.status).toBe(200);
@@ -166,7 +166,6 @@ describe.skipIf(!enabled)('campaigns API end to end (real guards, real PostgreSQ
           'quiz',
           'survey',
           'giveaway',
-          'instant',
           'poll',
           'vote',
         ]);

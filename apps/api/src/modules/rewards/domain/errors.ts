@@ -85,7 +85,7 @@ export class NoEntrantsError extends AppError {
   }
 }
 
-/** The prizes cannot be settled automatically (instant win, mixed methods, or none). */
+/** The prizes cannot be settled automatically (mixed methods, or none). */
 export class UnsupportedRewardsError extends AppError {
   constructor(message: string) {
     super(message, 422, 'REWARDS_UNSUPPORTED');

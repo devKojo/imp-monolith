@@ -4,8 +4,8 @@ import type { RiskAssessment } from './risk';
 export type Actor = { userId: string; tenantId: string; role: string };
 
 export type PrizeKind = 'CASH' | 'POINTS' | 'ITEM';
-export type Selection = 'RANKING' | 'DRAW' | 'POOL' | 'INSTANT' | 'COMPLETION';
-export type Archetype = 'GIVEAWAY' | 'QUIZ' | 'SURVEY' | 'INSTANT' | 'POLL' | 'VOTE';
+export type Selection = 'RANKING' | 'DRAW' | 'POOL' | 'COMPLETION';
+export type Archetype = 'GIVEAWAY' | 'QUIZ' | 'SURVEY' | 'POLL' | 'VOTE';
 
 export type PrizeRow = {
   id: string;

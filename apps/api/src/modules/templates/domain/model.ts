@@ -1,11 +1,11 @@
 /**
  * Campaign templates: the built-in campaign types. A template is not a form a business designs; it is a
- * type (quiz, survey, giveaway, instant win, poll, image vote) that says which kinds of field a campaign of that type may
+ * type (quiz, survey, giveaway, poll, image vote) that says which kinds of field a campaign of that type may
  * use, how many, and what a new campaign starts with. The campaign holds the actual content.
  *
  * The vocabulary here is the API's (lowercase ids); the database enums are the uppercase forms.
  */
-export const ARCHETYPES = ['giveaway', 'quiz', 'survey', 'instant', 'poll', 'vote'] as const;
+export const ARCHETYPES = ['giveaway', 'quiz', 'survey', 'poll', 'vote'] as const;
 export type Archetype = (typeof ARCHETYPES)[number];
 
 export const FIELD_KINDS = [
