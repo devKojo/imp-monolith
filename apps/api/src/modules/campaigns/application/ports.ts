@@ -60,12 +60,15 @@ export interface CampaignRepository {
     expectedVersion: number,
     input: { status: 'SCHEDULED' | 'LIVE'; slug: string },
   ): Promise<WriteResult>;
-  /** Moves a campaign from one of `from` to `to` at `expectedVersion`; `wrong_state` otherwise. */
+  /**
+   * Moves a campaign from one of `from` to `to` at `expectedVersion`; `wrong_state` otherwise. `endAt` also
+   * records when it closed (ending early).
+   */
   transition(
     ctx: TenantContext,
     id: string,
     expectedVersion: number,
-    change: { from: CampaignStatus[]; to: CampaignStatus },
+    change: { from: CampaignStatus[]; to: CampaignStatus; endAt?: Date },
   ): Promise<WriteResult>;
   /**
    * Takes a scheduled, live, paused or cancelled campaign back to DRAFT (its public address is released), but

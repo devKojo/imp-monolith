@@ -85,6 +85,7 @@ describe('access', () => {
       () => service.remove(analyst, c.id),
       () => service.launch(operator, c.id, c.version),
       () => service.cancel(operator, c.id, c.version),
+      () => service.end(operator, c.id, c.version),
       () => service.update(operator, c.id, { expectedVersion: 1, ...body() }),
     ]) {
       await expect(attempt()).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
@@ -375,6 +376,28 @@ describe('running', () => {
       code: 'CAMPAIGN_STATE',
     });
     await expect(service.cancel(owner, c.id, c.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+  });
+
+  it('ends a live or paused campaign now and records when, and refuses anything else', async () => {
+    const c = await launched({ endAt: hours(48) });
+    const ended = await service.end(owner, c.id, c.version);
+    expect(ended.status).toBe('COMPLETED');
+    expect(ended.endAt).toBe(NOW.toISOString());
+    await expect(service.end(owner, c.id, ended.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+    await expect(service.pause(owner, c.id, ended.version)).rejects.toMatchObject({
+      code: 'CAMPAIGN_STATE',
+    });
+
+    const p = await launched({ endAt: hours(48) });
+    const paused = await service.pause(owner, p.id, p.version);
+    expect((await service.end(owner, p.id, paused.version)).status).toBe('COMPLETED');
+
+    const waiting = await launched({ startAt: hours(5) });
+    await expect(service.end(owner, waiting.id, waiting.version)).rejects.toMatchObject({
       code: 'CAMPAIGN_STATE',
     });
   });

@@ -35,6 +35,7 @@ const noStore: RequestHandler = (_req, res, next) => {
  *   POST   /:id/launch          session + csrf   (manage)
  *   POST   /:id/pause           session + csrf   (operate)
  *   POST   /:id/resume          session + csrf   (operate)
+ *   POST   /:id/end             session + csrf   (manage)
  *   POST   /:id/cancel          session + csrf   (manage)
  *   POST   /:id/republish       session + csrf   (manage)
  *   POST   /:id/return-to-draft session + csrf   (manage)
@@ -78,6 +79,7 @@ export function campaignsRouter(service: CampaignsService, guards: RequestHandle
   versioned('/:id/launch', (a, id, v) => service.launch(a, id, v));
   versioned('/:id/pause', (a, id, v) => service.pause(a, id, v));
   versioned('/:id/resume', (a, id, v) => service.resume(a, id, v));
+  versioned('/:id/end', (a, id, v) => service.end(a, id, v));
   versioned('/:id/cancel', (a, id, v) => service.cancel(a, id, v));
   versioned('/:id/republish', (a, id, v) => service.republish(a, id, v));
   versioned('/:id/return-to-draft', (a, id, v) => service.returnToDraft(a, id, v));

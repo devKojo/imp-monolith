@@ -474,6 +474,11 @@ export const staticSiteText = {
   'cmp.toDraft.done': 'Campaign is a draft again',
   'cmp.error.hasParticipants':
     'Someone has already taken part, so this campaign cannot go back to draft. Duplicate it to change it.',
+  'cmp.end': 'End campaign',
+  'cmp.end.title': 'End this campaign now?',
+  'cmp.end.consequence':
+    'It closes today instead of on its end date. Nobody can take part any more, and its rewards can then be awarded. This cannot be undone.',
+  'cmp.ended': 'Campaign ended',
   'cmp.cancel': 'Cancel campaign',
   'cmp.cancel.title': 'Cancel this campaign?',
   'cmp.cancel.consequence': 'It stops for good and cannot be restarted.',

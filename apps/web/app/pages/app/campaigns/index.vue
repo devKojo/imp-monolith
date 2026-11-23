@@ -186,6 +186,9 @@ function menuItems(cell: Record<string, unknown>): ActionItem[] {
           },
         ]
       : []),
+    ...(canManage && (row.status === 'LIVE' || row.status === 'PAUSED')
+      ? [{ id: 'end', label: t('cmp.end'), icon: 'check-circle' as const }]
+      : []),
     ...(canManage ? [{ id: 'duplicate', label: t('cmp.duplicate'), icon: 'copy' as const }] : []),
     ...(canManage && row.archived
       ? [{ id: 'unarchive', label: t('cmp.unarchive'), icon: 'refresh' as const }]
@@ -217,11 +220,29 @@ function onAction(id: string, cell: Record<string, unknown>) {
     sharing.value = { slug: row.slug, title: row.name };
     shareOpen.value = true;
   } else if (id === 'pause') void togglePause({ ...ref, status: row.status });
+  else if (id === 'end') toEnd.value = { id: row.id, version: row.version, name: row.name };
   else if (id === 'duplicate') void copy(row.id);
   else if (id === 'archive') void archive(ref);
   else if (id === 'unarchive') void unarchive(ref);
   else if (id === 'delete') toDelete.value = { id: row.id, name: row.name };
 }
+
+const toEnd = ref<{ id: string; version: number; name: string } | null>(null);
+const endOpen = computed({
+  get: () => toEnd.value !== null,
+  set: (open: boolean) => {
+    if (!open) toEnd.value = null;
+  },
+});
+const confirmEnd = () =>
+  attempt(async () => {
+    if (!toEnd.value) return;
+    const row = toEnd.value;
+    toEnd.value = null;
+    await store.end(row);
+    await load();
+    toast.push(t('cmp.ended'), 'info');
+  });
 
 const toDelete = ref<{ id: string; name: string } | null>(null);
 const deleteOpen = computed({
@@ -259,7 +280,6 @@ const confirmDelete = () =>
       <h1 class="ui-text-h1">{{ t('cmp.title') }}</h1>
       <p v-if="!canManage" class="ui-text-caption ui-text-hint">{{ t('cmp.readonly.role') }}</p>
     </header>
-
 
     <UiSystemState v-if="loadFailed" kind="generic" @action="load" />
     <section v-else class="table-card" aria-labelledby="campaigns-title">
@@ -340,6 +360,14 @@ const confirmDelete = () =>
       :trigger="false"
     />
 
+    <UiConfirmDialog
+      v-model:open="endOpen"
+      variant="destructive"
+      :title="t('cmp.end.title')"
+      :consequence="t('cmp.end.consequence')"
+      :confirm-label="t('cmp.end')"
+      @confirm="confirmEnd"
+    />
     <UiConfirmDialog
       v-model:open="deleteOpen"
       variant="destructive"

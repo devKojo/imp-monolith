@@ -136,13 +136,14 @@ export class InMemoryCampaignRepository implements CampaignRepository {
     ctx: TenantContext,
     id: string,
     expectedVersion: number,
-    change: { from: CampaignStatus[]; to: CampaignStatus },
+    change: { from: CampaignStatus[]; to: CampaignStatus; endAt?: Date },
   ): Promise<WriteResult> {
     const row = this.live(ctx, id);
     if (!row) return { kind: 'not_found' };
     if (!change.from.includes(row.status) || row.archivedAt) return { kind: 'wrong_state' };
     if (row.version !== expectedVersion) return { kind: 'conflict' };
     row.status = change.to;
+    if (change.endAt) row.endAt = change.endAt.toISOString();
     this.touch(row);
     return { kind: 'ok', campaign: this.strip(row) };
   }
@@ -153,7 +154,11 @@ export class InMemoryCampaignRepository implements CampaignRepository {
     if (row) row.participantCount += n;
   }
 
-  async returnToDraft(ctx: TenantContext, id: string, expectedVersion: number): Promise<WriteResult> {
+  async returnToDraft(
+    ctx: TenantContext,
+    id: string,
+    expectedVersion: number,
+  ): Promise<WriteResult> {
     const row = this.live(ctx, id);
     if (!row) return { kind: 'not_found' };
     if (!['SCHEDULED', 'LIVE', 'PAUSED', 'CANCELLED'].includes(row.status) || row.archivedAt) {
