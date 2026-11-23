@@ -159,6 +159,10 @@ the API both require every prize to agree, and allow it only for a quiz or surve
   still available, or claimed. A paid or ended award cannot be recalled. A recalled tier is not given to someone
   else (the slot stays used).
 - **Settling.** Such a campaign has nothing to settle at the end (`POST /award` says so).
+- **Backfill.** People who qualified before the prizes were set to "As people pass" get nothing automatically.
+  `npm run db:backfill-instant-awards -w @imp/api` finds them (finished, no award yet) and runs the same
+  `allocateOnCompletion` in the order they finished. It is a dry run unless `--apply` is passed, can be limited
+  with `--campaign <id>`, and is safe to re-run. The claim window starts when it runs.
 - **Not built.** Automatic payout. The platform still does not move money; the business pays and marks it paid.
 
 ## Known gaps
