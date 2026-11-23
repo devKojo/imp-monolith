@@ -136,6 +136,7 @@ describe('client', () => {
     await api.launch('c1', 4, 'tok');
     await api.pause('c1', 5, 'tok');
     await api.resume('c1', 6, 'tok');
+    await api.end('c1', 7, 'tok');
     await api.cancel('c1', 7, 'tok');
     await api.republish('c1', 7, 'tok');
     await api.returnToDraft('c1', 7, 'tok');
@@ -149,6 +150,7 @@ describe('client', () => {
       ['POST', '/api/v1/campaigns/c1/launch'],
       ['POST', '/api/v1/campaigns/c1/pause'],
       ['POST', '/api/v1/campaigns/c1/resume'],
+      ['POST', '/api/v1/campaigns/c1/end'],
       ['POST', '/api/v1/campaigns/c1/cancel'],
       ['POST', '/api/v1/campaigns/c1/republish'],
       ['POST', '/api/v1/campaigns/c1/return-to-draft'],

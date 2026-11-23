@@ -244,6 +244,27 @@ export class CampaignsService {
     return this.moved(ctx, id, expectedVersion, ['PAUSED'], runningStatusFor(startAt, now));
   }
 
+  /**
+   * Ends a running campaign now, before its end date: nobody can take part any more and its rewards can be
+   * settled. The end time is recorded as now. A campaign that has not started cannot be ended (cancel it);
+   * one that is already over has nothing to end.
+   */
+  async end(actor: Actor | null, id: string, expectedVersion: number): Promise<CampaignDetail> {
+    const ctx = this.scope(actor, 'manage');
+    await this.running(ctx, id, ['LIVE', 'PAUSED'], 'Only a live or paused campaign can be ended');
+    const now = this.now();
+    return this.detail(
+      ctx,
+      this.settle(
+        await this.repo.transition(ctx, id, expectedVersion, {
+          from: ['LIVE', 'PAUSED'],
+          to: 'COMPLETED',
+          endAt: now,
+        }),
+      ),
+    );
+  }
+
   async cancel(actor: Actor | null, id: string, expectedVersion: number): Promise<CampaignDetail> {
     const ctx = this.scope(actor, 'manage');
     await this.running(

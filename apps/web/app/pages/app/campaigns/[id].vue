@@ -324,6 +324,19 @@ const unarchive = () =>
     toast.push(t('cmp.unarchivedDone'), 'info');
   });
 
+const endOpen = ref(false);
+const endNow = async () => {
+  await attempt(async () => {
+    adopt(await store.end(draft.value!));
+    toast.push(t('cmp.ended'), 'info');
+  });
+  endOpen.value = false;
+};
+// Ending closes a campaign that has started; one still waiting to start is cancelled instead.
+const canEnd = computed(
+  () => canManage.value && (draft.value?.status === 'LIVE' || draft.value?.status === 'PAUSED'),
+);
+
 const cancelOpen = ref(false);
 const cancel = async () => {
   // The dialog stays open while it works (its button shows busy); it closes once the call is done.
@@ -503,6 +516,15 @@ const crumbs = computed(() => [
               @click="toDraftOpen = true"
             >
               {{ t('cmp.toDraft') }}
+            </UiButton>
+            <UiButton
+              v-if="canEnd"
+              variant="secondary"
+              size="xs"
+              :disabled="busy"
+              @click="endOpen = true"
+            >
+              {{ t('cmp.end') }}
             </UiButton>
             <UiButton
               v-if="canManage && (runningStatus || draft.status === 'PAUSED')"
@@ -686,6 +708,15 @@ const crumbs = computed(() => [
         :confirm-label="t('cmp.toDraft')"
         :loading="busy"
         @confirm="returnToDraft"
+      />
+      <UiConfirmDialog
+        v-model:open="endOpen"
+        variant="destructive"
+        :title="t('cmp.end.title')"
+        :consequence="t('cmp.end.consequence')"
+        :confirm-label="t('cmp.end')"
+        :loading="busy"
+        @confirm="endNow"
       />
       <UiConfirmDialog
         v-model:open="cancelOpen"

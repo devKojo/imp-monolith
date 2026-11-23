@@ -283,17 +283,22 @@ export class PrismaCampaignRepository implements CampaignRepository {
     ctx: TenantContext,
     id: string,
     expectedVersion: number,
-    change: { from: CampaignStatus[]; to: CampaignStatus },
+    change: { from: CampaignStatus[]; to: CampaignStatus; endAt?: Date },
   ): Promise<WriteResult> {
     return withTenant(this.db, ctx, async (tx) => {
       const updated = await tx.campaign.updateMany({
         where: this.guard(ctx, id, expectedVersion, change.from),
-        data: { status: change.to, version: { increment: 1 } },
+        data: {
+          status: change.to,
+          ...(change.endAt ? { endAt: change.endAt } : {}),
+          version: { increment: 1 },
+        },
       });
       if (updated.count === 0) return this.whyNotWritten(tx, ctx, id, change.from);
       const action = change.from.includes('CANCELLED')
         ? 'republished'
-        : ({ PAUSED: 'paused', CANCELLED: 'cancelled' }[change.to as string] ?? 'resumed');
+        : ({ PAUSED: 'paused', CANCELLED: 'cancelled', COMPLETED: 'ended' }[change.to as string] ??
+          'resumed');
       return this.finish(tx, ctx, id, `campaign.${action}`);
     });
   }

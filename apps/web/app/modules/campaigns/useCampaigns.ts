@@ -44,6 +44,7 @@ export function useCampaigns() {
     launch: (c: Campaign) => run(() => api.launch(c.id, c.version, csrf())),
     pause: (c: { id: string; version: number }) => run(() => api.pause(c.id, c.version, csrf())),
     resume: (c: { id: string; version: number }) => run(() => api.resume(c.id, c.version, csrf())),
+    end: (c: { id: string; version: number }) => run(() => api.end(c.id, c.version, csrf())),
     cancel: (c: Campaign) => run(() => api.cancel(c.id, c.version, csrf())),
     republish: (c: Campaign) => run(() => api.republish(c.id, c.version, csrf())),
     returnToDraft: (c: { id: string; version: number }) =>
