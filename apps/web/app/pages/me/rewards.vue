@@ -177,7 +177,7 @@ watch(
           icon="gift"
           :heading-level="3"
         >
-          <UiButton to="/discover">{{ t('me.empty.action') }}</UiButton>
+          <UiButton to="/me">{{ t('common.backToDashboard') }}</UiButton>
         </UiEmptyState>
         <ul v-else class="list">
           <li v-for="a in available" :key="a.id">

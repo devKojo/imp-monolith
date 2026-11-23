@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { formatInZone } from '@imp/ui/app/utils/datetime';
 import { t } from '../../../i18n';
+import { useUnavailableExit } from '../../../modules/auth/composables/useHomeLink';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
@@ -15,6 +16,7 @@ import { useGiveaway } from '../../../modules/giveaway/useGiveaway';
  * The participant's ticket for a giveaway they have entered. Entering happens on the campaign page; a person
  * who has not entered is sent back there. Rendered in the browser: it reads the signed-in session.
  */
+const exit = useUnavailableExit();
 definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 
 const slug = String(useRoute().params.slug);
@@ -108,7 +110,7 @@ const result = computed(() => {
       :title="t('giveaway.unavailable.title')"
       :description="t('giveaway.unavailable.body')"
     >
-      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+      <UiButton :to="exit.to" variant="secondary" size="xs">{{ exit.label }}</UiButton>
     </UiEmptyState>
 
     <UiSystemState

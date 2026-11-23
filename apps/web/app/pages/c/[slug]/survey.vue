@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { t } from '../../../i18n';
+import { useUnavailableExit } from '../../../modules/auth/composables/useHomeLink';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { toApiError } from '../../../modules/auth/errors';
 import { siteFooter } from '../../../modules/site/footer';
@@ -26,6 +27,7 @@ import { useSurvey } from '../../../modules/survey/useSurvey';
  * change of mind cannot be stored out of order. Required questions are checked when moving on and again
  * by the server when submitting.
  */
+const exit = useUnavailableExit();
 definePageMeta({ middleware: 'auth', portal: 'participant', ssr: false });
 
 const slug = String(useRoute().params.slug);
@@ -204,7 +206,7 @@ const unanswered = computed(
       :title="t('survey.unavailable.title')"
       :description="t('survey.unavailable.body')"
     >
-      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+      <UiButton :to="exit.to" variant="secondary" size="xs">{{ exit.label }}</UiButton>
     </UiEmptyState>
 
     <UiSystemState v-else-if="state === 'error' || !view" kind="generic" @action="load" />

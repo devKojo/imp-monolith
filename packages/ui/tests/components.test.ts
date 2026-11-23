@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h, nextTick } from 'vue';
+import { defineComponent, h, nextTick, ref } from 'vue';
 import UiBanner from '../app/components/UiBanner.vue';
 import UiButton from '../app/components/UiButton.vue';
 import UiCollapsible from '../app/components/UiCollapsible.vue';
@@ -19,6 +19,7 @@ import UiPermissionGate from '../app/components/UiPermissionGate.vue';
 import UiReorderableList from '../app/components/UiReorderableList.vue';
 import UiStatusChip from '../app/components/UiStatusChip.vue';
 import UiSystemState from '../app/components/UiSystemState.vue';
+import { provideHomeRoute } from '../app/composables/useHomeRoute';
 import UiTabs from '../app/components/UiTabs.vue';
 import UiToaster from '../app/components/UiToaster.vue';
 import { useToast } from '../app/composables/useToast';
@@ -208,6 +209,25 @@ describe('UiSystemState (UXA-006)', () => {
     const f = mount(UiSystemState, { props: { kind: 'forbidden' } });
     await f.get('button').trigger('click');
     expect(f.emitted('action')).toHaveLength(1);
+  });
+
+  it('sends a signed-in person back to their dashboard from errors and dead ends', () => {
+    const within = (kind: 'generic' | 'rateLimited', home: string | null) =>
+      mount(
+        defineComponent({
+          setup() {
+            provideHomeRoute(ref(home));
+            return () => h(UiSystemState, { kind, params: { time: '0:45' } });
+          },
+        }),
+      );
+    const signedIn = within('generic', '/me');
+    const link = signedIn.get('a');
+    expect(link.attributes('href')).toBe('/me');
+    expect(link.text()).toBe('Back to dashboard');
+    // Signed out keeps the page's own action; states with their own meaning are untouched.
+    expect(within('generic', null).find('a').exists()).toBe(false);
+    expect(within('rateLimited', '/me').find('a').exists()).toBe(false);
   });
 
   it('page-level states use an h1, others an h2 or a banner', () => {

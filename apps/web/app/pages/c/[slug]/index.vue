@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import SessionActions from '../../../modules/auth/components/SessionActions.vue';
 import { t } from '../../../i18n';
+import { useUnavailableExit } from '../../../modules/auth/composables/useHomeLink';
 import { BRAND_NAME } from '../../../modules/auth/constants';
 import { useAuth } from '../../../modules/auth/composables/useAuth';
 import { toApiError } from '../../../modules/auth/errors';
@@ -27,6 +28,7 @@ import { siteFooter } from '../../../modules/site/footer';
  * discovery page but cannot be entered yet. Rendered in the browser: it reads the
  * signed-in state to choose the button.
  */
+const exit = useUnavailableExit();
 definePageMeta({ ssr: false });
 
 const slug = String(useRoute().params.slug);
@@ -195,7 +197,7 @@ const signinTo = `/signin?next=${encodeURIComponent(`/c/${slug}`)}`;
       :title="t('quiz.unavailable.title')"
       :description="t('quiz.unavailable.body')"
     >
-      <UiButton to="/discover" variant="secondary" size="xs">{{ t('quiz.back') }}</UiButton>
+      <UiButton :to="exit.to" variant="secondary" size="xs">{{ exit.label }}</UiButton>
     </UiEmptyState>
 
     <UiSystemState v-else-if="state === 'error' || !campaign" kind="generic" @action="load" />

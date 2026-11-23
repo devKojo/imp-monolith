@@ -43,6 +43,7 @@ export const staticSiteText = {
   'signin.unverified.title': 'Verify your email first',
   'signin.unverified.body':
     'We sent a verification link when you created your account. Open it, then sign in.',
+  'common.backToDashboard': 'Back to dashboard',
   'common.waitCountdown': 'You can try again when the timer ends.',
   'signin.forgot': 'Forgot password?',
   'signin.passwordChanged': 'Password updated. Sign in with your new password.',
